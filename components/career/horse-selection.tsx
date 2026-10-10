@@ -11,7 +11,7 @@ export function HorseSelection({ busy }: { busy: boolean }) {
   const [selected, setSelected] = useState<string | null>(null)
   return <>
     <div className="mb-7">
-      <p className="ui-label text-primary">FIRST CAREER · HORSE SELECTION</p>
+      <p className="ui-label text-primary">HORSE SELECTION</p>
       <h1 className="mt-3 text-3xl font-semibold tracking-tight">첫 육성마를 선택하세요</h1>
       <p className="mt-3 text-sm text-muted-foreground">서로 다른 세 가지 가능성. 능력과 적성을 비교하고, 함께할 한 마리를 선택하세요.</p>
     </div>

@@ -1,7 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { advanceMonth, commitAction, horses, resolveAction, startCareer, statKeys, trainings } from '../lib/career/model'
-import { readCareer, writeCareer } from '../lib/career/repository'
+import { clearCareer, readCareer, writeCareer } from '../lib/career/repository'
+import { applyCareer } from '../lib/career/lifecycle'
+import { readLifecycleSave, writeLifecycleSave } from '../lib/career/lifecycle-repository'
+
+test('monthly state extends the existing lifecycle without replacing management data', () => {
+  const original = { activeHorse: null, month: 4, stableName: '보존할 마방', funds: '₩42,800,000', archive: [{ id: 'retired' }], country: '대한민국', year: 2028 }
+  const career = resolveAction(commitAction(startCareer(horses[1].id), 'stamina'))
+  const merged = applyCareer(original, career)
+  assert.equal(merged.stableName, original.stableName)
+  assert.equal(merged.archive, original.archive)
+  assert.equal(merged.funds, original.funds)
+  assert.equal(merged.month, 1)
+  assert.equal((merged.activeHorse as unknown as { name: string }).name, '세레네 스텝')
+  assert.equal(original.activeHorse, null)
+})
 
 test('all candidates have exact starting values and nine aptitudes', () => {
   assert.equal(horses.length, 3)
@@ -101,4 +115,16 @@ test('cookie repository round-trips commitments, locked results, next month and 
   assert.equal(migrated.month, 4)
   assert.deepEqual(readCareer(), migrated)
   assert.ok(cookies.has('derby-career-lifecycle'))
+  const original = cookies.get('derby-career-lifecycle')
+  clearCareer()
+  assert.equal(cookies.get('derby-career-lifecycle'), original)
+  assert.equal(cookies.has('derby-career-lifecycle-checkpoint-1'), false)
+  const largeLifecycle = { activeHorse: migrated.horse, archive: Array.from({ length: 8 }, (_, id) => ({ id, name: '보존할 은퇴마 기록'.repeat(15) })), funds: '₩42,800,000' }
+  writeLifecycleSave(largeLifecycle)
+  assert.deepEqual(readLifecycleSave(), largeLifecycle)
+  assert.equal(cookies.get('derby-career-lifecycle'), original)
+  rejectWrites = true
+  assert.throws(() => writeLifecycleSave({ ...largeLifecycle, funds: '₩0' }), /저장/)
+  assert.deepEqual(readLifecycleSave(), largeLifecycle)
+  rejectWrites = false
 })

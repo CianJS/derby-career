@@ -1,4 +1,5 @@
 import { assertCareer, type Career, type Horse, type Stat, labels, statKeys } from './model'
+import { readLifecycleSave } from './lifecycle-repository'
 
 const key = 'derby-career-lifecycle-checkpoint-1'
 function readCookie(name: string): string | null {
@@ -6,6 +7,15 @@ function readCookie(name: string): string | null {
 }
 function writeCookie(name: string, value: string, maxAge = 31536000) {
   document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
+}
+export function clearCareer(): void {
+  const pointer = readCookie(key)
+  writeCookie(key, '', 0)
+  if (readCookie(key)) throw new Error('육성 기록을 갱신하지 못했습니다.')
+  if (pointer) {
+    const [generation, count] = pointer.split('.')
+    for (let i = 0; i < Math.min(Number(count), 16); i++) writeCookie(`${key}-${generation}-${i}`, '', 0)
+  }
 }
 export function readCareer(): Career | null {
   const pointer = readCookie(key)
@@ -45,9 +55,8 @@ export function writeCareer(state: Career): void {
   }
 }
 function migrateLegacy(): Career | null {
-  const raw = readCookie('derby-career-lifecycle')
-  if (!raw) return null
-  const legacy = JSON.parse(decodeURIComponent(raw))
+  const legacy = readLifecycleSave() as { activeHorse?: { id: string; name: string; growth: string; growthNote?: string; age: string; stats: [string, number][]; aptitude?: string[][]; fatigue?: number; bodyLoad?: number; condition?: string; record?: string; prize?: string }; month?: number } | null
+  if (!legacy) return null
   if (!legacy.activeHorse) return null
   const old = legacy.activeHorse
   const stats = Object.fromEntries(statKeys.map(stat => [stat, old.stats?.find(([label]: [string, number]) => label === labels[stat])?.[1]])) as Record<Stat, number>

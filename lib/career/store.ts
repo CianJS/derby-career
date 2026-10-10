@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { advanceMonth, commitAction, resolveAction, startCareer, type Career, type Choice } from './model'
-import { readCareer, writeCareer } from './repository'
+import { clearCareer, readCareer, writeCareer } from './repository'
 
 type Snapshot = { ready: boolean; busy: boolean; career: Career | null; error: string | null }
 const initial: Snapshot = { ready: false, busy: false, career: null, error: null }
@@ -53,6 +53,18 @@ async function mutate(operation: (saved: Career | null) => Career | null) {
 export function useCareer() { return useSyncExternalStore(subscribe, () => snapshot, () => initial) }
 export const careerStore = {
   refresh,
+  release: async () => {
+    if (snapshot.busy) return false
+    publish({ busy: true, error: null })
+    try {
+      await locked(clearCareer)
+      publish({ career: null })
+      return true
+    } catch (error) {
+      publish({ error: error instanceof Error ? error.message : '저장에 실패했습니다.' })
+      return false
+    } finally { publish({ busy: false }) }
+  },
   select: (horseId: string) => mutate(saved => saved ?? startCareer(horseId)),
   commit: (choice: Choice, expectedMonth: number) => mutate(saved => {
     if (!saved || saved.month !== expectedMonth || saved.action) return saved

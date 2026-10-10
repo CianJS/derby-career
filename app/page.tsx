@@ -1,5 +1,5 @@
-import { CareerCheckpoint } from '@/components/career/checkpoint'
+import App from '@/components/legacy-career'
 
 export default function Page() {
-  return <CareerCheckpoint />
+  return <App />
 }
