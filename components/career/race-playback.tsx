@@ -123,7 +123,7 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
   const feed = useMemo(() => significantFeed(log, names, Math.floor(time / 500) * 500), [log, names, time])
   const race = run.raceDefinitionSnapshot
 
-  return <div className="mt-3">
+  return <div className="lab-playback mt-3">
     <header className="race-broadcast-header">
       <div>
         <h1 className="ui-page-title font-serif">{race.name}</h1>

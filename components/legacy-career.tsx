@@ -412,7 +412,7 @@ function Header({ setView }: { setView: (v: View) => void }) {
   const [menu, setMenu] = useState(false);
   const [note, setNote] = useState(false);
   return (
-    <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur">
+    <header className="lab-topbar sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-[1540px] items-center justify-between px-4 md:px-8">
         <button
           className="flex items-center gap-2 lg:hidden"
@@ -421,6 +421,7 @@ function Header({ setView }: { setView: (v: View) => void }) {
           <Crown size={18} />
           <span className="font-serif">DERBY CAREER</span>
         </button>
+        <div className="lab-topbar-mark hidden md:flex">RACING CLUB <span>/</span> <strong>DERBY CAREER</strong></div>
         <div className="ml-auto flex items-center gap-2 text-muted-foreground">
           <span className="hidden text-xs sm:block">₩42,800,000</span>
           <button
@@ -513,7 +514,7 @@ function Sidebar({
           ? "jockeys"
           : view;
   return (
-    <aside className="hidden w-[var(--layout-sidebar)] shrink-0 border-r border-border/70 bg-sidebar px-4 py-6 lg:block">
+    <aside className="lab-sidebar hidden w-[var(--layout-sidebar)] shrink-0 border-r border-border/70 bg-sidebar px-4 py-6 lg:block">
       <button
         onClick={() => setView("home")}
         className="mb-10 flex items-center gap-3 px-3"
@@ -554,7 +555,7 @@ function StableSetup({
   const [name, setName] = useState("");
   const [country, setCountry] = useState("대한민국");
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-12 md:py-16">
+    <div className="lab-stable-setup flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-12 md:py-16">
       <div className="w-full max-w-xl">
         <p className="font-mono text-[10px] tracking-[.32em] text-primary">
           DERBY CAREER
@@ -730,7 +731,7 @@ function CareerComplete({
   onNext: () => void;
 }) {
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-16">
+    <div className="lab-complete flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-16">
       <div className="w-full max-w-xl">
         <p className="ui-label text-primary">CAREER COMPLETE</p>
         <h1 className="mt-3 font-serif text-5xl">{horse.name}</h1>
@@ -781,7 +782,7 @@ function RetirementConfirm({
   onConfirm: () => void;
 }) {
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-16">
+    <div className="lab-retirement flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-16">
       <div className="w-full max-w-md border border-border bg-card p-7">
         <p className="ui-label text-primary">RETIREMENT</p>
         <h1 className="mt-3 font-serif text-3xl">은퇴하시겠습니까?</h1>
@@ -817,12 +818,12 @@ function Home({
   onNewCareer: () => void;
 }) {
   return (
-    <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-6 py-16">
+    <div className="lab-home relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-6 py-16">
       <div className="pointer-events-none absolute inset-0 opacity-40">
         <div className="absolute left-1/2 top-1/2 size-[680px] -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-[48%] border border-primary/20" />
         <div className="absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-[48%] border border-teal-400/10" />
       </div>
-      <div className="relative z-10 w-full max-w-5xl text-center">
+      <div className="lab-home-content relative z-10 w-full max-w-5xl text-center">
         <p className="font-mono text-[10px] tracking-[.42em] text-primary">
           RACING CAREER SIMULATION
         </p>
@@ -837,7 +838,7 @@ function Home({
         </p>
         <button
           onClick={() => setView(hasActiveHorse ? "training" : "candidates")}
-          className="group mx-auto mt-12 flex items-center gap-4 border-b border-primary pb-3 font-serif text-2xl hover:gap-6"
+          className="lab-home-primary group mx-auto mt-12 flex items-center gap-4 border-b border-primary pb-3 font-serif text-2xl hover:gap-6"
         >
           {hasActiveHorse ? "육성 계속" : "새 육성마 시작"}
           <ChevronRight className="text-primary" />
@@ -850,7 +851,7 @@ function Home({
             새 커리어 시작
           </button>
         )}
-        <div className="mx-auto mt-20 grid max-w-3xl border-y border-border/70 md:grid-cols-3">
+        <div className="lab-home-links mx-auto mt-20 grid max-w-3xl border-y border-border/70 md:grid-cols-3">
           {[
             ["stable", "마구간", "STABLE"],
             ["races", "경주 정보", "RACE DATABASE"],
@@ -1460,7 +1461,7 @@ function Management({
   children: ReactNode;
 }) {
   return (
-    <div className="ui-management ui-page flex flex-col gap-5">
+    <div className="lab-management ui-management ui-page flex flex-col gap-5">
       <div>
         <p className="font-mono text-[10px] tracking-[.22em] text-primary">
           {eyebrow}

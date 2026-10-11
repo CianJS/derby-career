@@ -56,7 +56,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
 
   const timeText = `${Math.floor(result.finishTime / 60)}:${(result.finishTime % 60).toFixed(2).padStart(5, '0')}`
   return <div className="mt-5 flex flex-col gap-5">
-    <section aria-label="결과 요약" className="ui-result-summary">
+    <section aria-label="결과 요약" className="lab-result-hero ui-result-summary">
       <div><span className="ui-label text-primary">{race.name}</span><p className="mt-2 font-serif text-primary">{result.placing}착</p><p className="mt-1 text-sm text-muted-foreground tabular-nums">{result.placing} / {run.runners.length}</p><p className="mt-2 text-sm font-medium">{horseName}</p></div>
       <div><span className="ui-metadata">기록</span><p className="mt-2 text-sm font-medium tabular-nums">{timeText}</p></div>
       <div><span className="ui-metadata">착차</span><p className="mt-2 text-sm font-medium tabular-nums">{result.placing === 1 ? '1착' : `1착과 ${result.marginToWinner.toFixed(2)}초`}</p></div>

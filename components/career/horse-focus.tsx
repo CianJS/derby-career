@@ -2,7 +2,7 @@ import { HeartPulse } from 'lucide-react'
 import { labels, statKeys, type Career } from '@/lib/career/model'
 
 export function HorseFocus({ career }: { career: Career }) {
-  return <section aria-labelledby="horse-focus" className="rounded-lg border border-border bg-card px-5 py-4">
+  return <section aria-labelledby="horse-focus" className="lab-horse-focus rounded-lg border border-border bg-card px-5 py-4">
     <p className="ui-label text-primary">HORSE IN FOCUS</p>
     <div className="mt-3 grid items-start gap-6 lg:grid-cols-[1fr_1.2fr_1fr]">
       <div><h2 id="horse-focus" className="font-serif text-2xl font-semibold">{career.horse.name}</h2><p className="mt-2 text-xs text-muted-foreground">{career.age}세 · 성장형 {career.horse.growth}</p><p className="mt-3 text-xs">{career.record} <span className="mx-2 text-muted-foreground">/</span> 누적 상금 {career.prize}</p></div>

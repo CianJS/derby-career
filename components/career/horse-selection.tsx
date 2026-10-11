@@ -18,7 +18,7 @@ export function HorseSelection({ busy }: { busy: boolean }) {
     <fieldset disabled={busy}>
       <legend className="sr-only">육성마 후보 비교</legend>
       <div className="grid gap-4 md:grid-cols-3">
-        {horses.map((horse, index) => <label key={horse.id} className={cn('relative flex cursor-pointer flex-col gap-4 rounded-lg border bg-card p-5 transition-colors focus-within:ring-2 focus-within:ring-ring', selected === horse.id ? 'ui-selected' : 'border-border hover:border-primary/50')}>
+        {horses.map((horse, index) => <label key={horse.id} className={cn('lab-horse-candidate relative flex cursor-pointer flex-col gap-4 rounded-lg border bg-card p-5 transition-colors focus-within:ring-2 focus-within:ring-ring', selected === horse.id ? 'ui-selected' : 'border-border hover:border-primary/50')}>
           <input className="sr-only" type="radio" name="horse" value={horse.id} checked={selected === horse.id} onChange={() => setSelected(horse.id)} />
           <div className="flex items-center justify-between text-xs"><span className="tracking-widest text-muted-foreground">CANDIDATE 0{index + 1}</span><span className={cn('flex size-5 items-center justify-center rounded-full border', selected === horse.id ? 'border-primary text-primary' : 'border-border')}>{selected === horse.id && <Check size={13} aria-hidden />}</span></div>
           <div><h2 className="font-serif text-2xl font-semibold">{horse.name}</h2><p className="mt-2 text-xs text-muted-foreground">2세 <span className="mx-2">·</span> 성장형 <span className="text-primary">{horse.growth}</span></p></div>

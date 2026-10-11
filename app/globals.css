@@ -311,3 +311,260 @@ button { cursor: pointer; min-height: 2.25rem; } button:disabled { cursor: not-a
 .race-board li em { padding:.05rem .3rem; border:1px solid var(--primary); border-radius:999px; font:600 .5rem/1.2 var(--font-sans); letter-spacing:.08em; font-style:normal; }
 .race-live-grid { grid-template-columns:minmax(16rem,.7fr) minmax(0,1.3fr); }
 @media (max-width: 800px) { .race-live-grid { grid-template-columns:1fr; } .race-phase-track li { font-size:.5rem; letter-spacing:.06em; } }
+
+
+/* DERBY CAREER — DERBY LAB visual direction.
+   Visual-only skin: do not import prototype game rules, actions, or sample race data.
+   Injected after globals.css so the original UI and state handling remain intact. */
+
+/* 01 — Palette, type, elevations */
+:root, .light {
+  color-scheme: light;
+  --background:#f3f1fa;
+  --foreground:#282942;
+  --card:#ffffff;
+  --card-foreground:#282942;
+  --popover:#ffffff;
+  --popover-foreground:#282942;
+  --primary:#6758c7;
+  --primary-foreground:#ffffff;
+  --secondary:#eeebff;
+  --secondary-foreground:#292943;
+  --muted:#efedf7;
+  --muted-foreground:#77778e;
+  --accent:#eeeaff;
+  --accent-foreground:#302c60;
+  --border:#dedae9;
+  --input:#d6d3e5;
+  --ring:#8171e2;
+  --rose:#ce527c;
+  --blue:#6471c9;
+  --sage:#4e8a78;
+  --sidebar:#282942;
+  --sidebar-foreground:#f7f5ff;
+  --lab-navy:#282942;
+  --lab-navy-mid:#353650;
+  --lab-lime:#dffa78;
+  --lab-purple:#8171e2;
+  --lab-lavender:#e9e6ff;
+  --lab-soft:#f8f7fd;
+  --lab-shadow:0 16px 40px rgba(49,42,91,.085);
+  --layout-sidebar:14.25rem;
+  --radius-lg:.9rem;
+  --radius-xl:1.1rem;
+  --radius-2xl:1.35rem;
+}
+.dark {
+  color-scheme:dark;
+  --background:#1d1e34;
+  --foreground:#f6f4ff;
+  --card:#292a43;
+  --card-foreground:#f6f4ff;
+  --popover:#30314d;
+  --popover-foreground:#f6f4ff;
+  --primary:#dffa78;
+  --primary-foreground:#282942;
+  --secondary:#353651;
+  --secondary-foreground:#f5f3ff;
+  --muted:#373851;
+  --muted-foreground:#b4b1ca;
+  --accent:#3e3d65;
+  --accent-foreground:#ffffff;
+  --border:#52516c;
+  --input:#66617d;
+  --ring:#dffa78;
+  --rose:#ff8fac;
+  --blue:#abb7ff;
+  --sage:#8ecab1;
+  --sidebar:#17182b;
+  --sidebar-foreground:#f6f4ff;
+  --lab-navy:#17182b;
+  --lab-navy-mid:#333550;
+  --lab-lime:#dffa78;
+  --lab-purple:#afa2ff;
+  --lab-lavender:#383659;
+  --lab-soft:#25263d;
+  --lab-shadow:0 16px 42px rgba(0,0,0,.2);
+}
+html { background:var(--background); }
+body { color:var(--foreground); background:var(--background); font-family:var(--font-sans); font-weight:500; letter-spacing:-.012em; }
+.font-serif { font-family:var(--font-sans)!important; letter-spacing:-.052em; }
+.font-mono { letter-spacing:.08em; }
+h1,h2,h3 { letter-spacing:-.055em; }
+.ui-page-title { font-size:clamp(1.6rem,2.3vw,2.25rem); font-weight:850; line-height:1.2; }
+.ui-label { color:var(--primary); font-family:var(--font-sans); font-size:.65rem; font-weight:900; letter-spacing:.17em; }
+.ui-metadata { color:var(--muted-foreground); font-weight:700; }
+::selection { background:var(--lab-lime); color:#282942; }
+
+/* 02 — Top navigation and management sidebar: retain existing navigation and contexts */
+.lab-topbar { background:color-mix(in srgb,var(--card) 94%,var(--background)); border-bottom:1px solid var(--border); box-shadow:0 2px 0 rgba(65,54,114,.02); }
+.lab-topbar > div { max-width:none; min-height:4.85rem; padding-inline:clamp(1.15rem,3vw,3rem); }
+.lab-topbar .lab-topbar-mark { display:flex; align-items:center; gap:.85rem; font-size:.64rem; letter-spacing:.18em; font-weight:900; color:var(--muted-foreground); }
+.lab-topbar .lab-topbar-mark::before { content:'◆'; color:var(--primary); font-size:1rem; }
+.lab-topbar .lab-topbar-mark strong { color:var(--foreground); letter-spacing:.03em; }
+.lab-topbar button[aria-label] { color:var(--foreground); border:1px solid transparent; }
+.lab-topbar button[aria-label]:hover { border-color:var(--border); background:var(--accent); }
+.lab-sidebar { background:var(--sidebar); border-right:0; box-shadow:8px 0 24px rgba(38,31,75,.05); padding-inline:1rem; }
+.lab-sidebar > button:first-child { margin-bottom:3rem; padding:.3rem .5rem; gap:.9rem; color:var(--sidebar-foreground); }
+.lab-sidebar > button:first-child > div:first-child { background:var(--lab-lime); color:#282942; border-radius:.8rem; box-shadow:3px 4px 0 #a896f2; transform:rotate(-6deg); }
+.lab-sidebar > button:first-child p:first-child { font-weight:900; letter-spacing:-.055em; font-size:.94rem; }
+.lab-sidebar > button:first-child p:last-child { color:#a9a7c8; font-weight:800; letter-spacing:.2em; font-size:.48rem; }
+.lab-sidebar nav { gap:.4rem; }
+.lab-sidebar nav button { border:1px solid transparent; border-radius:.75rem; min-height:2.85rem; padding-inline:.85rem; font-weight:780; color:#c9c8de; transition:transform .16s, background .16s; }
+.lab-sidebar nav button:hover { background:#3c3d5a; color:white; transform:translateX(2px); }
+.lab-sidebar nav button.border-primary { border:1px solid var(--lab-lime)!important; background:var(--lab-lime)!important; color:#282942!important; box-shadow:3px 3px 0 #7765bb; }
+.lab-sidebar nav button.border-primary svg { color:#282942!important; }
+
+/* 03 — Shared interactive surfaces and typography */
+[data-slot="button"].bg-primary, button.bg-primary { background:var(--lab-lime); color:#282942; border-color:var(--lab-lime); font-weight:850; box-shadow:3px 3px 0 rgba(132,123,192,.38); }
+[data-slot="button"].bg-primary:hover,button.bg-primary:hover { background:#d4f66c; border-color:#d4f66c; }
+[data-slot="button"] { border-radius:.75rem; padding-inline:1rem; }
+[data-slot="button"]:focus-visible,button:focus-visible,label:focus-within { outline-offset:3px; }
+button:disabled, [aria-disabled="true"] { cursor:not-allowed; }
+input, select, textarea { background-color:transparent; color:var(--foreground); }
+input::placeholder { color:var(--muted-foreground); }
+.ui-selected { background:var(--lab-lavender)!important; border:2px solid var(--primary)!important; box-shadow:4px 4px 0 color-mix(in srgb,var(--lab-purple) 39%,transparent); }
+.ui-section, .lab-horse-focus, .lab-monthly, .lab-entry fieldset, .lab-entry section[aria-label="출전 요약"], .lab-management .rounded-xl.border.bg-card {
+  border:1px solid var(--border); border-radius:1.15rem; background:var(--card); box-shadow:var(--lab-shadow);
+}
+.ui-section { padding:1.3rem 1.4rem; }
+.ui-section h2 { font-weight:850; }
+.ui-important-value, [data-stat] { font-weight:900; }
+.ui-table-row:hover, .ui-compact-table button:hover { background:var(--accent); }
+.ui-dense-toolbar [role="combobox"], .lab-management summary, .lab-management select { border-radius:.75rem; }
+.ui-error-state { border:1px solid color-mix(in srgb,var(--rose) 50%,var(--border)); border-radius:.8rem; background:color-mix(in srgb,var(--rose) 8%,var(--card)); }
+
+/* 04 — HOME is still a lobby, not the management dashboard. */
+.lab-home { background:radial-gradient(circle at 15% 10%,rgba(174,152,255,.14),transparent 34%),var(--background); }
+.lab-home .lab-home-content { max-width:61rem; padding:clamp(2rem,5vw,3.5rem); border-radius:2rem; background:var(--card); box-shadow:0 22px 60px rgba(49,42,91,.095); }
+.lab-home-content > p:first-child { font-family:var(--font-sans); color:var(--primary); font-weight:900; letter-spacing:.3em; }
+.lab-home-content > h1 { color:var(--lab-navy); font-family:var(--font-sans); font-weight:1000; letter-spacing:-.085em; line-height:.9; }
+.dark .lab-home-content > h1 { color:var(--foreground); }
+.lab-home-content > h1 span { color:var(--primary)!important; }
+.lab-home-primary { margin-top:2.3rem; border:0!important; padding:.95rem 1.55rem!important; border-radius:.9rem; background:var(--lab-lime); color:#282942; font-family:var(--font-sans); font-size:1.15rem; font-weight:900; box-shadow:4px 5px 0 #b9a9e5; }
+.lab-home-primary svg { color:#282942!important; }
+.lab-home-primary:hover { transform:translateY(-2px); }
+.lab-home-links { margin-top:3.2rem; border:0!important; gap:.8rem; }
+.lab-home-links > button { border:1px solid var(--border)!important; border-radius:1rem; background:var(--lab-soft); padding:1.4rem!important; transition:transform .15s, box-shadow .15s; }
+.lab-home-links > button:hover { background:var(--lab-lavender); transform:translateY(-3px); box-shadow:0 8px 0 rgba(130,110,207,.15); }
+.lab-home-links > button > p:nth-child(2) { color:var(--foreground); font-weight:850; }
+
+/* 05 — Monthly training remains the one-action system. Visual cards are NOT playable resources. */
+.lab-training > div { max-width:90rem; }
+.lab-training > div > .mb-6 h1 { font-size:clamp(2rem,3vw,2.85rem); font-weight:900; letter-spacing:-.065em; }
+.lab-horse-focus { position:relative; padding:1.45rem 1.5rem; overflow:hidden; }
+.lab-horse-focus::before { content:''; position:absolute; right:-2rem; top:-3rem; width:14rem; height:14rem; border-radius:50%; background:color-mix(in srgb,var(--lab-purple) 14%,transparent); pointer-events:none; }
+.lab-horse-focus > .grid { position:relative; }
+.lab-horse-focus h2 { font-size:clamp(1.5rem,2vw,2.2rem); font-weight:950; }
+.lab-horse-focus [data-stat] { color:var(--foreground); }
+.lab-horse-focus dl div[aria-hidden] { height:.48rem; border-radius:99px; background:var(--muted); }
+.lab-horse-focus dl div[aria-hidden] > div { height:100%; border-radius:99px; background:var(--lab-purple); }
+.lab-horse-focus > .border-t { margin-top:1.15rem; padding-top:1rem; }
+.lab-monthly { padding:1.5rem; }
+.lab-monthly h2 { font-size:1.45rem; font-weight:900; }
+.lab-monthly .lab-training-deck { gap:.75rem; }
+.lab-monthly .lab-training-card { min-height:10.8rem; justify-content:space-between; gap:.8rem; background:var(--lab-soft); border:1px solid var(--border); border-radius:.9rem; padding:1rem; transition:transform .17s, box-shadow .17s, border-color .17s; }
+.lab-monthly .lab-training-card:not([aria-disabled="true"]):hover { transform:translateY(-3px); border-color:var(--lab-purple); box-shadow:0 7px 0 color-mix(in srgb,var(--lab-purple) 15%,transparent); }
+.lab-training-card svg { width:1.35rem; height:1.35rem; color:var(--primary); }
+.lab-training-card span.text-sm { font-size:1rem; font-weight:900; }
+.lab-monthly .lab-training-card.ui-selected { background:var(--lab-lavender)!important; }
+.lab-monthly fieldset > div.mt-2 label { min-height:4.2rem; border:1px solid var(--border); border-radius:.9rem; background:var(--lab-soft); }
+.lab-monthly fieldset > div.mt-2 label:hover { background:var(--lab-lavender); }
+.lab-monthly > div[aria-live="polite"], .lab-monthly > div.mt-4[aria-live="polite"] { border:1px solid var(--lab-navy); border-radius:.9rem; background:var(--lab-navy); padding:1.15rem; color:#fff; }
+.lab-monthly > div[aria-live="polite"] .text-muted-foreground, .lab-monthly > div.mt-4[aria-live="polite"] .text-muted-foreground { color:#c8c7dd; }
+.lab-monthly > div[aria-live="polite"] .text-primary { color:var(--lab-lime); }
+.lab-monthly > div[aria-live="polite"] .text-sage { color:#a7e5c4; }
+.lab-monthly > div[aria-live="polite"] .text-rose { color:#ff9fc0; }
+.lab-monthly aside[aria-label="다음 달 주요 출전 기회"] { background:color-mix(in srgb,var(--lab-lime) 24%,var(--card)); border:1px solid color-mix(in srgb,var(--lab-lime) 65%,var(--border)); border-radius:.9rem; padding:1rem; }
+.lab-training section[aria-labelledby="recent-activity"] { background:var(--card); border-radius:1.1rem; border:1px solid var(--border); padding:1.25rem; box-shadow:var(--lab-shadow); }
+.lab-horse-candidate { border-radius:1.2rem; background:var(--card); box-shadow:var(--lab-shadow); }
+.lab-horse-candidate:hover { border-color:var(--lab-purple); transform:translateY(-2px); }
+.lab-horse-candidate.ui-selected { background:var(--lab-lavender)!important; }
+.lab-horse-candidate dl [aria-hidden] { border-radius:99px; }
+.lab-horse-candidate dl [aria-hidden] > div { background:var(--lab-purple); border-radius:99px; }
+@media(min-width:1050px){ .lab-training-deck { grid-template-columns:repeat(3,minmax(0,1fr))!important; } }
+
+/* 06 — Race Entry: existing race/jockey/tactic single workspace, no prototype game mechanics */
+.lab-entry { gap:1rem; }
+.lab-entry > header { padding:1rem 0; }
+.lab-entry h1 { font-weight:950; }
+.lab-entry > section[aria-label="현재 육성마"] { border:1px solid var(--border); border-radius:1rem; background:var(--lab-lavender); padding:1.25rem; }
+.lab-entry fieldset { min-width:0; padding:1.2rem; }
+.lab-entry fieldset legend { padding-inline:.5rem; font-weight:900; font-size:.98rem; }
+.lab-entry fieldset label { border-radius:.85rem; background:var(--lab-soft); border:1px solid var(--border); }
+.lab-entry fieldset label:hover { background:var(--lab-lavender); }
+.lab-entry fieldset label:has(input:checked) { background:var(--lab-lavender); border:2px solid var(--primary); box-shadow:3px 3px 0 color-mix(in srgb,var(--lab-purple) 35%,transparent); }
+.lab-entry fieldset input[type="radio"] { accent-color:var(--primary); }
+.lab-entry section[aria-label="출전 요약"] { background:var(--lab-navy); border-color:var(--lab-navy); color:#fff; padding:1.3rem; }
+.lab-entry section[aria-label="출전 요약"] .text-muted-foreground { color:#c5c4d6; }
+.lab-entry section[aria-label="출전 요약"] .text-primary { color:var(--lab-lime); }
+
+/* 07 — Playback: same simulation log, same strip/board/feed; visual treatment only */
+.lab-playback .race-broadcast-header { align-items:center; }
+.lab-playback .race-broadcast-header h1 { font-size:clamp(1.6rem,2.7vw,2.3rem); font-weight:900; }
+.lab-playback .race-strip { border:1px solid #44466b; border-radius:1.1rem; background:linear-gradient(145deg,#262842,#363957); box-shadow:var(--lab-shadow); }
+.lab-playback .race-strip-lanes { background:repeating-linear-gradient(to bottom,transparent 0 calc(100%/var(--strip-rows) - 1px),rgba(200,204,242,.16) calc(100%/var(--strip-rows) - 1px) calc(100%/var(--strip-rows))); }
+.lab-playback .race-strip-runner b { color:#e9e4ff; background:#5d5d9f; border-color:#a7a1f5; }
+.lab-playback .race-strip-runner.is-player b { background:var(--lab-lime); color:#262640; border-color:var(--lab-lime); box-shadow:0 0 0 4px rgba(223,250,120,.22); }
+.lab-playback .race-strip-runner.is-player span { color:#282942; background:var(--lab-lime); border-color:var(--lab-lime); font-weight:900; }
+.lab-playback .race-strip-finish { background:repeating-linear-gradient(0deg,#dffa78 0 6px,transparent 6px 12px); }
+.lab-playback .race-phase-track li.active { color:var(--primary); font-weight:900; }
+.lab-playback .race-ranking-panel { border-radius:1rem; background:var(--card); border:1px solid var(--border); overflow:hidden; box-shadow:var(--lab-shadow); }
+.lab-playback .race-ranking-panel .panel-title { font-family:var(--font-sans); font-weight:900; color:var(--primary); background:var(--lab-soft); }
+.lab-playback .race-board li.player { color:var(--foreground); background:var(--lab-lavender); box-shadow:inset 3px 0 var(--primary); }
+.lab-playback .race-board li.player b { color:var(--primary); }
+.lab-playback .race-board li.player s { background:var(--lab-purple); }
+.lab-playback .race-board li em { color:var(--primary); border-color:var(--primary); }
+.lab-playback .race-board li b { color:var(--muted-foreground); }
+.lab-playback .race-board li s { background:#a9a4d5; }
+
+/* 08 — Result and archive: sports score typography, not new reward systems */
+.lab-result-hero { border-radius:1.4rem; overflow:hidden; border:1px solid var(--lab-lime); background:var(--lab-lime); color:#282942; box-shadow:var(--lab-shadow); }
+.lab-result-hero > * { border-bottom-color:rgba(40,41,66,.25); }
+.lab-result-hero > :first-child { background:rgba(255,255,255,.25); border-radius:.8rem; }
+.lab-result-hero .text-primary { color:#333053!important; }
+.lab-result-hero .text-muted-foreground, .lab-result-hero .ui-metadata { color:#5b6060!important; }
+.lab-result-hero > :first-child p.font-serif { font-size:clamp(2.7rem,5.4vw,4.7rem); font-weight:1000; line-height:.95; }
+.lab-result-hero p.tabular-nums { font-weight:850; }
+.lab-management > div:first-child h1 { font-size:clamp(1.65rem,2.5vw,2.25rem); font-weight:950; }
+.lab-management .ui-section { background:var(--card); border-radius:1.1rem; }
+.lab-management .rounded-xl.border.bg-card { transition:transform .17s,box-shadow .17s; }
+.lab-management button.rounded-xl.border.bg-card:hover { transform:translateY(-2px); box-shadow:0 12px 22px rgba(49,42,91,.1); }
+.lab-management .overflow-hidden { border-radius:1rem; background:var(--card); }
+.lab-management .overflow-hidden > div:first-child { background:var(--lab-lavender); }
+.lab-management .ui-page-title,.lab-management .font-serif { font-weight:900; }
+.lab-management button.border-b:hover { background:var(--accent); }
+.lab-management input, .lab-management select { color:var(--foreground); }
+.lab-management [class*="bg-primary/20"] { background:var(--lab-lavender); }
+.lab-management details, .lab-management .ui-section { overflow:visible; }
+
+
+/* 08b — Setup and retirement flows receive the same visual shell, without new steps */
+.lab-stable-setup > div,.lab-complete > div,.lab-retirement > div { background:var(--card); border:1px solid var(--border); border-radius:1.5rem; box-shadow:var(--lab-shadow); padding:clamp(1.5rem,3vw,2.4rem); }
+.lab-stable-setup h1,.lab-complete h1,.lab-retirement h1 { font-weight:950; letter-spacing:-.07em; }
+.lab-stable-setup input,.lab-stable-setup select { background:var(--lab-soft); border:1px solid var(--border); border-radius:.75rem; padding:1rem; }
+.lab-stable-setup > div > button.bg-primary,.lab-complete > div > button.bg-primary { background:var(--lab-lime); color:#282942; font-weight:900; border:1px solid var(--lab-lime); box-shadow:3px 3px 0 #b9a9e5; }
+.lab-retirement > div > div:last-child > button:last-child { background:color-mix(in srgb,var(--rose) 12%,var(--card)); border:1px solid var(--rose); border-radius:.75rem; color:var(--rose); font-weight:850; }
+.lab-retirement > div > div:last-child > button:last-child:hover { background:color-mix(in srgb,var(--rose) 19%,var(--card)); }
+
+/* 09 — Dark theme and small screens remain usable, no layout or state changes */
+.dark .lab-home-links > button { background:#343550; }
+.dark .lab-home-content > h1 span { color:var(--lab-lime)!important; }
+.dark .lab-horse-focus::before { opacity:.5; }
+.dark .lab-result-hero { background:var(--lab-lime); color:#282942; }
+.dark .lab-monthly > div[aria-live="polite"] { border-color:#626080; }
+@media (max-width:1023px){ .lab-sidebar{ display:none; } .lab-entry fieldset { padding:1rem; } }
+@media (max-width:720px){
+  .lab-topbar > div { min-height:4rem; padding-inline:1rem; }
+  .lab-home { padding:2rem 1rem; }
+  .lab-home .lab-home-content { padding:2rem 1.2rem; border-radius:1.35rem; }
+  .lab-home-content > h1 { font-size:clamp(3rem,15vw,5rem); }
+  .lab-home-links { margin-top:2rem; }
+  .lab-home-links > button { padding:1rem!important; }
+  .lab-monthly,.lab-horse-focus{ padding:1rem; }
+  .lab-monthly .lab-training-card { min-height:9.5rem; }
+  .lab-result-hero > :first-child p.font-serif{ font-size:3.3rem; }
+  .lab-playback .race-broadcast-header{ align-items:flex-start; }
+}
+@media(prefers-reduced-motion:reduce){ .lab-training-card,.lab-horse-candidate,.lab-home-links > button { transition:none!important; transform:none!important; } }
+
