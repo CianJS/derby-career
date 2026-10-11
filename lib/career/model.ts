@@ -1,4 +1,6 @@
 import { assertRaceRun, type RaceRunInput } from './race-entry'
+import { BALANCE } from './balance'
+import { deriveCondition, isHealthy, rollsInjury } from './status'
 
 export const statKeys = ['speed', 'stamina', 'power', 'guts', 'intelligence'] as const
 export type Stat = typeof statKeys[number]
@@ -13,15 +15,17 @@ export const horses: Horse[] = [
   { id: 'DEV_HORSE_NORTHERN_RIVER', name: '노던 리버', growth: '만성', description: '지구력과 후반 버티기가 강점인 중·장거리형', stats: { speed: 470, stamina: 590, power: 480, guts: 560, intelligence: 455 }, aptitude: aptitudes('ADCAADCAA') },
 ]
 export const trainings: Record<Stat, { name: string; secondary?: Stat; preview: string; fatigue: number; bodyLoad: number; fatigueLabel: string; loadLabel: string }> = {
-  speed: { name: '스피드 훈련', secondary: 'power', preview: '속도 ↑↑ · 파워 ↑', fatigue: 13, bodyLoad: 13, fatigueLabel: '보통', loadLabel: '높음' },
-  stamina: { name: '스태미나 훈련', secondary: 'guts', preview: '지구력 ↑↑ · 근성 ↑', fatigue: 16, bodyLoad: 8, fatigueLabel: '높음', loadLabel: '보통' },
-  power: { name: '파워 훈련', secondary: 'speed', preview: '파워 ↑↑ · 속도 ↑', fatigue: 13, bodyLoad: 13, fatigueLabel: '보통', loadLabel: '높음' },
-  guts: { name: '근성 훈련', secondary: 'stamina', preview: '근성 ↑↑ · 지구력 ↑', fatigue: 16, bodyLoad: 10, fatigueLabel: '높음', loadLabel: '보통~높음' },
-  intelligence: { name: '지능 훈련', preview: '지능 ↑↑', fatigue: 6, bodyLoad: 4, fatigueLabel: '낮음', loadLabel: '낮음' },
+  speed: { name: '스피드 훈련', secondary: 'power', preview: '속도 ↑↑ · 파워 ↑', ...BALANCE.training.cost.speed, fatigueLabel: '보통', loadLabel: '높음' },
+  stamina: { name: '스태미나 훈련', secondary: 'guts', preview: '지구력 ↑↑ · 근성 ↑', ...BALANCE.training.cost.stamina, fatigueLabel: '높음', loadLabel: '보통' },
+  power: { name: '파워 훈련', secondary: 'speed', preview: '파워 ↑↑ · 속도 ↑', ...BALANCE.training.cost.power, fatigueLabel: '보통', loadLabel: '높음' },
+  guts: { name: '근성 훈련', secondary: 'stamina', preview: '근성 ↑↑ · 지구력 ↑', ...BALANCE.training.cost.guts, fatigueLabel: '높음', loadLabel: '보통~높음' },
+  intelligence: { name: '지능 훈련', preview: '지능 ↑↑', ...BALANCE.training.cost.intelligence, fatigueLabel: '낮음', loadLabel: '낮음' },
 }
-export type Choice = Stat | 'rest'
+export type Choice = Stat | 'rest' | 'treatment'
+export type ActionType = 'training' | 'rest' | 'treatment'
 export type Change = { key: keyof Values; before: number; after: number }
-export type ActionRecord = { actionId: string; horseId: string; month: number; actionType: 'training' | 'rest'; trainingType: Stat | null; seed: number; result: Change[] | null }
+export type StatusChange = { key: 'condition' | 'health'; before: string; after: string }
+export type ActionRecord = { actionId: string; horseId: string; month: number; actionType: ActionType; trainingType: Stat | null; seed: number; result: Change[] | null; statusChanges?: StatusChange[] }
 export type GameTime = { calendarDate: { year: number; month: number }; careerTurnIndex: number }
 import { summarizeRecords, type HorseRaceRecord } from './records'
 export type { HorseRaceRecord } from './records'
@@ -65,47 +69,64 @@ export function hashSeed(text: string): number {
 }
 export function commitAction(state: Career, choice: Choice): Career {
   if (state.action || state.raceRun) return state
-  if (choice !== 'rest' && !statKeys.includes(choice)) throw new Error('지원하지 않는 행동입니다.')
+  const isTraining = choice !== 'rest' && choice !== 'treatment'
+  if (isTraining && !statKeys.includes(choice)) throw new Error('지원하지 않는 행동입니다.')
+  if (isTraining && !isHealthy(state.health)) throw new Error('부상 중에는 훈련할 수 없습니다. 휴식하거나 치료를 선택해 주세요.')
+  if (choice === 'treatment' && isHealthy(state.health)) throw new Error('치료할 부상이 없습니다.')
   const actionId = `${state.horse.id}:month-${state.month}`
-  return { ...state, action: { actionId, horseId: state.horse.id, month: state.month, actionType: choice === 'rest' ? 'rest' : 'training', trainingType: choice === 'rest' ? null : choice, seed: hashSeed(`${actionId}:${choice}:v1`), result: null } }
+  return { ...state, action: { actionId, horseId: state.horse.id, month: state.month, actionType: isTraining ? 'training' : choice, trainingType: isTraining ? choice : null, seed: hashSeed(`${actionId}:${choice}:v1`), result: null } }
 }
 export function resolveAction(state: Career): Career {
   const action = state.action
   if (!action || action.result !== null) return state
   const deltas: Partial<Values> = {}
+  let health = state.health
   if (action.actionType === 'rest') {
-    deltas.fatigue = -35
-    deltas.bodyLoad = -25
+    deltas.fatigue = BALANCE.rest.fatigue
+    deltas.bodyLoad = BALANCE.rest.bodyLoad
+  } else if (action.actionType === 'treatment') {
+    deltas.fatigue = BALANCE.treatment.fatigue
+    deltas.bodyLoad = BALANCE.treatment.bodyLoad
+    if (!isHealthy(health)) health = BALANCE.treatment.healthAfter
   } else {
     const type = action.trainingType!
     const training = trainings[type]
-    deltas[type] = 14 + action.seed % 5
-    if (training.secondary) deltas[training.secondary] = 4 + (action.seed >>> 8) % 3
+    const { primary, secondary } = BALANCE.training
+    deltas[type] = primary.base + action.seed % primary.spread
+    if (training.secondary) deltas[training.secondary] = secondary.base + (action.seed >>> 8) % secondary.spread
     deltas.fatigue = training.fatigue
     deltas.bodyLoad = training.bodyLoad
+    if (rollsInjury(state.values, action.seed)) health = BALANCE.injury.health
   }
   const values = { ...state.values }
   const result: Change[] = []
   for (const key of Object.keys(deltas) as (keyof Values)[]) {
     const before = values[key]
-    const after = Math.max(0, before + deltas[key]!)
+    const after = Math.min(statKeys.includes(key as Stat) ? BALANCE.maxStat : Infinity, Math.max(0, before + deltas[key]!))
     values[key] = after
     if (before !== after) result.push({ key, before, after })
   }
-  return { ...state, values, action: { ...action, result } }
+  const condition = deriveCondition(values, health)
+  const statusChanges: StatusChange[] = []
+  if (health !== state.health) statusChanges.push({ key: 'health', before: state.health, after: health })
+  if (condition !== state.condition) statusChanges.push({ key: 'condition', before: state.condition, after: condition })
+  return { ...state, values, health, condition, action: { ...action, result, statusChanges } }
 }
 export function advanceMonth(state: Career, expectedActionId: string): Career {
   if (state.raceRun || !state.action || state.action.actionId !== expectedActionId || state.action.result === null) return state
   return { ...state, ...nextTime(state), action: null, recent: [state.action, ...state.recent].slice(0, 3) }
 }
-export function actionName(action: ActionRecord): string { return action.actionType === 'rest' ? '휴식' : trainings[action.trainingType!].name }
+export function actionName(action: ActionRecord): string { return action.actionType === 'rest' ? '휴식' : action.actionType === 'treatment' ? '치료' : trainings[action.trainingType!].name }
 export function changeText(change: Change): string { const delta = change.after - change.before; return `${labels[change.key]} ${delta > 0 ? '+' : ''}${delta}` }
+export const statusLabels: Record<StatusChange['key'], string> = { condition: '컨디션', health: '건강' }
+export function statusChangeText(change: StatusChange): string { return `${statusLabels[change.key]} ${change.before} → ${change.after}` }
+export function actionSummary(action: ActionRecord): string { return [...(action.result ?? []).map(changeText), ...(action.statusChanges ?? []).map(statusChangeText)].join(' / ') || '변경 없음' }
 export function assertCareer(value: unknown): asserts value is Career {
   const state = value as Career
   if (!state || state.version !== 1 || !state.horse?.id || !state.horse.name || !Array.isArray(state.horse.aptitude) || !Array.isArray(state.contractedJockeyIds) || !Number.isInteger(state.month) || state.month < 1 || !state.calendarDate || !Number.isInteger(state.calendarDate.year) || !Number.isInteger(state.calendarDate.month) || state.calendarDate.month < 1 || state.calendarDate.month > 12 || !Number.isInteger(state.careerTurnIndex) || state.careerTurnIndex < 1 || !Array.isArray(state.raceRecords) || !state.values || !Array.isArray(state.recent) || state.recent.length > 3) throw new Error('저장된 육성 데이터를 읽을 수 없습니다. 기존 저장은 유지됩니다.')
   for (const key of [...statKeys, 'fatigue', 'bodyLoad'] as (keyof Values)[]) if (!Number.isFinite(state.values[key]) || state.values[key] < 0) throw new Error('저장된 능력치가 유효하지 않습니다.')
   if (state.raceRun !== undefined) assertRaceRun(state.raceRun, state)
   for (const action of [...state.recent, ...(state.action ? [state.action] : [])]) {
-    if (!action.actionId || action.horseId !== state.horse.id || !Number.isInteger(action.month) || !Number.isInteger(action.seed) || !['training', 'rest'].includes(action.actionType) || (action.actionType === 'training' && !statKeys.includes(action.trainingType!)) || (action.result !== null && (!Array.isArray(action.result) || action.result.some(c => !(c.key in labels) || !Number.isFinite(c.before) || !Number.isFinite(c.after))))) throw new Error('저장된 행동 기록이 유효하지 않습니다.')
+    if (!action.actionId || action.horseId !== state.horse.id || !Number.isInteger(action.month) || !Number.isInteger(action.seed) || !['training', 'rest', 'treatment'].includes(action.actionType) || (action.actionType === 'training' && !statKeys.includes(action.trainingType!)) || (action.result !== null && (!Array.isArray(action.result) || action.result.some(c => !(c.key in labels) || !Number.isFinite(c.before) || !Number.isFinite(c.after)))) || (action.statusChanges !== undefined && (!Array.isArray(action.statusChanges) || action.statusChanges.some(c => !(c.key in statusLabels) || typeof c.before !== 'string' || typeof c.after !== 'string')))) throw new Error('저장된 행동 기록이 유효하지 않습니다.')
   }
 }

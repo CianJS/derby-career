@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { actionName, changeText } from '@/lib/career/model'
+import { actionName, actionSummary } from '@/lib/career/model'
 import { careerStore, useCareer } from '@/lib/career/store'
 import { HorseSelection } from './horse-selection'
 import { HorseFocus } from './horse-focus'
@@ -11,7 +11,7 @@ export function CareerCheckpoint({ onHome, onHorse, raceEntry, horseSummary }: {
   const { ready, career, busy, error } = useCareer()
   const activities = career ? [
     ...career.raceRecords.map(record => ({ key: `race-${record.raceRunId ?? record.date}`, month: record.month ?? 0, label: record.month ? `Month ${record.month}` : record.date, title: `${record.race} · ${record.result}`, detail: `상금 ₩${(record.prizeMoney ?? 0).toLocaleString('ko-KR')}`, race: true })),
-    ...[...(career.action?.result ? [career.action] : []), ...career.recent].map(action => ({ key: action.actionId, month: action.month, label: `Month ${action.month}`, title: actionName(action), detail: action.result?.map(changeText).join(' / ') || '변경 없음', race: false })),
+    ...[...(career.action?.result ? [career.action] : []), ...career.recent].map(action => ({ key: action.actionId, month: action.month, label: `Month ${action.month}`, title: actionName(action), detail: actionSummary(action), race: false })),
   ].sort((a, b) => b.month - a.month || Number(b.race) - Number(a.race)).slice(0, 3) : []
   return <div className="training-workspace pb-4"><div className="mx-auto max-w-[1380px] px-4 py-7 md:px-8">
     <button onClick={onHome} className="mb-5 text-xs text-muted-foreground">← 홈</button>
