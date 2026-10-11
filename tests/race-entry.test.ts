@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { applyRaceResult, advanceMonth, assertCareer, commitAction, horses, resolveAction, startCareer } from '../lib/career/model'
-import { contractedJockeys, entryRestriction, lockRaceEntry, raceDefinitions, ridingFit, type RaceEntryDraft } from '../lib/career/race-entry'
+import { contractedJockeys, entryRestriction, lockRaceEntry, raceDefinitions, raceEligibility, ridingFit, type RaceEntryDraft } from '../lib/career/race-entry'
 import { readCareer, writeCareer } from '../lib/career/repository'
 import { applyCareer } from '../lib/career/lifecycle'
 import { summarizeRecords } from '../lib/career/records'
@@ -11,7 +11,9 @@ const month3 = () => ({ ...startCareer(horses[1].id), month: 3, careerTurnIndex:
 test('only healthy maiden horses in month three may enter, irrespective of aptitude', () => {
   assert.match(entryRestriction({ ...month3(), month: 2, careerTurnIndex: 2 })!, /3개월/)
   assert.match(entryRestriction({ ...month3(), health: '부상' })!, /건강/)
-  assert.match(entryRestriction({ ...month3(), record: '1전 1승' })!, /미승리/)
+  const winner = { ...month3(), raceRecords: [{ race: '기록', result: '1착', date: '2028.05', placing: 1 }] }
+  assert.match(raceEligibility(winner, raceDefinitions[1])!, /미승리/)
+  assert.match(entryRestriction(winner)!, /출전할 수 있는 경주가 없습니다/)
   assert.equal(entryRestriction(month3()), null)
   assert.equal(entryRestriction({ ...month3(), health: 'HEALTHY' }), null)
   const state = month3()
@@ -56,7 +58,7 @@ test('all runner snapshots fit existing cookie repository and round-trip without
   cookies.set('derby-career-lifecycle-checkpoint-1', `legacy.${chunks.length}`)
   chunks.forEach((chunk, i) => cookies.set(`derby-career-lifecycle-checkpoint-1-legacy-${i}`, chunk))
   assert.deepEqual(readCareer(), legacy)
-  for (const race of raceDefinitions) {
+  for (const race of raceDefinitions.filter(r => r.month === 3)) {
     const locked = lockRaceEntry(month3(), { ...draft, raceId: race.id })
     writeCareer(locked)
     assert.deepEqual(readCareer(), locked)
