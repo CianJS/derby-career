@@ -1,13 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { advanceMonth, assertCareer, commitAction, horses, resolveAction, startCareer } from '../lib/career/model'
+import { applyRaceResult, advanceMonth, assertCareer, commitAction, horses, resolveAction, startCareer } from '../lib/career/model'
 import { contractedJockeys, entryRestriction, lockRaceEntry, raceDefinitions, ridingFit, type RaceEntryDraft } from '../lib/career/race-entry'
 import { readCareer, writeCareer } from '../lib/career/repository'
+import { applyCareer } from '../lib/career/lifecycle'
+import { summarizeRecords } from '../lib/career/records'
 
 const draft: RaceEntryDraft = { raceId: raceDefinitions[1].id, jockeyId: contractedJockeys[2].id, tactic: '선입' }
-const month3 = () => ({ ...startCareer(horses[1].id), month: 3 })
+const month3 = () => ({ ...startCareer(horses[1].id), month: 3, careerTurnIndex: 3 })
 test('only healthy maiden horses in month three may enter, irrespective of aptitude', () => {
-  assert.match(entryRestriction({ ...month3(), month: 2 })!, /3개월/)
+  assert.match(entryRestriction({ ...month3(), month: 2, careerTurnIndex: 2 })!, /3개월/)
   assert.match(entryRestriction({ ...month3(), health: '부상' })!, /건강/)
   assert.match(entryRestriction({ ...month3(), record: '1전 1승' })!, /미승리/)
   assert.equal(entryRestriction(month3()), null)
@@ -15,7 +17,7 @@ test('only healthy maiden horses in month three may enter, irrespective of aptit
   const state = month3()
   state.horse = { ...state.horse, aptitude: state.horse.aptitude.map(([name]) => [name, 'D']) }
   assert.ok(lockRaceEntry(state, draft).raceRun)
-  assert.throws(() => lockRaceEntry({ ...month3(), month: 2 }, draft))
+  assert.throws(() => lockRaceEntry({ ...month3(), month: 2, careerTurnIndex: 2 }, draft))
   assert.throws(() => lockRaceEntry({ ...month3(), health: '부상' }, draft))
 })
 test('draft selection is not a monthly commitment and incomplete selections are rejected', () => {
@@ -66,6 +68,28 @@ test('all runner snapshots fit existing cookie repository and round-trip without
     assert.deepEqual(readCareer(), locked)
     rejectWrites = false
   }
+})
+test('race records are empty initially and result application is idempotent across save reloads', () => {
+  const locked = lockRaceEntry(month3(), draft)
+  assert.deepEqual(locked.raceRecords, [])
+  const runId = locked.raceRun!.raceRunId
+  const finished = applyRaceResult(locked, runId, 2, 3000000)
+  assert.equal(finished.raceRecords.length, 1)
+  assert.equal(finished.record, '1전 0승')
+  assert.equal(finished.prize, '₩3,000,000')
+  assert.equal(finished.raceRecords[0].jockeyId, draft.jockeyId)
+  const lifecycle = applyCareer<{ activeHorse: { id: string; name: string; age: string; sex: string; growth: string; growthNote: string; stats: [string, number][]; aptitude: [string, string, string][]; record: string; best: string; prize: string } | null; month: number }>({ activeHorse: null, month: 3 }, finished)
+  assert.equal(lifecycle.activeHorse!.record, summarizeRecords(finished.raceRecords).record)
+  assert.equal(lifecycle.activeHorse!.prize, finished.prize)
+  assert.equal(lifecycle.activeHorse!.best, summarizeRecords(finished.raceRecords).best)
+  assert.equal(applyRaceResult(finished, runId, 1, 9999), finished)
+  writeCareer(finished)
+  const restored = readCareer()!
+  assert.equal(applyRaceResult(restored, runId, 2, 3000000).raceRecords.length, 1)
+  assert.throws(() => applyRaceResult(locked, 'different-run', 2, 3000000))
+})
+test('entry rejects jockeys absent from persisted contract IDs', () => {
+  assert.throws(() => lockRaceEntry({ ...month3(), contractedJockeyIds: [] }, draft))
 })
 test('riding fit is deterministic and depends on race, horse and tactic', () => {
   const state = month3()

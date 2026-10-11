@@ -1,5 +1,5 @@
 export type CalendarDate = { year: number; month: number }
-export type HorseRaceRecord = { race: string; result: string; date: string; placing?: number; prizeMoney?: number; jockeyId?: string; jockeyName?: string; distance?: number; grade?: string }
+export type HorseRaceRecord = { raceRunId?: string; race: string; result: string; date: string; placing?: number; prizeMoney?: number; jockeyId?: string; jockeyName?: string; distance?: number; grade?: string }
 export function calendarDate(year = 2028, month = 4): CalendarDate {
   return { year: year + Math.floor((month - 1) / 12), month: ((month - 1) % 12 + 12) % 12 + 1 }
 }

@@ -16,6 +16,8 @@ import {
 } from "@/components/career/race-entry-workspace";
 import { careerStore, useCareer } from "@/lib/career/store";
 import { applyCareer } from "@/lib/career/lifecycle";
+import { contractedJockeys } from "@/lib/career/race-entry";
+import { summarizeRecords, type HorseRaceRecord } from "@/lib/career/records";
 import {
   readLifecycleSave,
   writeLifecycleSave,
@@ -87,7 +89,7 @@ type CareerHorse = {
   bodyLoad?: number;
   condition?: string;
   retiredAt?: string;
-  raceRecords?: readonly { race: string; result: string; date: string }[];
+  raceRecords?: readonly HorseRaceRecord[];
 };
 type PostRaceSnapshot = {
   raceId: string;
@@ -311,32 +313,7 @@ const races = [
     prize: "₩110,000,000",
   },
 ];
-const jockeys = [
-  {
-    name: "김도윤",
-    meta: "32세 · 대한민국",
-    style: "선입 / 추입",
-    contract: "8개월 남음",
-    chem: 72,
-    abilities: [82, 77, 91, 86, 80],
-  },
-  {
-    name: "박성현",
-    meta: "29세 · 대한민국",
-    style: "선행",
-    contract: "4개월 남음",
-    chem: 45,
-    abilities: [88, 74, 79, 90, 76],
-  },
-  {
-    name: "이현우",
-    meta: "35세 · 일본",
-    style: "추입",
-    contract: "계약 가능",
-    chem: 0,
-    abilities: [75, 86, 88, 82, 92],
-  },
-];
+const jockeys = contractedJockeys.map(j => ({ ...j, meta: j.style, contract: '—', chem: j.chemistry, abilities: [j.start, j.pace, j.path, j.timing, j.stability] }));
 function Meter({ value }: { value: number }) {
   return (
     <div className="h-1 rounded-full bg-muted">
@@ -746,12 +723,12 @@ function CareerComplete({
             <p className="mt-2 font-serif text-primary">은퇴</p>
           </div>
         </div>
-        <button
-          onClick={onNext}
-          className="mt-8 rounded-lg bg-primary px-5 py-3 text-xs text-primary-foreground"
-        >
-          새 육성마 선택
-        </button>
+      <button
+        onClick={onNext}
+        className="mt-5 rounded-lg bg-primary px-5 py-2 text-xs text-primary-foreground"
+      >
+        다음 달 시작
+      </button>
         <button
           onClick={() => setView("stable")}
           className="ui-secondary-control ml-3 rounded-lg border border-border px-5 py-3 text-xs"
@@ -1005,7 +982,7 @@ function Training({
     ["speed", "스피드", "속도 ↑↑ · 파워 ↑", "보통", "높음"],
     ["stamina", "스태미나", "지구력 ↑↑ · 근성 ↑", "높음", "보통"],
     ["power", "파워", "파워 ↑↑ · 속도 ↑", "보통", "높음"],
-    ["guts", "근성", "근성 ↑↑ · 지구력 ↑", "높음", "보통~높음"],
+    ["guts", "근성", "근성 ↑↑ · 지구력 ↑", "높음", "보��~높음"],
     ["intelligence", "지능", "지능 ↑↑", "낮음", "낮음"],
   ] as const;
   return (
@@ -1576,6 +1553,8 @@ function Horse({
   onRetire: () => void;
   horse: CareerHorse;
 }) {
+  const { career } = useCareer();
+  const summary = summarizeRecords(horse.raceRecords);
   const stats = horse.stats;
   const apt = horse.aptitude;
   return (
@@ -1655,35 +1634,8 @@ function Horse({
               <span>결과</span>
               <span>상금</span>
             </div>
-            {[
-              [
-                "2028.01",
-                "한신 컵",
-                "G3",
-                "1400m",
-                "김도윤",
-                "3착",
-                "₩8,000,000",
-              ],
-              [
-                "2027.11",
-                "교토 신문배",
-                "G2",
-                "2200m",
-                "김도윤",
-                "1착",
-                "₩48,000,000",
-              ],
-              [
-                "2027.09",
-                "대배전",
-                "G2",
-                "2000m",
-                "박성현",
-                "2착",
-                "₩24,000,000",
-              ],
-            ].map((r) => (
+            {!horse.raceRecords?.length && <p className="py-4 text-sm text-muted-foreground">경주 기록이 없습니다.</p>}
+            {(horse.raceRecords ?? []).map(record => [record.date, record.race, record.grade ?? '—', record.distance ? `${record.distance}m` : '—', record.jockeyName ?? '—', record.result, `₩${(record.prizeMoney ?? 0).toLocaleString('ko-KR')}`]).map((r) => (
               <button
                 key={r[1]}
                 onClick={() => setView("race")}
@@ -1700,38 +1652,11 @@ function Horse({
         </Section>
         <div className="grid gap-5 md:grid-cols-2">
           <Section eyebrow="KEY JOCKEYS" title="주요 기수">
-            <button
-              onClick={() => setView("jockey")}
-              className="flex w-full justify-between border-b border-border py-3 text-left text-sm hover:text-primary"
-            >
-              <span>
-                김도윤{" "}
-                <small className="ml-2 text-xs text-muted-foreground">
-                  8전 4승 · 호흡도 72
-                </small>
-              </span>
-              <ChevronRight size={15} />
-            </button>
-            <p className="border-b border-border py-3 text-sm">
-              박성현{" "}
-              <small className="ml-2 text-xs text-muted-foreground">
-                4전 1승
-              </small>
-            </p>
+            {summary.jockeyRelations.length === 0 ? <p className="py-3 text-sm text-muted-foreground">함께한 기수가 없습니다.</p> : summary.jockeyRelations.map(relation => <p key={relation.jockeyId} className="border-b border-border py-3 text-sm">{jockeys.find(j => j.id === relation.jockeyId)?.name ?? horse.raceRecords?.find(r => r.jockeyId === relation.jockeyId)?.jockeyName} · {relation.starts}전 {relation.wins}승 · {career?.contractedJockeyIds.includes(relation.jockeyId) ? '계약 중' : '미계약'}</p>)}
           </Section>
           <Section eyebrow="CAREER TIMELINE" title="주요 사건">
             <div className="flex flex-col gap-3 text-xs">
-              <p>
-                <span className="mr-4 text-muted-foreground">2026.06</span>데뷔
-              </p>
-              <p>
-                <span className="mr-4 text-muted-foreground">2027.11</span>첫 G2
-                우승
-              </p>
-              <p>
-                <span className="mr-4 text-muted-foreground">2028.03</span>G1 첫
-                출전
-              </p>
+              {summary.careerTimeline.length === 0 ? <p className="text-muted-foreground">아직 기록이 없습니다.</p> : summary.careerTimeline.map((event, index) => <p key={`${event.date}-${index}`}><span className="mr-4 text-muted-foreground">{event.date}</span>{event.text}</p>)}
             </div>
           </Section>
         </div>
@@ -2159,9 +2084,10 @@ function Race({ setView }: { setView: (v: View) => void }) {
     </Management>
   );
 }
-function Jockeys({ setView }: { setView: (v: View) => void }) {
+function Jockeys({ setView, onSelect }: { setView: (v: View) => void; onSelect: (id: string) => void }) {
+  const { career } = useCareer();
   const [tab, setTab] = useState("contract");
-  const list = tab === "contract" ? jockeys.slice(0, 2) : jockeys.slice(2);
+  const list = jockeys.filter(j => (career?.contractedJockeyIds.includes(j.id) ?? false) === (tab === 'contract'));
   return (
     <Management
       title="기수"
@@ -2186,7 +2112,7 @@ function Jockeys({ setView }: { setView: (v: View) => void }) {
         {list.map((j) => (
           <button
             key={j.name}
-            onClick={() => setView("jockey")}
+            onClick={() => { onSelect(j.id); setView("jockey"); }}
             className="rounded-xl border border-border bg-card p-4 text-left hover:bg-accent/40"
           >
             <div className="flex items-center gap-3">
@@ -2200,12 +2126,12 @@ function Jockeys({ setView }: { setView: (v: View) => void }) {
             </div>
             <p className="mt-4 text-xs text-muted-foreground">{j.style}</p>
             <p className="mt-1 text-xs text-primary">
-              계약 잔여 · {j.contract}
+              {career?.contractedJockeyIds.includes(j.id) ? '계약 중' : '계약 가능'}
             </p>
             <p className="mt-1 text-xs">
               현재 육성마 호흡도 ·{" "}
               <b className="text-primary">
-                {j.name === "김도윤" ? "72" : "45"} / 100
+                {j.chem} / 100
               </b>
             </p>
             <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-2 text-xs">
@@ -2231,23 +2157,26 @@ function Jockeys({ setView }: { setView: (v: View) => void }) {
     </Management>
   );
 }
-function Jockey({ setView }: { setView: (v: View) => void }) {
-  const j = jockeys[0];
+function Jockey({ setView, jockeyId, horses }: { setView: (v: View) => void; jockeyId: string; horses: CareerHorse[] }) {
+  const { career } = useCareer();
+  const j = jockeys.find(j => j.id === jockeyId) ?? jockeys[0];
+  const riddenHorses = horses.filter(h => h.raceRecords?.some(r => r.jockeyId === j.id));
+  const records = riddenHorses.flatMap(h => (h.raceRecords ?? []).filter(r => r.jockeyId === j.id).map(r => [r.date, h.name, r.race, r.grade ?? '—', r.result]));
   return (
     <Management
-      title="김도윤"
+      title={j.name}
       eyebrow="JOCKEY RECORD"
       description="기수의 능력과 기승 기록을 조회합니다."
     >
       <Section eyebrow="PROFILE / CONTRACT" title="프로필 · 계약">
         <div className="grid grid-cols-2 md:grid-cols-3">
           {[
-            ["나이", "32세"],
-            ["국가", "대한민국"],
-            ["주요 스타일", "선입 / 추입"],
-            ["계약 상태", "계약 중"],
-            ["잔여 기간", "8개월"],
-            ["현재 육성마와 호흡도", "72 / 100"],
+            ["나이", "—"],
+            ["국가", "—"],
+            ["주요 스타일", j.style],
+            ["계약 상태", career?.contractedJockeyIds.includes(j.id) ? "계약 중" : "미계약"],
+            ["잔여 기간", "—"],
+            ["현재 육성마와 호흡도", `${j.chem} / 100`],
           ].map(([a, b]) => (
             <div key={a} className="border-b border-r border-border px-4 py-3">
               <span className="text-xs text-muted-foreground">{a}</span>
@@ -2284,7 +2213,8 @@ function Jockey({ setView }: { setView: (v: View) => void }) {
             <span>등급</span>
             <span>결과</span>
           </div>
-          {[].map((r) => (
+          {records.length === 0 && <p className="py-4 text-sm text-muted-foreground">최근 기승 기록이 없습니다.</p>}
+          {records.map((r) => (
             <div
               key={r.join("-")}
               className="grid min-w-[620px] grid-cols-[100px_1.2fr_1.3fr_70px_70px] border-b border-border px-3 py-3 text-xs"
@@ -2312,7 +2242,7 @@ function Jockey({ setView }: { setView: (v: View) => void }) {
       </Section>
       <Section eyebrow="HORSES" title="함께한 말">
         <div className="flex flex-col gap-2">
-          <p className="border-y border-border py-4 text-sm text-muted-foreground">저장된 기승 기록이 없습니다.</p>
+          {riddenHorses.length === 0 ? <p className="border-y border-border py-4 text-sm text-muted-foreground">함께한 말이 없습니다.</p> : riddenHorses.map(h => <p key={h.id} className="border-b border-border py-3 text-sm">{h.name} · {summarizeRecords(h.raceRecords?.filter(r => r.jockeyId === j.id)).record}</p>)}
         </div>
       </Section>
     </Management>
@@ -2454,7 +2384,7 @@ function RaceEntryArchive({ setView }: { setView: (v: View) => void }) {
                 <div className="mt-auto border-t border-border pt-3 text-xs">
                   <span className="text-muted-foreground">호흡도</span>
                   <b className="ml-2 text-primary">
-                    {j.name === "김도윤" ? "72" : "45"} / 100
+                    {j.chem} / 100
                   </b>
                   <p className="mt-1 text-muted-foreground">
                     기승 적합도 · {suitability}
@@ -2703,7 +2633,7 @@ function RaceEntryLegacy({ setView }: { setView: (v: View) => void }) {
                 <p className="mt-4 text-xs">
                   호흡도{" "}
                   <b className="text-primary">
-                    {j.name === "김도윤" ? "72" : "45"} / 100
+                    {j.chem} / 100
                   </b>
                 </p>
                 <p className="mt-2 text-xs text-primary">
@@ -4460,7 +4390,10 @@ function RaceResultReflection({
   state?: LifecycleState;
   onLock?: (snapshot: PostRaceSnapshot) => void;
 }) {
+  const { career, busy, error } = useCareer();
   const [simulation] = useState(() => buildRaceSimulation("SATSUKI-LOCKED"));
+  const run = career?.raceRun;
+  const resultMatchesRun = !!run && simulation.raceId === run.raceDefinitionSnapshot.id && simulation.playerHorseId === run.playerHorseId;
   const result =
     simulation.finalStandings.find(
       (s) => s.horseId === simulation.playerHorseId,
@@ -4590,8 +4523,11 @@ function RaceResultReflection({
           })}
         </div>
       </Section>
+      {error && <p role="alert" className="ui-error-state">{error}</p>}
+      {!resultMatchesRun && <p role="status" className="mt-4 text-sm text-muted-foreground">저장된 출전과 일치하는 확정 결과가 없습니다. 미리보기 결과는 육성 기록에 반영하지 않습니다.</p>}
       <button
-        onClick={onNext}
+        disabled={busy || !resultMatchesRun}
+        onClick={async () => { if (run && resultMatchesRun && await careerStore.applyResult(run.raceRunId, result.rank, result.prize ?? 0)) onNext(); }}
         className="mt-5 rounded-lg bg-primary px-5 py-2 text-xs text-primary-foreground"
       >
         다음 달 시작
@@ -4601,6 +4537,7 @@ function RaceResultReflection({
 }
 export default function App() {
   const [state, setState] = useState<LifecycleState>(initialLifecycle);
+  const [selectedJockeyId, setSelectedJockeyId] = useState(jockeys[0].id);
   const [view, setView] = useState<View>("home");
   const { career } = useCareer();
   const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(
@@ -4695,8 +4632,7 @@ export default function App() {
       const prizeText = `₩${snapshot.after.prize.toLocaleString()}`;
       const afterHorse = {
         ...horse,
-        record: snapshot.after.record,
-        prize: prizeText,
+        ...summarizeRecords(horse.raceRecords),
         fatigue: snapshot.after.fatigue,
         bodyLoad: snapshot.after.bodyLoad,
         condition: snapshot.after.condition,
@@ -4749,8 +4685,7 @@ export default function App() {
       if (!horse) return current;
       const updatedHorse = {
         ...horse,
-        record: snapshot.after.record,
-        prize: `₩${snapshot.after.prize.toLocaleString()}`,
+        ...summarizeRecords(horse.raceRecords),
         fatigue: snapshot.after.fatigue,
         bodyLoad: snapshot.after.bodyLoad,
         condition: snapshot.after.condition,
@@ -4878,8 +4813,8 @@ export default function App() {
           )}{" "}
           {view === "races" && <Races setView={setView} />}{" "}
           {view === "race" && <Race setView={setView} />}{" "}
-          {view === "jockeys" && <Jockeys setView={setView} />}{" "}
-          {view === "jockey" && <Jockey setView={setView} />}
+          {view === "jockeys" && <Jockeys setView={setView} onSelect={setSelectedJockeyId} />}{" "}
+          {view === "jockey" && <Jockey setView={setView} jockeyId={selectedJockeyId} horses={[...(state.activeHorse ? [state.activeHorse] : []), ...state.archive]} />}
         </main>
       </div>
     </div>

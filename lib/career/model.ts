@@ -23,7 +23,17 @@ export type Choice = Stat | 'rest'
 export type Change = { key: keyof Values; before: number; after: number }
 export type ActionRecord = { actionId: string; horseId: string; month: number; actionType: 'training' | 'rest'; trainingType: Stat | null; seed: number; result: Change[] | null }
 export type GameTime = { calendarDate: { year: number; month: number }; careerTurnIndex: number }
-export type HorseRaceRecord = { race: string; result: string; date: string; placing?: number; prizeMoney?: number; jockeyId?: string; jockeyName?: string }
+import { summarizeRecords, type HorseRaceRecord } from './records'
+export type { HorseRaceRecord } from './records'
+
+export function applyRaceResult(career: Career, raceRunId: string, placing: number, prizeMoney: number): Career {
+  if (career.raceRecords.some(record => record.raceRunId === raceRunId)) return career
+  const run = career.raceRun
+  if (!run || run.raceRunId !== raceRunId || run.playerHorseId !== career.horse.id) throw new Error('출전 기록이 일치하지 않습니다.')
+  if (!Number.isInteger(placing) || placing < 1 || placing > run.runners.length || !Number.isFinite(prizeMoney) || prizeMoney < 0) throw new Error('유효하지 않은 경주 결과입니다.')
+  const raceRecords = [...career.raceRecords, { raceRunId, race: run.raceDefinitionSnapshot.name, result: `${placing}착`, date: `${career.calendarDate.year}.${String(career.calendarDate.month).padStart(2, '0')}`, placing, prizeMoney, jockeyId: run.player.jockeySnapshot.id, jockeyName: run.player.jockeySnapshot.name, distance: run.raceDefinitionSnapshot.distance, grade: run.raceDefinitionSnapshot.raceClass }]
+  return { ...career, raceRecords, ...summarizeRecords(raceRecords) }
+}
 export type Career = { version: 1; horse: Horse; age: number; month: number; calendarDate: { year: number; month: number }; careerTurnIndex: number; contractedJockeyIds: string[]; values: Values; condition: string; health: string; record: string; prize: string; raceRecords: readonly HorseRaceRecord[]; action: ActionRecord | null; recent: ActionRecord[]; raceRun?: RaceRunInput }
 export function startCareer(horseId: string): Career {
   const horse = horses.find(h => h.id === horseId)

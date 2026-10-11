@@ -1,7 +1,7 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
-import { advanceMonth, commitAction, resolveAction, startCareer, type Career, type Choice } from './model'
+import { applyRaceResult, advanceMonth, commitAction, resolveAction, startCareer, type Career, type Choice } from './model'
 import { clearCareer, readCareer, writeCareer } from './repository'
 
 import { lockRaceEntry, type RaceEntryDraft } from './race-entry'
@@ -49,12 +49,17 @@ async function mutate(operation: (saved: Career | null) => Career | null) {
     })
     publish({ career })
     channel?.postMessage('saved')
-  } catch (error) { publish({ error: error instanceof Error ? error.message : '저장에 실패했습니다. 다시 시도해 주세요.' }) }
+    return true
+  } catch (error) { publish({ error: error instanceof Error ? error.message : '저장에 실패했습니다. 다시 시도해 주세요.' }); return false }
   finally { publish({ busy: false }) }
 }
 export function useCareer() { return useSyncExternalStore(subscribe, () => snapshot, () => initial) }
 export const careerStore = {
   refresh,
+  applyResult: (raceRunId: string, placing: number, prizeMoney: number) => mutate(saved => {
+    if (!saved) throw new Error('육성 기록이 없습니다.')
+    return applyRaceResult(saved, raceRunId, placing, prizeMoney)
+  }),
   release: async () => {
     if (snapshot.busy) return false
     publish({ busy: true, error: null })
