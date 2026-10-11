@@ -14,7 +14,7 @@ export function CareerCheckpoint({ onHome, onHorse, raceEntry, horseSummary }: {
     <button onClick={onHome} className="mb-5 text-xs text-muted-foreground">← 홈</button>
     {error && <div role="alert" className="ui-error-state mb-5"><span>{error}</span><button disabled={busy} onClick={() => void careerStore.refresh()} className="ui-secondary-control rounded-lg border border-border px-4 py-2 text-xs">다시 불러오기</button></div>}
     {!ready ? <p role="status" className="py-16 text-center text-sm text-muted-foreground">육성 기록을 불러오는 중…</p> : !career ? error ? null : <HorseSelection busy={busy} /> : <>
-      <div className="mb-6 flex items-end justify-between gap-4"><div><p className="ui-label text-primary">FOCUS PLAY · MONTHLY DECISION</p><h1 className="mt-2 font-serif text-3xl font-semibold">이번 달 육성</h1><p className="mt-2 text-sm text-muted-foreground">Month {career.month} · {career.action || career.raceRun ? '이번 달 행동 완료' : '행동 하나를 선택하세요'}</p></div><button onClick={onHorse} className="text-xs text-primary">현재 육성마 상세</button></div>
+      <div className="mb-6 flex items-end justify-between gap-4"><div><p className="ui-label text-primary">FOCUS PLAY · MONTHLY DECISION</p><h1 className="mt-2 font-serif text-3xl font-semibold">이번 달 육성</h1><p className="mt-2 text-sm text-muted-foreground">{career.calendarDate.year}년 {career.calendarDate.month}월 · 육성 {career.careerTurnIndex}개월차 · {career.action || career.raceRun ? '이번 달 행동 완료' : '행동 하나를 선택하세요'}</p></div><button onClick={onHorse} className="text-xs text-primary">현재 육성마 상세</button></div>
       <div className="flex flex-col gap-4">
         {horseSummary ?? <HorseFocus career={career} />}
         <MonthlyDecision key={`${career.horse.id}:${career.month}`} career={career} busy={busy} raceEntry={raceEntry} />

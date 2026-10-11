@@ -22,7 +22,7 @@ export const healthy = (career: Career) => ['정상', 'HEALTHY'].includes(career
 export const maiden = (career: Career) => /(?:^|\s)0승(?:\s|$)/.test(career.record)
 export function entryRestriction(career: Career): string | null {
   if (career.raceRun || career.action) return '이번 달 행동을 이미 확정했습니다.'
-  if (career.month !== 3 || !raceDefinitions.some(r => r.month === career.month)) return '경주 출전은 3개월 차에 열립니다.'
+  if (career.careerTurnIndex !== 3 || !raceDefinitions.some(r => r.month === 3)) return '경주 출전은 3개월 차에 열립니다.'
   if (!healthy(career)) return '건강이 정상일 때 출전할 수 있습니다.'
   if (!maiden(career)) return '미승리 경주마만 출전할 수 있습니다.'
   return null
