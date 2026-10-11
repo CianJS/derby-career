@@ -410,6 +410,9 @@ function Header({ setView }: { setView: (v: View) => void }) {
   const { theme = "dark", setTheme } = useTheme();
   const [menu, setMenu] = useState(false);
   const [note, setNote] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const activeTheme = mounted ? theme : "dark";
   return (
     <header className="lab-topbar sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-[1540px] items-center justify-between px-4 md:px-8">
@@ -435,7 +438,7 @@ function Header({ setView }: { setView: (v: View) => void }) {
               onClick={() => setMenu(!menu)}
               className="rounded-lg p-2 hover:bg-accent"
             >
-              {theme === "light" ? <Sun size={17} /> : <Moon size={17} />}
+              {activeTheme === "light" ? <Sun size={17} /> : <Moon size={17} />}
             </button>
             {menu && (
               <div className="absolute right-0 top-11 z-40 w-36 rounded-xl border border-border bg-popover p-1.5 shadow-xl">
@@ -1731,7 +1734,7 @@ function HorseArchive({ setView }: { setView: (v: View) => void }) {
             ["나이", "6세"],
             ["성별", "암말"],
             ["출생지", "대한민국"],
-            ["클래스", "OPEN"],
+            ["��래스", "OPEN"],
             ["활동 상태", "은퇴"],
             ["성장형", "보통"],
             ["통산 전적", "31전 9승"],
@@ -2386,7 +2389,7 @@ function RaceEntryArchive({ setView }: { setView: (v: View) => void }) {
           ))}
         </div>
         <p className="mt-3 border-l-2 border-red-900/70 px-3 py-2 text-xs text-red-200">
-          WARNING · 현재 신체 부하가 높은 편입니다. 경주 후 피로와 부하가 증가할
+          WARNING · 현재 신체 부하��� 높은 편입니다. 경주 후 피로와 부하가 증가할
           수 있습니다.
         </p>
         <button
