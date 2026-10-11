@@ -251,11 +251,9 @@ button { cursor: pointer; min-height: 2.25rem; } button:disabled { cursor: not-a
 .ui-result-summary::after { content:'FINAL'; position:absolute; top:1rem; right:1.25rem; color:color-mix(in srgb,var(--primary) 58%,transparent); font:600 .55rem/1 var(--font-mono); letter-spacing:.22em; }
 .ui-focus-workspace .ui-section:nth-of-type(2) { border-top:0; border-left:2px solid color-mix(in srgb,var(--primary) 55%,transparent); border-radius:0 .5rem .5rem 0; }
 .ui-focus-workspace .ui-section:nth-of-type(3) { background:color-mix(in srgb,var(--muted) 18%,transparent); border-style:dashed; }
-.race-story-trajectory { position:relative; min-height:13rem; margin-top:1rem; padding:1rem 0; }
-.race-story-trajectory::before { content:''; position:absolute; inset:1rem 0; background:repeating-linear-gradient(to bottom,transparent 0 2.45rem,color-mix(in srgb,var(--border) 65%,transparent) 2.45rem 2.5rem); pointer-events:none; }
-.race-story-point { position:absolute; left:calc(var(--story-index, 0) * 25%); top:calc((var(--story-rank, 5) - 1) * 2.5rem); display:flex; flex-direction:column; gap:.2rem; z-index:1; transform:translateX(-50%); }
-.race-story-point:nth-child(1){--story-index:0;--story-rank:5}.race-story-point:nth-child(2){--story-index:1;--story-rank:5}.race-story-point:nth-child(3){--story-index:2;--story-rank:4}.race-story-point:nth-child(4){--story-index:3;--story-rank:4}.race-story-point:nth-child(5){--story-index:4;--story-rank:2}
-.race-story-point::before { content:''; position:absolute; left:50%; top:.95rem; width:calc(100% + 4rem); height:2px; background:var(--primary); transform:rotate(var(--story-angle,0deg)); transform-origin:left center; opacity:.72; z-index:-1; }
+.race-story-trajectory { position:relative; min-height:calc(var(--story-rows,0) * 2.5rem + 6.5rem); margin:1rem 2rem 0; }
+.race-story-trajectory::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(to bottom,transparent 0 2.45rem,color-mix(in srgb,var(--border) 65%,transparent) 2.45rem 2.5rem); pointer-events:none; }
+.race-story-point { position:absolute; left:calc(var(--story-x, 0) * 1%); top:calc(var(--story-row, 0) * 2.5rem); display:flex; flex-direction:column; align-items:center; gap:.2rem; z-index:1; transform:translateX(-50%); }
 .race-story-phase { color:var(--muted-foreground); font:600 .52rem/1 var(--font-mono); letter-spacing:.1em; white-space:nowrap; }
 .race-story-dot { display:grid; place-items:center; width:2.8rem; height:2.8rem; border:1px solid color-mix(in srgb,var(--primary) 72%,var(--border)); border-radius:50%; background:var(--card); color:var(--primary); font-size:.72rem; font-weight:600; }
 .race-story-distance,.race-story-point small { color:var(--muted-foreground); font-size:.58rem; white-space:nowrap; }
@@ -263,13 +261,13 @@ button { cursor: pointer; min-height: 2.25rem; } button:disabled { cursor: not-a
 .race-story-point.is-finish .race-story-dot { width:3.25rem; height:3.25rem; border-width:2px; box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 10%,transparent); }
 .race-event-timeline { position:relative; margin-top:.75rem; padding-left:4.8rem; }
 .race-event-timeline::before { content:''; position:absolute; left:4.05rem; top:.5rem; bottom:.5rem; width:1px; background:var(--border); }
-.race-event-item { position:relative; display:grid; grid-template-columns:4.2rem 1.5rem 1fr; align-items:center; gap:.65rem; min-height:2.65rem; padding:.45rem 0; border-bottom:1px solid color-mix(in srgb,var(--border) 45%,transparent); }
-.race-event-phase { position:absolute; right:calc(100% - 3.75rem); color:var(--muted-foreground); font:600 .52rem/1 var(--font-mono); letter-spacing:.08em; text-align:right; white-space:nowrap; }
+.race-event-item { position:relative; display:grid; grid-template-columns:1.5rem 1fr; align-items:center; gap:.65rem; min-height:2.65rem; padding:.45rem 0; border-bottom:1px solid color-mix(in srgb,var(--border) 45%,transparent); }
+.race-event-phase { position:absolute; right:calc(100% + 1.25rem); color:var(--muted-foreground); font:600 .52rem/1 var(--font-mono); letter-spacing:.08em; text-align:right; white-space:nowrap; }
 .race-event-node { position:relative; z-index:1; display:grid; place-items:center; width:1.45rem; height:1.45rem; border:1px solid var(--border); border-radius:50%; background:var(--card); color:var(--muted-foreground); }
 .race-event-item p { margin:0; font-size:.75rem; }
 .race-event-item.event-blocked .race-event-node,.race-event-item.event-path_clear .race-event-node,.race-event-item.event-overtake .race-event-node,.race-event-item.event-sprint_start .race-event-node { color:var(--primary); border-color:color-mix(in srgb,var(--primary) 55%,var(--border)); }
 .race-event-item.event-finish { border-bottom:0; }.race-event-item.event-finish .race-event-node { color:var(--primary); border-color:var(--primary); box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent); }.race-event-item.event-finish p { color:var(--primary); font-weight:600; }
-@media (max-width:720px){.race-story-trajectory{min-height:12rem}.race-story-point{transform:translateX(-50%) scale(.9)}.race-event-timeline{padding-left:3.9rem}.race-event-timeline::before{left:3.25rem}.race-event-item{grid-template-columns:3.3rem 1.35rem 1fr}.race-event-phase{right:calc(100% - 3.05rem);font-size:.44rem}.race-event-item p{font-size:.68rem}}
+@media (max-width:720px){.race-story-trajectory{min-height:12rem}.race-story-point{transform:translateX(-50%) scale(.9)}.race-event-timeline{padding-left:3.9rem}.race-event-timeline::before{left:3.25rem}.race-event-item{grid-template-columns:1.35rem 1fr}.race-event-phase{right:calc(100% + 1rem);font-size:.44rem}.race-event-item p{font-size:.68rem}}
 
 @media (max-width:720px) { .ui-result-summary { grid-template-columns:1fr 1fr; padding:1rem; }.ui-result-summary > :first-child { grid-column:1 / -1; padding-bottom:1rem; border-bottom:1px solid var(--border); }.ui-result-summary::after { top:.75rem; right:.8rem; }.ui-focus-workspace > .ui-section:first-of-type { box-shadow:none; } }
 @media (prefers-reduced-motion:reduce) { .ui-compare-card:hover,.ui-compare-card.ui-selected { transform:none; } }

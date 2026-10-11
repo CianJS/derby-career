@@ -1,4 +1,5 @@
 import type { Career, Horse, Values } from './model'
+import { simulateRace, summarizeRaceLog, type RaceSimulationLog, type RaceSimulationSummary } from './race-simulation'
 
 export const tactics = ['도주', '선행', '선입', '추입'] as const
 export type RunningTactic = typeof tactics[number]
@@ -6,7 +7,7 @@ export type RaceDefinitionSnapshot = { id: string; name: string; month: number; 
 export type JockeySnapshot = { id: string; name: string; start: number; pace: number; path: number; timing: number; stability: number; chemistry: number; style: string }
 export type HorseSnapshot = { id: string; name: string; age: number; values: Values; aptitude: Horse['aptitude']; health: 'HEALTHY'; condition: string; record: string }
 export type RaceRunnerInput = { horseSnapshot: HorseSnapshot; jockeySnapshot: JockeySnapshot; tactic: RunningTactic }
-export type RaceRunInput = { raceRunId: string; month: number; raceDefinitionSnapshot: RaceDefinitionSnapshot; playerHorseId: string; runners: RaceRunnerInput[]; player: RaceRunnerInput; raceSeed: string; engineVersion: string }
+export type RaceRunInput = { raceRunId: string; month: number; raceDefinitionSnapshot: RaceDefinitionSnapshot; playerHorseId: string; runners: RaceRunnerInput[]; player: RaceRunnerInput; raceSeed: string; engineVersion: string; simulation?: RaceSimulationSummary }
 export type RaceEntryDraft = { raceId: string | null; jockeyId: string | null; tactic: RunningTactic | null }
 export const raceDefinitions: RaceDefinitionSnapshot[] = [
   { id: 'DEV_M3_SPRINT_1400', name: '스프린트 트라이얼', month: 3, surface: 'Turf', distance: 1400, raceClass: '미승리', runners: 10, courseProfile: '짧은 직선 / 완만한 코너', prize: 8000000, entryFee: 0 },
@@ -38,7 +39,10 @@ export function ridingFit(career: Career, race: RaceDefinitionSnapshot | undefin
   return { label: score >= 85 ? '매우 좋음' : score >= 78 ? '좋음' : score >= 70 ? '보통' : '주의', explanation: `${tactic} 전술에서는 ${early ? '스타트·페이스' : '진로·승부 타이밍'} 능력을 중시합니다. 말의 전술 ${horseGrade}·거리 ${distanceGrade} 적성과 ${race.distance === 2000 ? '장거리 전개 안정성' : '초반 전개'}을 함께 반영했습니다.` }
 }
 export function lockRaceEntry(career: Career, draft: RaceEntryDraft, identity: () => string = () => crypto.randomUUID()): Career {
-  if (career.raceRun) return career
+  return lockRaceEntryWithLog(career, draft, identity).career
+}
+export function lockRaceEntryWithLog(career: Career, draft: RaceEntryDraft, identity: () => string = () => crypto.randomUUID()): { career: Career; log: RaceSimulationLog | null } {
+  if (career.raceRun) return { career, log: null }
   const reason = entryRestriction(career)
   if (reason) throw new Error(reason)
   const race = raceDefinitions.find(r => r.id === draft.raceId && r.month === career.careerTurnIndex)
@@ -52,11 +56,14 @@ export function lockRaceEntry(career: Career, draft: RaceEntryDraft, identity: (
     jockeySnapshot: { id: `FIELD_JOCKEY_${i + 1}`, name: `참가 기수 ${i + 1}`, start: 75, pace: 75, path: 75, timing: 75, stability: 75, chemistry: 0, style: '균형' }, tactic: tactics[i % tactics.length],
   }))
   const raceRun: RaceRunInput = structuredClone({ raceRunId: identity(), month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...opponents], raceSeed: identity(), engineVersion: 'entry-contract-v1' })
-  return { ...career, raceRun }
+  const log = simulateRace(raceRun)
+  return { career: { ...career, raceRun: { ...raceRun, simulation: summarizeRaceLog(log) } }, log }
 }
 export function assertRaceRun(run: RaceRunInput, career: Career) {
   const fail = () => { throw new Error('저장된 출전 정보를 읽을 수 없습니다. 기존 저장은 유지됩니다.') }
   if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || run.month !== 3 || career.careerTurnIndex !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || !run.raceDefinitionSnapshot || !raceDefinitions.some(r => r.id === run.raceDefinitionSnapshot.id) || run.raceDefinitionSnapshot.month !== run.month || !Array.isArray(run.runners) || run.runners.length !== run.raceDefinitionSnapshot.runners || ![10, 12].includes(run.runners.length)) fail()
+  const summary = run.simulation
+  if (summary !== undefined && (!summary.digest || !summary.engineVersion || !summary.result || summary.result.playerHorseId !== run.playerHorseId || !Number.isInteger(summary.result.placing) || summary.result.placing < 1 || summary.result.placing > run.runners.length || !Number.isFinite(summary.result.prizeMoney) || summary.result.prizeMoney < 0)) fail()
   for (const runner of run.runners) {
     if (!runner?.horseSnapshot?.id || !runner.horseSnapshot.name || runner.horseSnapshot.health !== 'HEALTHY' || !Array.isArray(runner.horseSnapshot.aptitude) || !runner.horseSnapshot.values || !runner.jockeySnapshot?.id || !tactics.includes(runner.tactic)) fail()
     for (const key of ['speed', 'stamina', 'power', 'guts', 'intelligence', 'fatigue', 'bodyLoad'] as const) if (!Number.isFinite(runner.horseSnapshot.values[key]) || runner.horseSnapshot.values[key] < 0) fail()

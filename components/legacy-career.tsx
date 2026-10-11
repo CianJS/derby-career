@@ -14,6 +14,8 @@ import {
   RaceAction,
   RaceEntryWorkspace,
 } from "@/components/career/race-entry-workspace";
+import { RacePlayback } from "@/components/career/race-playback";
+import { RaceReflection } from "@/components/career/race-reflection";
 import { careerStore, useCareer } from "@/lib/career/store";
 import { applyCareer } from "@/lib/career/lifecycle";
 import { contractedJockeys } from "@/lib/career/race-entry";
@@ -2256,7 +2258,7 @@ function RaceEntry({ setView }: { setView: (v: View) => void }) {
       backLabel="육성으로 돌아가기"
       backDisabled={busy}
     >
-      <RaceEntryWorkspace />
+      <RaceEntryWorkspace onStartRace={() => setView("raceexperimental")} />
     </FocusShell>
   );
 }
@@ -4381,160 +4383,6 @@ function ArchivedHorseRecord({
     </Management>
   );
 }
-function RaceResultReflection({
-  setView,
-  onNext,
-}: {
-  setView: (v: View) => void;
-  onNext: () => void;
-  state?: LifecycleState;
-  onLock?: (snapshot: PostRaceSnapshot) => void;
-}) {
-  const { career, busy, error } = useCareer();
-  const [simulation] = useState(() => buildRaceSimulation("SATSUKI-LOCKED"));
-  const run = career?.raceRun;
-  const resultMatchesRun = !!run && simulation.raceId === run.raceDefinitionSnapshot.id && simulation.playerHorseId === run.playerHorseId;
-  const result =
-    simulation.finalStandings.find(
-      (s) => s.horseId === simulation.playerHorseId,
-    ) || simulation.finalStandings[0];
-  const playerName = result.horseName;
-  const sample = [
-    { phase: "START", rank: 5, distance: "2000m", change: "" },
-    { phase: "MID", rank: 5, distance: "1063m", change: "" },
-    { phase: "FINAL CORNER", rank: 4, distance: "750m", change: "5위 → 4위" },
-    { phase: "STRETCH", rank: 4, distance: "125m", change: "" },
-    { phase: "FINISH", rank: 2, distance: "0m", change: "4위 → 2위" },
-  ];
-  const events = simulation.frames
-    .filter((frame) => frame.events.length > 0)
-    .map((frame) => {
-      const event = frame.events[0];
-      return { phase: frame.phase, type: event.type };
-    });
-  const eventText = (type: string) =>
-    type === "BLOCKED"
-      ? "앞이 막혀 전진이 지체되었습니다."
-      : type === "PATH_CLEAR"
-        ? "외곽 진로를 확보했습니다."
-        : type === "OVERTAKE"
-          ? "순위를 끌어올렸습니다."
-          : type === "SPRINT_START"
-            ? "직선에서 스퍼트를 시작했습니다."
-            : type === "FINISH"
-              ? `2착 · 1착과 +${result.marginToWinner.toFixed(1)}초`
-              : "안정적인 출발";
-  const eventIcon = (type: string) =>
-    type === "BLOCKED"
-      ? TriangleAlert
-      : type === "PATH_CLEAR"
-        ? ArrowUpRight
-        : type === "OVERTAKE"
-          ? ArrowUp
-          : type === "SPRINT_START"
-            ? Zap
-            : Flag;
-  return (
-    <FocusShell setView={setView}>
-      <p className="ui-label text-primary">RACE RESULT</p>
-      <h1 className="ui-page-title mt-2 font-serif">사츠키상 · G1</h1>
-      <p className="mt-2 text-sm text-muted-foreground">2028년 4월 28일</p>
-      <Section eyebrow="FINAL RESULT" title="결과 요약">
-        <div className="ui-result-summary mt-4">
-          <div>
-            <span className="ui-label text-primary">RESULT</span>
-            <p className="mt-2 font-serif text-3xl text-primary">2착</p>
-            <p className="mt-1 text-sm font-medium">{playerName}</p>
-          </div>
-          <div>
-            <span className="ui-metadata">기록</span>
-            <p className="mt-2 text-sm font-medium">120.8s</p>
-          </div>
-          <div>
-            <span className="ui-metadata">착차</span>
-            <p className="mt-2 text-sm font-medium">+0.4초</p>
-          </div>
-          <div>
-            <span className="ui-metadata">획득 상금</span>
-            <p className="mt-2 text-sm font-medium text-primary">₩48,000,000</p>
-          </div>
-        </div>
-      </Section>
-      <Section eyebrow="POSITION HISTORY" title="순위 변화">
-        <div className="race-story-trajectory">
-          {sample.map((point, index) => (
-            <div
-              key={point.phase}
-              className={`race-story-point rank-${point.rank} ${index === sample.length - 1 ? "is-finish" : ""}`}
-            >
-              <span className="race-story-phase">{point.phase}</span>
-              <span className="race-story-dot">{point.rank}위</span>
-              <span className="race-story-distance">{point.distance}</span>
-              {point.change && <small>{point.change}</small>}
-            </div>
-          ))}
-        </div>
-      </Section>
-      <Section eyebrow="CAREER / CONDITION" title="경기 후 상태 변화">
-        <div className="grid gap-x-6 md:grid-cols-2">
-          <div className="border-b border-border py-3">
-            <span className="ui-metadata">누적 상금</span>
-            <p className="mt-1 text-sm font-medium">
-              ₩218,000,000 → ₩266,000,000
-            </p>
-            <span className="text-xs text-primary">+₩48,000,000</span>
-          </div>
-          <div className="border-b border-border py-3">
-            <span className="ui-metadata">통산 전적</span>
-            <p className="mt-1 text-sm font-medium">12전 5승 → 13전 5승</p>
-          </div>
-          <div className="border-b border-border py-3">
-            <span className="ui-metadata">피로</span>
-            <p className="mt-1 text-sm font-medium">36 → 61</p>
-            <span className="text-xs text-primary">+25</span>
-          </div>
-          <div className="border-b border-border py-3">
-            <span className="ui-metadata">신체 부하</span>
-            <p className="mt-1 text-sm font-medium">48 → 66</p>
-            <span className="text-xs text-primary">+18</span>
-          </div>
-          <div className="border-b border-border py-3">
-            <span className="ui-metadata">컨디션</span>
-            <p className="mt-1 text-sm font-medium">좋음 → 보통</p>
-          </div>
-        </div>
-      </Section>
-      <Section eyebrow="RACE SUMMARY" title="경기 복기">
-        <div className="race-event-timeline">
-          {events.map((event, index) => {
-            const Icon = eventIcon(event.type);
-            return (
-              <div
-                key={`${event.phase}-${index}`}
-                className={`race-event-item event-${event.type.toLowerCase()}`}
-              >
-                <span className="race-event-phase">{event.phase}</span>
-                <span className="race-event-node">
-                  <Icon size={13} />
-                </span>
-                <p>{eventText(event.type)}</p>
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-      {error && <p role="alert" className="ui-error-state">{error}</p>}
-      {!resultMatchesRun && <p role="status" className="mt-4 text-sm text-muted-foreground">저장된 출전과 일치하는 확정 결과가 없습니다. 미리보기 결과는 육성 기록에 반영하지 않습니다.</p>}
-      <button
-        disabled={busy || !resultMatchesRun}
-        onClick={async () => { if (run && resultMatchesRun && await careerStore.applyResult(run.raceRunId, result.rank, result.prize ?? 0)) onNext(); }}
-        className="mt-5 rounded-lg bg-primary px-5 py-2 text-xs text-primary-foreground"
-      >
-        다음 달 시작
-      </button>
-    </FocusShell>
-  );
-}
 export default function App() {
   const [state, setState] = useState<LifecycleState>(initialLifecycle);
   const [selectedJockeyId, setSelectedJockeyId] = useState(jockeys[0].id);
@@ -4775,17 +4623,21 @@ export default function App() {
             />
           )}{" "}
           {view === "entry" && <RaceEntry setView={setView} />}{" "}
-          {view === "raceplay" && <RacePlayVisual setView={setView} />}{" "}
-          {view === "raceexperimental" && (
-            <RaceBroadcastV2 setView={setView} onRaceLocked={() => {}} />
+          {(view === "raceplay" || view === "raceexperimental") && (
+            <FocusShell setView={setView} backLabel="육성으로 돌아가기">
+              <RacePlayback
+                onFinish={() => setView("result")}
+                onBack={() => setView("training")}
+              />
+            </FocusShell>
           )}{" "}
           {view === "result" && (
-            <RaceResultReflection
-              setView={setView}
-              state={state}
-              onLock={lockPostRace}
-              onNext={commitRaceAndAdvance}
-            />
+            <FocusShell setView={setView} backLabel="육성으로 돌아가기">
+              <RaceReflection
+                onNext={() => setView("training")}
+                onBack={() => setView("training")}
+              />
+            </FocusShell>
           )}{" "}
           {view === "stable" && (
             <Stable

@@ -73,10 +73,12 @@ test('race records are empty initially and result application is idempotent acro
   const locked = lockRaceEntry(month3(), draft)
   assert.deepEqual(locked.raceRecords, [])
   const runId = locked.raceRun!.raceRunId
-  const finished = applyRaceResult(locked, runId, 2, 3000000)
+  const expected = locked.raceRun!.simulation!.result
+  assert.throws(() => applyRaceResult(locked, runId, expected.placing === 1 ? 2 : 1, expected.prizeMoney), /시뮬레이션/)
+  const finished = applyRaceResult(locked, runId, expected.placing, expected.prizeMoney)
   assert.equal(finished.raceRecords.length, 1)
-  assert.equal(finished.record, '1전 0승')
-  assert.equal(finished.prize, '₩3,000,000')
+  assert.equal(finished.record, `1전 ${expected.placing === 1 ? 1 : 0}승`)
+  assert.equal(finished.prize, `₩${expected.prizeMoney.toLocaleString('en-US')}`)
   assert.equal(finished.raceRecords[0].jockeyId, draft.jockeyId)
   const lifecycle = applyCareer<{ activeHorse: { id: string; name: string; age: string; sex: string; growth: string; growthNote: string; stats: [string, number][]; aptitude: [string, string, string][]; record: string; best: string; prize: string } | null; month: number }>({ activeHorse: null, month: 3 }, finished)
   assert.equal(lifecycle.activeHorse!.record, summarizeRecords(finished.raceRecords).record)
@@ -85,8 +87,8 @@ test('race records are empty initially and result application is idempotent acro
   assert.equal(applyRaceResult(finished, runId, 1, 9999), finished)
   writeCareer(finished)
   const restored = readCareer()!
-  assert.equal(applyRaceResult(restored, runId, 2, 3000000).raceRecords.length, 1)
-  assert.throws(() => applyRaceResult(locked, 'different-run', 2, 3000000))
+  assert.equal(applyRaceResult(restored, runId, expected.placing, expected.prizeMoney).raceRecords.length, 1)
+  assert.throws(() => applyRaceResult(locked, 'different-run', expected.placing, expected.prizeMoney))
 })
 test('entry rejects jockeys absent from persisted contract IDs', () => {
   assert.throws(() => lockRaceEntry({ ...month3(), contractedJockeyIds: [] }, draft))

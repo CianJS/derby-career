@@ -31,8 +31,26 @@ export function applyRaceResult(career: Career, raceRunId: string, placing: numb
   const run = career.raceRun
   if (!run || run.raceRunId !== raceRunId || run.playerHorseId !== career.horse.id) throw new Error('출전 기록이 일치하지 않습니다.')
   if (!Number.isInteger(placing) || placing < 1 || placing > run.runners.length || !Number.isFinite(prizeMoney) || prizeMoney < 0) throw new Error('유효하지 않은 경주 결과입니다.')
+  const expected = run.simulation?.result
+  if (expected && (expected.placing !== placing || expected.prizeMoney !== prizeMoney)) throw new Error('저장된 시뮬레이션 결과와 일치하지 않습니다.')
   const raceRecords = [...career.raceRecords, { raceRunId, race: run.raceDefinitionSnapshot.name, result: `${placing}착`, date: `${career.calendarDate.year}.${String(career.calendarDate.month).padStart(2, '0')}`, placing, prizeMoney, jockeyId: run.player.jockeySnapshot.id, jockeyName: run.player.jockeySnapshot.name, distance: run.raceDefinitionSnapshot.distance, grade: run.raceDefinitionSnapshot.raceClass }]
   return { ...career, raceRecords, ...summarizeRecords(raceRecords) }
+}
+export function completeRace(career: Career, raceRunId: string, placing: number, prizeMoney: number): Career {
+  const run = career.raceRun
+  const recorded = career.raceRecords.some(record => record.raceRunId === raceRunId)
+  if (!run || run.raceRunId !== raceRunId) {
+    if (recorded) return career
+    throw new Error('출전 기록이 일치하지 않습니다.')
+  }
+  const applied = applyRaceResult(career, raceRunId, placing, prizeMoney)
+  const next: Career = { ...applied, action: null, ...nextTime(applied) }
+  delete next.raceRun
+  return next
+}
+function nextTime(state: Career): Pick<Career, 'month' | 'calendarDate' | 'careerTurnIndex'> {
+  const rollsYear = state.calendarDate.month === 12
+  return { month: state.month + 1, careerTurnIndex: state.careerTurnIndex + 1, calendarDate: { year: rollsYear ? state.calendarDate.year + 1 : state.calendarDate.year, month: rollsYear ? 1 : state.calendarDate.month + 1 } }
 }
 export type Career = { version: 1; horse: Horse; age: number; month: number; calendarDate: { year: number; month: number }; careerTurnIndex: number; contractedJockeyIds: string[]; values: Values; condition: string; health: string; record: string; prize: string; raceRecords: readonly HorseRaceRecord[]; action: ActionRecord | null; recent: ActionRecord[]; raceRun?: RaceRunInput }
 export function startCareer(horseId: string): Career {
@@ -78,9 +96,7 @@ export function resolveAction(state: Career): Career {
 }
 export function advanceMonth(state: Career, expectedActionId: string): Career {
   if (state.raceRun || !state.action || state.action.actionId !== expectedActionId || state.action.result === null) return state
-  const nextMonth = state.calendarDate.month === 12 ? 1 : state.calendarDate.month + 1
-const nextYear = state.calendarDate.month === 12 ? state.calendarDate.year + 1 : state.calendarDate.year
-return { ...state, month: state.month + 1, calendarDate: { year: nextYear, month: nextMonth }, careerTurnIndex: state.careerTurnIndex + 1, action: null, recent: [state.action, ...state.recent].slice(0, 3) }
+  return { ...state, ...nextTime(state), action: null, recent: [state.action, ...state.recent].slice(0, 3) }
 }
 export function actionName(action: ActionRecord): string { return action.actionType === 'rest' ? '휴식' : trainings[action.trainingType!].name }
 export function changeText(change: Change): string { const delta = change.after - change.before; return `${labels[change.key]} ${delta > 0 ? '+' : ''}${delta}` }
