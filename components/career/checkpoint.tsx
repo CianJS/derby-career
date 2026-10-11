@@ -9,7 +9,10 @@ import { MonthlyDecision } from './monthly-decision'
 
 export function CareerCheckpoint({ onHome, onHorse, raceEntry, horseSummary }: { onHome: () => void; onHorse: () => void; raceEntry: ReactNode; horseSummary?: ReactNode }) {
   const { ready, career, busy, error } = useCareer()
-  const recent = career ? [...(career.action?.result ? [career.action] : []), ...career.recent].slice(0, 3) : []
+  const activities = career ? [
+    ...career.raceRecords.map(record => ({ key: `race-${record.raceRunId ?? record.date}`, month: record.month ?? 0, label: record.month ? `Month ${record.month}` : record.date, title: `${record.race} · ${record.result}`, detail: `상금 ₩${(record.prizeMoney ?? 0).toLocaleString('ko-KR')}`, race: true })),
+    ...[...(career.action?.result ? [career.action] : []), ...career.recent].map(action => ({ key: action.actionId, month: action.month, label: `Month ${action.month}`, title: actionName(action), detail: action.result?.map(changeText).join(' / ') || '변경 없음', race: false })),
+  ].sort((a, b) => b.month - a.month || Number(b.race) - Number(a.race)).slice(0, 3) : []
   return <div className="training-workspace pb-4"><div className="mx-auto max-w-[1380px] px-4 py-7 md:px-8">
     <button onClick={onHome} className="mb-5 text-xs text-muted-foreground">← 홈</button>
     {error && <div role="alert" className="ui-error-state mb-5"><span>{error}</span><button disabled={busy} onClick={() => void careerStore.refresh()} className="ui-secondary-control rounded-lg border border-border px-4 py-2 text-xs">다시 불러오기</button></div>}
@@ -18,7 +21,7 @@ export function CareerCheckpoint({ onHome, onHorse, raceEntry, horseSummary }: {
       <div className="flex flex-col gap-4">
         {horseSummary ?? <HorseFocus career={career} />}
         <MonthlyDecision key={`${career.horse.id}:${career.month}`} career={career} busy={busy} raceEntry={raceEntry} />
-        <section aria-labelledby="recent-activity" className="ui-section border border-border bg-card"><p className="ui-label text-primary">RECENT ACTIVITY</p><h2 id="recent-activity" className="mt-1 font-serif text-xl font-semibold">최근 활동</h2>{recent.length ? <ul className="mt-3 grid gap-3 md:grid-cols-3">{recent.map(action => <li key={action.actionId} className="border-b border-border pb-2 text-xs"><p className="text-muted-foreground">Month {action.month}</p><p className="mt-1 text-sm">{actionName(action)}</p><p className="mt-2 leading-5 text-sage">{action.result?.map(changeText).join(' / ') || '변경 없음'}</p></li>)}</ul> : <p className="mt-3 text-xs text-muted-foreground">아직 완료한 월간 기록이 없습니다.</p>}</section>
+        <section aria-labelledby="recent-activity" className="ui-section border border-border bg-card"><p className="ui-label text-primary">RECENT ACTIVITY</p><h2 id="recent-activity" className="mt-1 font-serif text-xl font-semibold">최근 활동</h2>{activities.length ? <ul className="mt-3 grid gap-3 md:grid-cols-3">{activities.map(item => <li key={item.key} className={`border-b pb-2 text-xs ${item.race ? 'border-primary/60' : 'border-border'}`}><p className="text-muted-foreground">{item.label}</p><p className={`mt-1 text-sm ${item.race ? 'font-medium text-primary' : ''}`}>{item.title}</p><p className={`mt-2 leading-5 ${item.race ? 'text-foreground' : 'text-sage'}`}>{item.detail}</p></li>)}</ul> : <p className="mt-3 text-xs text-muted-foreground">아직 완료한 월간 기록이 없습니다.</p>}</section>
       </div>
     </>}
   </div></div>

@@ -6,7 +6,7 @@ import type { RaceFrame, RaceSimulationLog } from '@/lib/career/race-simulation'
 const width = 600
 const left = 28
 const right = 12
-const top = 12
+const top = 16
 const bottom = 20
 const maxPoints = 160
 
@@ -27,10 +27,10 @@ function rankSamples(log: RaceSimulationLog): RankPoint[] {
   })
 }
 
-export function PositionHistory({ log, frame, playerHorseId, names }: { log: RaceSimulationLog; frame: RaceFrame; playerHorseId: string; names: Map<string, string> }) {
+export function PositionHistory({ log, frame, playerHorseId, names, markers = [] }: { log: RaceSimulationLog; frame: RaceFrame; playerHorseId: string; names: Map<string, string>; markers?: { tMs: number; label: string }[] }) {
   const ranked = useMemo(() => rankSamples(log), [log])
   const count = log.samples[0].runners.length
-  const height = Math.max(150, count * 16 + top + bottom)
+  const height = Math.min(260, Math.max(150, count * 13 + top + bottom))
   const plotWidth = width - left - right
   const plotHeight = height - top - bottom
   const x = (tMs: number) => left + (tMs / log.durationMs) * plotWidth
@@ -56,9 +56,13 @@ export function PositionHistory({ log, frame, playerHorseId, names }: { log: Rac
           <text x={left - 8} y={y(rank)} textAnchor="end" dominantBaseline="central" fontSize={10} fill="var(--muted-foreground)">{rank}</text>
         </g>)}
         <line x1={lastX} x2={lastX} y1={top} y2={height - bottom} stroke="var(--muted-foreground)" strokeWidth={1} strokeDasharray="2 3" opacity={0.5} />
-        {horseIds.map(horseId => <polyline key={horseId} points={line(horseId)} fill="none" stroke="var(--muted-foreground)" strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" opacity={0.3} />)}
-        <polyline points={line(playerHorseId)} fill="none" stroke="var(--primary)" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
-        <circle cx={lastX} cy={y(playerRank)} r={4} fill="var(--primary)" />
+        {horseIds.map(horseId => <polyline key={horseId} points={line(horseId)} fill="none" stroke="var(--muted-foreground)" strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" opacity={0.32} />)}
+        {markers.filter(marker => marker.tMs <= frame.tMs).map(marker => <g key={marker.label}>
+          <line x1={x(marker.tMs)} x2={x(marker.tMs)} y1={top} y2={height - bottom} stroke="var(--primary)" strokeWidth={1} strokeDasharray="1 4" opacity={0.45} />
+          <text x={x(marker.tMs)} y={top - 3} textAnchor="middle" fontSize={8} fill="var(--primary)" opacity={0.8}>{marker.label}</text>
+        </g>)}
+        <polyline points={line(playerHorseId)} fill="none" stroke="var(--primary)" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={lastX} cy={y(playerRank)} r={3.5} fill="var(--primary)" />
         <text x={left} y={height - 4} fontSize={9} fill="var(--muted-foreground)">START</text>
         <text x={width - right} y={height - 4} textAnchor="end" fontSize={9} fill="var(--muted-foreground)">FINISH</text>
       </svg>

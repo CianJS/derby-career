@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Button } from '@/components/ui/button'
 import { PositionHistory } from '@/components/career/race-position-history'
 import type { RaceRunInput } from '@/lib/career/race-entry'
+import { significantFeed } from '@/lib/career/race-feed'
 import { readRaceLog } from '@/lib/career/race-log-repository'
-import { frameAt, highlightText, validateRaceLog, type RaceSimulationLog } from '@/lib/career/race-simulation'
+import { frameAt, validateRaceLog, type RaceSimulationLog } from '@/lib/career/race-simulation'
 import { useCareer } from '@/lib/career/store'
 
 const phases = ['START', 'MID', 'FINAL_CORNER', 'STRETCH', 'FINISH'] as const
-const speeds = [1, 2, 4] as const
+const STRIP_ROWS = 6
 
 function loadLog(run: RaceRunInput): { log: RaceSimulationLog | null; error: string | null } {
   try {
@@ -36,15 +37,56 @@ function Playback({ run, onFinish, onBack }: { run: RaceRunInput; onFinish: () =
   return <Stage run={run} log={loaded.log} onFinish={onFinish} />
 }
 
+export function PhaseMarker({ phaseIndex }: { phaseIndex: number }) {
+  return <ol className="race-phase-track" aria-label={`경주 구간, 현재 ${phases[phaseIndex].replace('_', ' ')}`}>
+    {phases.map((phase, index) => <li key={phase} aria-current={index === phaseIndex ? 'step' : undefined} className={index === phaseIndex ? 'active' : index < phaseIndex ? 'passed' : ''}>{phase.replace('_', ' ')}</li>)}
+  </ol>
+}
+
+export function RaceStrip({ frame, runners, playerHorseId, names, raceDistance }: { frame: ReturnType<typeof frameAt>; runners: RaceRunInput['runners']; playerHorseId: string; names: Map<string, string>; raceDistance: number }) {
+  const gates = useMemo(() => new Map(runners.map((runner, index) => [runner.horseSnapshot.id, index + 1])), [runners])
+  const ordered = [...frame.runners].sort((a, b) => (a.horseId === playerHorseId ? 1 : 0) - (b.horseId === playerHorseId ? 1 : 0))
+  return <div className="race-strip" role="img" aria-label={`레이스 스트립. 결승까지 ${frame.remaining}미터 남았습니다.`}>
+    <div className="race-strip-lanes" />
+    <span className="race-strip-start" />
+    <span className="race-strip-finish" />
+    {ordered.map(runner => {
+      const gate = gates.get(runner.horseId) ?? 0
+      const isPlayer = runner.horseId === playerHorseId
+      const row = (gate - 1) % STRIP_ROWS
+      const progress = Math.min(100, Math.max(0, (runner.distance / raceDistance) * 100))
+      return <div key={runner.horseId} className={`race-strip-runner ${isPlayer ? 'is-player' : ''}`} style={{ '--strip-x': progress / 100, '--strip-row': row } as CSSProperties}>
+        <b>{gate}</b>
+        {isPlayer && <span>{names.get(runner.horseId)} · YOU</span>}
+      </div>
+    })}
+  </div>
+}
+
+export function PositionBoard({ frame, playerHorseId, names, raceDistance }: { frame: ReturnType<typeof frameAt>; playerHorseId: string; names: Map<string, string>; raceDistance: number }) {
+  const player = frame.runners.find(runner => runner.horseId === playerHorseId)
+  return <div className="race-ranking-panel">
+    <div className="panel-title"><span>POSITION BOARD</span><span>{player?.rank}위 / {frame.runners.length}두</span></div>
+    <ol className="race-board">
+      {frame.runners.map(runner => {
+        const isPlayer = runner.horseId === playerHorseId
+        return <li key={runner.horseId} className={isPlayer ? 'player' : ''}>
+          <b>{runner.rank}</b>
+          <span>{names.get(runner.horseId)}</span>
+          {isPlayer ? <em>YOU</em> : <i />}
+          <u><s style={{ width: `${Math.max(4, (runner.distance / raceDistance) * 100)}%` }} /></u>
+        </li>
+      })}
+    </ol>
+  </div>
+}
+
 function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationLog; onFinish: () => void }) {
   const [time, setTime] = useState(0)
   const [paused, setPaused] = useState(false)
-  const [speed, setSpeed] = useState<1 | 2 | 4>(1)
   const timeRef = useRef(0)
   const pausedRef = useRef(false)
-  const speedRef = useRef<1 | 2 | 4>(1)
   pausedRef.current = paused
-  speedRef.current = speed
 
   useEffect(() => {
     let raf = 0
@@ -54,7 +96,7 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
       const delta = Math.min(Math.max(0, now - previous), 250)
       previous = now
       if (!pausedRef.current && timeRef.current < log.durationMs) {
-        timeRef.current = Math.min(log.durationMs, timeRef.current + delta * speedRef.current)
+        timeRef.current = Math.min(log.durationMs, timeRef.current + delta)
         if (now - lastHud >= 100 || timeRef.current >= log.durationMs) {
           lastHud = now
           setTime(timeRef.current)
@@ -69,44 +111,29 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
   const names = useMemo(() => new Map(run.runners.map(r => [r.horseSnapshot.id, r.horseSnapshot.name])), [run])
   const frame = frameAt(log, time)
   const finished = time >= log.durationMs
-  const player = frame.runners.find(r => r.horseId === run.playerHorseId)!
   const phaseIndex = phases.indexOf(frame.phase)
-  const visibleHighlights = log.highlights.filter(h => h.tMs <= time && highlightText(h))
-  const highlight = visibleHighlights.at(-1)
-  const feed = visibleHighlights.map(h => ({ id: h.id, tMs: h.tMs, text: highlightText(h) })).reverse()
+  const feed = useMemo(() => significantFeed(log, names, Math.floor(time / 500) * 500), [log, names, time])
   const race = run.raceDefinitionSnapshot
 
-  return <div className="mt-5">
-    <header className="race-broadcast-header"><div><p className="ui-label text-muted-foreground">RACE VIEW · 저장된 경주 기록 재생</p><h1 className="ui-page-title mt-2 font-serif">{race.name}</h1><p className="mt-1 text-sm text-muted-foreground">{race.surface} {race.distance}m · {run.runners.length}두 출전 · {run.player.jockeySnapshot.name} · {run.player.tactic}</p></div></header>
-    <div className="race-phase-strip" aria-label="경주 구간">{phases.map((p, i) => <span key={p} className={i === phaseIndex ? 'active' : ''}>{p.replace('_', ' ')}</span>)}</div>
-    <main className="race-broadcast-stage">
-      <div className="race-stage-top"><span className="ui-label text-primary">LIVE TRACK VIEW</span><span className="race-distance-live">{frame.remaining}m <small>REMAINING</small></span></div>
-      <div className={`race-scene race-phase-${phaseIndex}`}>
-        <div className="race-motion-lines" />
-        <div className="race-track-grid" />
-        <div className={`race-finish-band ${frame.remaining <= 400 ? 'is-near' : ''} ${frame.remaining <= 100 ? 'is-finish' : ''}`} />
-        <div className="race-gate" />
-        {frame.runners.map(r => {
-          const isPlayer = r.horseId === run.playerHorseId
-          return <div key={r.horseId} className={`race-broadcast-runner ${isPlayer ? 'player is-player' : 'rival'}`} style={{ '--runner-progress': `${(r.distance / log.raceDistance) * 100}%`, '--runner-lane': `${50 + r.lane}%` } as CSSProperties}><span className="runner-tag">{names.get(r.horseId)}{isPlayer && <em>YOU</em>}</span><i /></div>
-        })}
-        {highlight && <div className="race-event-pop" role="status"><span>{highlightText(highlight)}</span></div>}
+  return <div className="mt-4">
+    <header className="race-broadcast-header">
+      <div>
+        <h1 className="ui-page-title font-serif">{race.name}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{race.surface} {race.distance}m · {run.runners.length}두 · {run.player.jockeySnapshot.name} · {run.player.tactic} · 남은 거리 {frame.remaining}m</p>
       </div>
-      <div className="race-stage-footer"><span>{frame.remaining}m remaining</span><div className="race-progress-bar"><i style={{ width: `${(time / log.durationMs) * 100}%` }} /></div><span>{frame.remaining <= 100 ? 'PHOTO FINISH' : frame.remaining <= 400 ? 'FINAL 400M' : ''}</span></div>
-    </main>
+      {finished ? <Button onClick={onFinish}>결과 확인</Button> : <Button variant="outline" onClick={() => setPaused(v => !v)}>{paused ? '계속' : '일시정지'}</Button>}
+    </header>
+    <PhaseMarker phaseIndex={phaseIndex} />
+    <RaceStrip frame={frame} runners={run.runners} playerHorseId={run.playerHorseId} names={names} raceDistance={log.raceDistance} />
     <section className="race-live-grid">
+      <PositionBoard frame={frame} playerHorseId={run.playerHorseId} names={names} raceDistance={log.raceDistance} />
       <div className="flex min-w-0 flex-col gap-3">
-        <div className="race-ranking-panel"><div className="panel-title"><span>LIVE RANKING</span><span>{player.rank}위 / {frame.runners.length}두</span></div>{frame.runners.map(r => <div key={r.horseId} className={`race-rank-row ${r.horseId === run.playerHorseId ? 'player' : ''}`}><b>{r.rank}</b><span>{names.get(r.horseId)} {r.horseId === run.playerHorseId && <em>YOU</em>}</span><i><span style={{ width: `${Math.max(4, (r.distance / log.raceDistance) * 100)}%` }} /></i></div>)}</div>
         <PositionHistory log={log} frame={frame} playerHorseId={run.playerHorseId} names={names} />
-      </div>
-      <div className="race-ranking-panel self-start">
-        <div className="panel-title"><span>RACE FEED</span><span>{feed.length}건</span></div>
-        {feed.length ? <ul aria-label="경주 중계 기록" className="max-h-[28rem] overflow-y-auto">{feed.map(item => <li key={item.id} className="flex gap-3 border-b border-border px-3 py-2 text-xs leading-5 last:border-b-0"><span className="w-12 shrink-0 tabular-nums text-muted-foreground">{(item.tMs / 1000).toFixed(1)}s</span><span>{item.text}</span></li>)}</ul> : <p className="px-3 py-3 text-xs text-muted-foreground">아직 기록된 이벤트가 없습니다.</p>}
+        <div className="race-ranking-panel">
+          <div className="panel-title"><span>주요 상황</span></div>
+          {feed.length ? <ul aria-label="주요 상황">{feed.map(item => <li key={item.id} className="flex gap-3 border-b border-border px-3 py-1.5 text-xs leading-5 last:border-b-0"><span className="w-12 shrink-0 tabular-nums text-muted-foreground">{(item.tMs / 1000).toFixed(1)}s</span><span>{item.text}</span></li>)}</ul> : <p className="px-3 py-2 text-xs text-muted-foreground">경주가 진행되면 주요 상황이 표시됩니다.</p>}
+        </div>
       </div>
     </section>
-    <footer className="race-control-deck">
-      {finished ? <Button onClick={onFinish}>결과 확인</Button> : <Button onClick={() => setPaused(v => !v)}>{paused ? '계속' : '일시정지'}</Button>}
-      <div className="race-speed-group" role="group" aria-label="재생 속도"><span className="ui-metadata">PLAYBACK</span>{speeds.map(value => <button key={value} type="button" aria-pressed={speed === value} className={speed === value ? 'active' : ''} onClick={() => { setSpeed(value); setPaused(false) }}>{value}x</button>)}</div>
-    </footer>
   </div>
 }

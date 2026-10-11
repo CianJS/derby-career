@@ -1,5 +1,6 @@
 "use client";
 
+import { FilterMenu } from "@/components/career/filter-menu";
 import {
   useEffect,
   useRef,
@@ -1467,10 +1468,10 @@ function Stable({
           </p>
         </div>
       )}
-      {archive.length > 0 && (
+      {archive.length > 1 && (
         <Section eyebrow="CAREER ARCHIVE · RECENT" title="최근 은퇴마">
           <div className="space-y-2">
-            {archive.map((horse) => (
+            {archive.slice(0, 2).map((horse) => (
               <button
                 key={horse.id}
                 onClick={() => setView("horseArchive")}
@@ -1500,21 +1501,12 @@ function Stable({
             className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
           />
         </label>
-        <label className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs">
+        <div className="flex items-center gap-2 text-xs">
           <span className="text-muted-foreground">정렬</span>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="bg-transparent outline-none"
-          >
-            <option value="recent">최근 육성순</option>
-            <option value="name">이름순</option>
-            <option value="wins">통산 승수순</option>
-            <option value="prize">누적 상금순</option>
-          </select>
-        </label>
+          <FilterMenu label="" value={{ recent: "최근 육성순", name: "이름순", wins: "통산 승수순", prize: "누적 상금순" }[sort] ?? "최근 육성순"} options={["최근 육성순", "이름순", "통산 승수순", "누적 상금순"]} onChange={v => setSort(({ "최근 육성순": "recent", "이름순": "name", "통산 승수순": "wins", "누적 상금순": "prize" } as Record<string, string>)[v] ?? "recent")} align="right" />
+        </div>
       </div>
-      <Section eyebrow="HORSE ROSTER · CAREER ARCHIVE" title="경주마 목록">
+      <Section eyebrow="CAREER ARCHIVE" title="은퇴 경주마">
         <div className="hidden grid-cols-[1.5fr_1fr_1fr_1fr_1fr_100px_24px] gap-4 border-b border-border px-4 pb-3 text-[10px] tracking-wide text-muted-foreground md:grid">
           <span>이름</span>
           <span>나이·성별</span>
@@ -1886,88 +1878,19 @@ function Races({ setView }: { setView: (v: View) => void }) {
             },
           ] as const
         ).map(({ label, value, setter, options }) => (
-          <label
-            key={label}
-            className="rounded-lg border border-border px-3 py-2 text-xs"
-          >
-            {label}{" "}
-            <select
-              value={value as string}
-              onChange={(e) => setter(e.target.value)}
-              className="bg-transparent"
-            >
-              <>
-                {options.map((o) => (
-                  <option key={o}>{o}</option>
-                ))}
-              </>
-            </select>
-          </label>
+          <FilterMenu key={label} label={label} value={value as string} options={options} onChange={setter} />
         ))}
         <details className="relative">
-          <summary className="cursor-pointer list-none rounded-lg border border-border px-3 py-2 text-xs text-primary">
+          <summary className="cursor-pointer list-none rounded-lg border border-border bg-card px-3 py-2 text-xs text-primary">
             상세 필터
           </summary>
-          <div className="absolute right-0 z-10 mt-2 grid min-w-[320px] grid-cols-2 gap-2 rounded-xl border border-border bg-card p-3 shadow-xl">
-            <label className="text-xs">
-              개최국{" "}
-              <select
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                className="ml-1 bg-transparent"
-              >
-                <option>전체</option>
-                <option>일본</option>
-              </select>
-            </label>
-            <label className="text-xs">
-              경마장{" "}
-              <select
-                value={venue}
-                onChange={(e) => setVenue(e.target.value)}
-                className="ml-1 bg-transparent"
-              >
-                <option>전체</option>
-                <option>한신</option>
-                <option>나카야마</option>
-                <option>도쿄</option>
-              </select>
-            </label>
-            <label className="text-xs">
-              연령{" "}
-              <select
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                className="ml-1 bg-transparent"
-              >
-                <option>전체</option>
-                <option>3세</option>
-              </select>
-            </label>
-            <label className="text-xs">
-              성별{" "}
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="ml-1 bg-transparent"
-              >
-                <option>전체</option>
-                <option>수말·암말</option>
-              </select>
-            </label>
-            <label className="text-xs">
-              부담중량{" "}
-              <select
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                className="ml-1 bg-transparent"
-              >
-                <option>전체</option>
-                <option>정량</option>
-                <option>별정</option>
-              </select>
-            </label>
-            <label className="col-span-2 text-xs">
+          <div className="absolute right-0 z-10 mt-1 grid min-w-[320px] grid-cols-2 gap-2 rounded-xl border border-border bg-popover p-3 shadow-xl">
+            <FilterMenu label="개최국" value={country} options={["전체", "일본"]} onChange={setCountry} />
+            <FilterMenu label="경마장" value={venue} options={["전체", "한신", "나카야마", "도쿄"]} onChange={setVenue} />
+            <FilterMenu label="연령" value={age} options={["전체", "3세"]} onChange={setAge} />
+            <FilterMenu label="성별" value={gender} options={["전체", "수말·암말"]} onChange={setGender} />
+            <FilterMenu label="부담중량" value={weight} options={["전체", "정량", "별정"]} onChange={setWeight} />
+            <label className="col-span-2 flex items-center text-xs">
               <input
                 type="checkbox"
                 checked={major}
@@ -2031,8 +1954,7 @@ function Race({ setView }: { setView: (v: View) => void }) {
             ["마장", "잔디"],
             ["거리", "2000m"],
             ["방향", "우회전"],
-            ["연령", "3세"],
-            ["성별", "수말·암말"],
+            ["날씨 / 마장 상태", "맑음 · 양호"],
             ["상금", "₩120,000,000"],
           ].map(([a, b]) => (
             <div key={a} className="border-b border-r border-border px-4 py-3">
@@ -2045,10 +1967,11 @@ function Race({ setView }: { setView: (v: View) => void }) {
       <Section eyebrow="ENTRY CONDITIONS" title="참가 조건">
         <div className="grid grid-cols-2 md:grid-cols-4">
           {[
+            ["연령", "3세"],
+            ["성별", "수말·암말"],
+            ["클래스", "OPEN"],
             ["부담중량", "정량 57kg"],
-            ["출전 조건", "3세 OPEN"],
-            ["발주 시각", "15:40"],
-            ["등급", "G1"],
+            ["등록료", "₩1,200,000"],
           ].map(([a, b]) => (
             <div key={a} className="border-b border-border py-3">
               <span className="text-xs text-muted-foreground">{a}</span>
@@ -2064,7 +1987,7 @@ function Race({ setView }: { setView: (v: View) => void }) {
             <ul className="mt-3 flex flex-col gap-2 text-xs text-muted-foreground">
               <li>직선 길이 · 310m</li>
               <li>코너 특성 · 첫 코너 진입까지 거리 짧음</li>
-              <li>高低差 · 約2.2m · 마지막 구간에서 가속 요구</li>
+              <li>경사 · 고저차 약 2.2m · 마지막 구간에서 가속 요구</li>
             </ul>
           </div>
           <div>
@@ -2086,10 +2009,12 @@ function Race({ setView }: { setView: (v: View) => void }) {
     </Management>
   );
 }
+const STABLE_CONTRACTED_JOCKEY_IDS = ["HAN_DOYUN", "SEO_JIAN", "YOON_TAESUNG"];
 function Jockeys({ setView, onSelect }: { setView: (v: View) => void; onSelect: (id: string) => void }) {
   const { career } = useCareer();
   const [tab, setTab] = useState("contract");
-  const list = jockeys.filter(j => (career?.contractedJockeyIds.includes(j.id) ?? false) === (tab === 'contract'));
+  const contractedIds = career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS;
+  const list = jockeys.filter(j => contractedIds.includes(j.id) === (tab === 'contract'));
   return (
     <Management
       title="기수"
@@ -2101,7 +2026,7 @@ function Jockeys({ setView, onSelect }: { setView: (v: View) => void; onSelect: 
           onClick={() => setTab("contract")}
           className={`rounded-lg px-4 py-2 text-xs ${tab === "contract" ? "bg-primary text-primary-foreground" : ""}`}
         >
-          계약 기수
+          계약 기수 {contractedIds.length} / 3
         </button>
         <button
           onClick={() => setTab("available")}
@@ -2128,14 +2053,16 @@ function Jockeys({ setView, onSelect }: { setView: (v: View) => void; onSelect: 
             </div>
             <p className="mt-4 text-xs text-muted-foreground">{j.style}</p>
             <p className="mt-1 text-xs text-primary">
-              {career?.contractedJockeyIds.includes(j.id) ? '계약 중' : '계약 가능'}
+              {contractedIds.includes(j.id) ? '계약 중' : '계약 가능'}
             </p>
-            <p className="mt-1 text-xs">
-              현재 육성마 호흡도 ·{" "}
-              <b className="text-primary">
-                {j.chem} / 100
-              </b>
-            </p>
+            {career ? (
+              <p className="mt-1 text-xs">
+                현재 육성마 호흡도 ·{" "}
+                <b className="text-primary">{j.chem} / 100</b>
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-muted-foreground">현재 육성마 없음</p>
+            )}
             <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-2 text-xs">
               {[
                 "스타트",
@@ -2176,9 +2103,9 @@ function Jockey({ setView, jockeyId, horses }: { setView: (v: View) => void; joc
             ["나이", "—"],
             ["국가", "—"],
             ["주요 스타일", j.style],
-            ["계약 상태", career?.contractedJockeyIds.includes(j.id) ? "계약 중" : "미계약"],
-            ["잔여 기간", "—"],
-            ["현재 육성마와 호흡도", `${j.chem} / 100`],
+            ["계약 상태", (career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS).includes(j.id) ? "계약 중" : "미계약"],
+            ["잔여 기간", (career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS).includes(j.id) ? "2029년 12월까지" : "—"],
+            career ? ["현재 육성마와 호흡도", `${j.chem} / 100`] : ["현재 육성마", "없음"],
           ].map(([a, b]) => (
             <div key={a} className="border-b border-r border-border px-4 py-3">
               <span className="text-xs text-muted-foreground">{a}</span>
@@ -4380,7 +4307,78 @@ function ArchivedHorseRecord({
           ))}
         </div>
       </Section>
+      <ArchivedHorseHistory horse={horse} />
     </Management>
+  );
+}
+function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
+  const records = horse.raceRecords ?? [];
+  const relations = Array.from(
+    records.reduce((map, r) => {
+      if (!r.jockeyId) return map;
+      const entry = map.get(r.jockeyId) ?? { name: r.jockeyName ?? r.jockeyId, starts: 0, best: 99 };
+      entry.starts += 1;
+      const place = r.placing ?? Number(r.result.match(/^(\d+)/)?.[1] ?? 99);
+      entry.best = Math.min(entry.best, place || 99);
+      return map.set(r.jockeyId, entry);
+    }, new Map<string, { name: string; starts: number; best: number }>()),
+  );
+  const timeline = [
+    ["육성 시작", "육성을 시작했습니다"],
+    ...records.slice(0, 4).map((r) => [r.date, `${r.race} ${r.result}`]),
+    [horse.retiredAt || "은퇴", "은퇴"],
+  ];
+  return (
+    <>
+      <Section eyebrow="RACE RECORD" title="출전 기록">
+        {records.length === 0 ? (
+          <p className="py-4 text-sm text-muted-foreground">출전 기록이 없습니다.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[680px] grid-cols-[80px_1.4fr_60px_70px_1fr_60px_1fr] gap-2 border-b border-border px-3 pb-2 text-[10px] text-muted-foreground">
+              <span>날짜</span><span>경주</span><span>등급</span><span>거리</span><span>기수</span><span>결과</span><span>상금</span>
+            </div>
+            {records.map((r, i) => (
+              <div key={r.raceRunId ?? `${r.date}-${i}`} className="grid min-w-[680px] grid-cols-[80px_1.4fr_60px_70px_1fr_60px_1fr] gap-2 border-b border-border px-3 py-2.5 text-xs">
+                <span className="tabular-nums text-muted-foreground">{r.date}</span>
+                <span className="font-serif">{r.race}</span>
+                <span>{r.grade ?? "—"}</span>
+                <span className="tabular-nums">{r.distance ? `${r.distance}m` : "—"}</span>
+                <span>{r.jockeyName ?? "—"}</span>
+                <span className="text-primary">{r.result}</span>
+                <span className="tabular-nums">{r.prizeMoney !== undefined ? `₩${r.prizeMoney.toLocaleString("ko-KR")}` : "—"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+      <Section eyebrow="JOCKEY RELATIONSHIPS" title="함께한 기수">
+        {relations.length === 0 ? (
+          <p className="py-4 text-sm text-muted-foreground">함께한 기수 기록이 없습니다.</p>
+        ) : (
+          <div className="grid gap-x-6 md:grid-cols-2">
+            {relations.map(([id, r]) => (
+              <div key={id} className="flex items-center justify-between border-b border-border py-2.5 text-xs">
+                <b className="font-serif text-sm">{r.name}</b>
+                <span className="text-muted-foreground">
+                  {r.starts}전 · Chemistry {jockeys.find((j) => j.id === id)?.chem ?? "—"} · 최고 {r.best === 99 ? "—" : `${r.best}착`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+      <Section eyebrow="CAREER TIMELINE" title="커리어 타임라인">
+        <ol>
+          {timeline.map(([when, what], i) => (
+            <li key={`${when}-${i}`} className="flex gap-4 border-b border-border py-2 text-xs last:border-b-0">
+              <span className="w-24 shrink-0 tabular-nums text-muted-foreground">{when}</span>
+              <span>{what}</span>
+            </li>
+          ))}
+        </ol>
+      </Section>
+    </>
   );
 }
 export default function App() {

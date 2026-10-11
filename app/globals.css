@@ -277,3 +277,35 @@ button { cursor: pointer; min-height: 2.25rem; } button:disabled { cursor: not-a
 @media (min-width: 1024px) { .ui-management { padding-inline: clamp(1rem, 3vw, 3rem); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 ::selection { background: color-mix(in oklch, var(--primary) 35%, transparent); color: var(--foreground); }
+
+/* Race playback: phase marker, compact strip, board */
+.race-phase-track { display:flex; align-items:center; margin:.75rem 0 0; padding:0; list-style:none; pointer-events:none; user-select:none; }
+.race-phase-track li { position:relative; flex:0 0 auto; color:color-mix(in srgb,var(--muted-foreground) 62%,transparent); font:600 .6rem/1 var(--font-mono); letter-spacing:.14em; white-space:nowrap; }
+.race-phase-track li + li { flex:1 1 0; display:flex; align-items:center; justify-content:flex-end; gap:.6rem; }
+.race-phase-track li + li::before { content:''; flex:1; height:1px; background:color-mix(in srgb,var(--border) 80%,transparent); }
+.race-phase-track li.passed { color:var(--muted-foreground); }
+.race-phase-track li.active { color:var(--primary); }
+.race-phase-track li.active::after { content:''; position:absolute; left:50%; top:-.5rem; width:.3rem; height:.3rem; margin-left:-.15rem; border-radius:50%; background:var(--primary); }
+.race-phase-track li:first-child.active::after { left:.1rem; }
+.race-strip { position:relative; height:9.5rem; margin-top:.75rem; overflow:hidden; border:1px solid color-mix(in srgb,var(--border) 75%,transparent); background:linear-gradient(180deg,color-mix(in srgb,var(--card) 80%,#0c2528),color-mix(in srgb,var(--card) 92%,#0c2528)); }
+.race-strip-lanes { position:absolute; inset:0; background:repeating-linear-gradient(to bottom,transparent 0 calc(100%/6 - 1px),color-mix(in srgb,var(--border) 60%,transparent) calc(100%/6 - 1px) calc(100%/6)); }
+.race-strip-start,.race-strip-finish { position:absolute; top:0; bottom:0; width:2px; }
+.race-strip-start { left:1.5rem; background:color-mix(in srgb,var(--muted-foreground) 35%,transparent); }
+.race-strip-finish { right:1.5rem; background:repeating-linear-gradient(0deg,var(--primary) 0 6px,transparent 6px 12px); opacity:.75; }
+.race-strip-runner { position:absolute; left:calc(1.5rem + (100% - 3rem) * var(--strip-x)); display:flex; align-items:center; gap:.3rem; top:calc(var(--strip-row) * (100% / 6) + (100% / 12)); transform:translate(-50%,-50%); z-index:1; }
+.race-strip-runner b { display:grid; place-items:center; width:1.05rem; height:1.05rem; border-radius:50%; border:1px solid color-mix(in srgb,#7fb7ae 70%,transparent); background:color-mix(in srgb,#2b6b66 70%,var(--card)); color:#cfe5e0; font:600 .55rem/1 var(--font-mono); }
+.race-strip-runner span { padding:.12rem .4rem; border:1px solid var(--primary); border-radius:999px; background:color-mix(in srgb,var(--primary) 16%,var(--card)); color:var(--primary); font-size:.65rem; font-weight:600; white-space:nowrap; }
+.race-strip-runner.is-player { z-index:3; }
+.race-strip-runner.is-player b { width:1.35rem; height:1.35rem; border-color:var(--primary); background:var(--primary); color:var(--primary-foreground); box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 22%,transparent); }
+.race-board { margin:0; padding:.25rem 0; list-style:none; }
+.race-board li { display:grid; grid-template-columns:1.4rem minmax(0,1fr) auto 3.5rem; align-items:center; gap:.5rem; padding:.2rem .8rem; color:var(--muted-foreground); font-size:.72rem; line-height:1.2; }
+.race-board li b { font-variant-numeric:tabular-nums; color:#7fb7ae; }
+.race-board li span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.race-board li u { display:block; height:3px; background:color-mix(in srgb,var(--border) 80%,transparent); text-decoration:none; }
+.race-board li s { display:block; height:100%; background:#527b76; text-decoration:none; }
+.race-board li.player { color:var(--primary); background:color-mix(in srgb,var(--primary) 9%,transparent); box-shadow:inset 2px 0 var(--primary); font-weight:600; }
+.race-board li.player b { color:var(--primary); }
+.race-board li.player s { background:var(--primary); }
+.race-board li em { padding:.05rem .3rem; border:1px solid var(--primary); border-radius:999px; font:600 .5rem/1.2 var(--font-sans); letter-spacing:.08em; font-style:normal; }
+.race-live-grid { grid-template-columns:minmax(16rem,.7fr) minmax(0,1.3fr); }
+@media (max-width: 800px) { .race-live-grid { grid-template-columns:1fr; } .race-phase-track li { font-size:.5rem; letter-spacing:.06em; } }

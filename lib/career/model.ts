@@ -33,7 +33,7 @@ export function applyRaceResult(career: Career, raceRunId: string, placing: numb
   if (!Number.isInteger(placing) || placing < 1 || placing > run.runners.length || !Number.isFinite(prizeMoney) || prizeMoney < 0) throw new Error('유효하지 않은 경주 결과입니다.')
   const expected = run.simulation?.result
   if (expected && (expected.placing !== placing || expected.prizeMoney !== prizeMoney)) throw new Error('저장된 시뮬레이션 결과와 일치하지 않습니다.')
-  const raceRecords = [...career.raceRecords, { raceRunId, race: run.raceDefinitionSnapshot.name, result: `${placing}착`, date: `${career.calendarDate.year}.${String(career.calendarDate.month).padStart(2, '0')}`, placing, prizeMoney, jockeyId: run.player.jockeySnapshot.id, jockeyName: run.player.jockeySnapshot.name, distance: run.raceDefinitionSnapshot.distance, grade: run.raceDefinitionSnapshot.raceClass }]
+  const raceRecords = [...career.raceRecords, { raceRunId, month: career.month, race: run.raceDefinitionSnapshot.name, result: `${placing}착`, date: `${career.calendarDate.year}.${String(career.calendarDate.month).padStart(2, '0')}`, placing, prizeMoney, jockeyId: run.player.jockeySnapshot.id, jockeyName: run.player.jockeySnapshot.name, distance: run.raceDefinitionSnapshot.distance, grade: run.raceDefinitionSnapshot.raceClass }]
   return { ...career, raceRecords, ...summarizeRecords(raceRecords) }
 }
 export function completeRace(career: Career, raceRunId: string, placing: number, prizeMoney: number): Career {
