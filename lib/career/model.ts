@@ -23,11 +23,12 @@ export type Choice = Stat | 'rest'
 export type Change = { key: keyof Values; before: number; after: number }
 export type ActionRecord = { actionId: string; horseId: string; month: number; actionType: 'training' | 'rest'; trainingType: Stat | null; seed: number; result: Change[] | null }
 export type GameTime = { calendarDate: { year: number; month: number }; careerTurnIndex: number }
-export type Career = { version: 1; horse: Horse; age: number; month: number; calendarDate: { year: number; month: number }; careerTurnIndex: number; values: Values; condition: string; health: string; record: string; prize: string; raceRecords: readonly { race: string; result: string; date: string; placing?: number; prizeMoney?: number; jockeyId?: string; jockeyName?: string }[]; action: ActionRecord | null; recent: ActionRecord[]; raceRun?: RaceRunInput }
+export type HorseRaceRecord = { race: string; result: string; date: string; placing?: number; prizeMoney?: number; jockeyId?: string; jockeyName?: string }
+export type Career = { version: 1; horse: Horse; age: number; month: number; calendarDate: { year: number; month: number }; careerTurnIndex: number; contractedJockeyIds: string[]; values: Values; condition: string; health: string; record: string; prize: string; raceRecords: readonly HorseRaceRecord[]; action: ActionRecord | null; recent: ActionRecord[]; raceRun?: RaceRunInput }
 export function startCareer(horseId: string): Career {
   const horse = horses.find(h => h.id === horseId)
   if (!horse) throw new Error('육성마를 선택해 주세요.')
-  return { version: 1, horse, age: 2, month: 1, calendarDate: { year: 2028, month: 4 }, careerTurnIndex: 1, values: { ...horse.stats, fatigue: 5, bodyLoad: 5 }, condition: '보통', health: '정상', record: '0전 0승', prize: '₩0', raceRecords: [], action: null, recent: [] }
+  return { version: 1, horse, age: 2, month: 1, calendarDate: { year: 2028, month: 4 }, careerTurnIndex: 1, contractedJockeyIds: ['HAN_DOYUN', 'SEO_JIAN', 'YOON_TAESUNG'], values: { ...horse.stats, fatigue: 5, bodyLoad: 5 }, condition: '보통', health: '정상', record: '0전 0승', prize: '₩0', raceRecords: [], action: null, recent: [] }
 }
 export function hashSeed(text: string): number {
   let value = 2166136261
@@ -75,7 +76,7 @@ export function actionName(action: ActionRecord): string { return action.actionT
 export function changeText(change: Change): string { const delta = change.after - change.before; return `${labels[change.key]} ${delta > 0 ? '+' : ''}${delta}` }
 export function assertCareer(value: unknown): asserts value is Career {
   const state = value as Career
-  if (!state || state.version !== 1 || !state.horse?.id || !state.horse.name || !Array.isArray(state.horse.aptitude) || !Number.isInteger(state.month) || state.month < 1 || !state.calendarDate || !Number.isInteger(state.calendarDate.year) || !Number.isInteger(state.calendarDate.month) || state.calendarDate.month < 1 || state.calendarDate.month > 12 || !Number.isInteger(state.careerTurnIndex) || state.careerTurnIndex < 1 || !Array.isArray(state.raceRecords) || !state.values || !Array.isArray(state.recent) || state.recent.length > 3) throw new Error('저장된 육성 데이터를 읽을 수 없습니다. 기존 저장은 유지됩니다.')
+  if (!state || state.version !== 1 || !state.horse?.id || !state.horse.name || !Array.isArray(state.horse.aptitude) || !Array.isArray(state.contractedJockeyIds) || !Number.isInteger(state.month) || state.month < 1 || !state.calendarDate || !Number.isInteger(state.calendarDate.year) || !Number.isInteger(state.calendarDate.month) || state.calendarDate.month < 1 || state.calendarDate.month > 12 || !Number.isInteger(state.careerTurnIndex) || state.careerTurnIndex < 1 || !Array.isArray(state.raceRecords) || !state.values || !Array.isArray(state.recent) || state.recent.length > 3) throw new Error('저장된 육성 데이터를 읽을 수 없습니다. 기존 저장은 유지됩니다.')
   for (const key of [...statKeys, 'fatigue', 'bodyLoad'] as (keyof Values)[]) if (!Number.isFinite(state.values[key]) || state.values[key] < 0) throw new Error('저장된 능력치가 유효하지 않습니다.')
   if (state.raceRun !== undefined) assertRaceRun(state.raceRun, state)
   for (const action of [...state.recent, ...(state.action ? [state.action] : [])]) {

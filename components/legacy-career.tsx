@@ -885,8 +885,8 @@ function Cockpit({
             {horse?.age} · 성장형 {horse?.growth}
           </p>
           <p className="mt-3 text-sm">
-            통산 {state.activeHorse?.record || "12전 5승"} · 누적{" "}
-            {state.activeHorse?.prize || "₩218,000,000"}
+            통산 {state.activeHorse?.record || "0전 0승"} · 누적{" "}
+            {state.activeHorse?.prize || "₩0"}
           </p>
           {(horse?.bodyLoad ?? 0) >= 60 && (
             <div className="mt-4 border-l-2 border-red-900/70 px-3 py-2 text-xs text-red-200">
@@ -2284,11 +2284,7 @@ function Jockey({ setView }: { setView: (v: View) => void }) {
             <span>등급</span>
             <span>결과</span>
           </div>
-          {[
-            ["2028.01", "천둥의 전설", "한신 컵", "G3", "3착"],
-            ["2027.11", "천둥의 전설", "교토 신문배", "G2", "1착"],
-            ["2027.10", "블루 문", "교토 대상전", "G2", "5착"],
-          ].map((r) => (
+          {[].map((r) => (
             <div
               key={r.join("-")}
               className="grid min-w-[620px] grid-cols-[100px_1.2fr_1.3fr_70px_70px] border-b border-border px-3 py-3 text-xs"
@@ -2316,24 +2312,7 @@ function Jockey({ setView }: { setView: (v: View) => void }) {
       </Section>
       <Section eyebrow="HORSES" title="함께한 말">
         <div className="flex flex-col gap-2">
-          <button
-            onClick={() => setView("horse")}
-            className="flex justify-between border-b border-border py-3 text-left text-sm hover:text-primary"
-          >
-            <span>천둥의 전설</span>
-            <span className="text-xs text-muted-foreground">
-              8전 4승 · 호흡도 72
-            </span>
-          </button>
-          <button
-            onClick={() => setView("horse")}
-            className="flex justify-between border-b border-border py-3 text-left text-sm hover:text-primary"
-          >
-            <span>블루 문</span>
-            <span className="text-xs text-muted-foreground">
-              12전 3승 · 육성 완료
-            </span>
-          </button>
+          <p className="border-y border-border py-4 text-sm text-muted-foreground">저장된 기승 기록이 없습니다.</p>
         </div>
       </Section>
     </Management>
@@ -4001,7 +3980,7 @@ function RaceExperimental({ setView }: { setView: (v: View) => void }) {
           onClick={() => setPaused((v) => !v)}
           className="rounded-lg bg-primary px-5 py-2 text-xs text-primary-foreground"
         >
-          {started && !paused ? "일시정지" : "레이스 시작"}
+          {started && !paused ? "일시정지" : "레이스 ���작"}
         </button>
         <button
           onClick={() => setView("raceplay")}
@@ -4667,11 +4646,11 @@ export default function App() {
       ...current,
       activeHorse: {
         ...horse,
-        record: "12전 5승",
-        prize: "₩218,000,000",
-        fatigue: 36,
-        bodyLoad: 48,
-        condition: "좋음",
+        record: "0전 0승",
+        prize: "₩0",
+        fatigue: 5,
+        bodyLoad: 5,
+        condition: "보통",
         raceRecords: [],
       },
       lifecycleView: "home",
@@ -4721,14 +4700,7 @@ export default function App() {
         fatigue: snapshot.after.fatigue,
         bodyLoad: snapshot.after.bodyLoad,
         condition: snapshot.after.condition,
-        raceRecords: [
-          ...(horse.raceRecords || []),
-          {
-            race: "사츠키상 · G1",
-            result: "2착",
-            date: `${current.year}.${String(current.month).padStart(2, "0")}`,
-          },
-        ],
+        raceRecords: horse.raceRecords || [],
       };
       const nextState = {
         ...current,
@@ -4782,10 +4754,7 @@ export default function App() {
         fatigue: snapshot.after.fatigue,
         bodyLoad: snapshot.after.bodyLoad,
         condition: snapshot.after.condition,
-        raceRecords: [
-          ...(horse.raceRecords || []),
-          { race: "사츠키상 · G1", result: "2착", date: "2028년 4월" },
-        ],
+        raceRecords: horse.raceRecords || [],
       };
       return {
         ...current,

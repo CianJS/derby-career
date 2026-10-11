@@ -59,7 +59,7 @@ export function writeCareer(state: Career): void {
 }
 function normalizeSavedCareer(value: unknown): Career {
   const state = value as Partial<Career> & { month?: number }
-  return { ...state, calendarDate: state.calendarDate ?? { year: 2028, month: 4 }, careerTurnIndex: state.careerTurnIndex ?? state.month ?? 1, raceRecords: state.raceRecords ?? [] } as Career
+  return { ...state, calendarDate: state.calendarDate ?? { year: 2028, month: 4 }, careerTurnIndex: state.careerTurnIndex ?? 1, contractedJockeyIds: state.contractedJockeyIds ?? ['HAN_DOYUN', 'SEO_JIAN', 'YOON_TAESUNG'], raceRecords: state.raceRecords ?? [] } as Career
 }
 function migrateLegacy(): Career | null {
   const legacy = readLifecycleSave() as { activeHorse?: { id: string; name: string; growth: string; growthNote?: string; age: string; stats: [string, number][]; aptitude?: string[][]; fatigue?: number; bodyLoad?: number; condition?: string; record?: string; prize?: string }; month?: number } | null
@@ -69,7 +69,7 @@ function migrateLegacy(): Career | null {
   const stats = Object.fromEntries(statKeys.map(stat => [stat, old.stats?.find(([label]: [string, number]) => label === labels[stat])?.[1]])) as Record<Stat, number>
   const horse: Horse = { id: old.id, name: old.name, growth: old.growth, description: old.growthNote || '', stats, aptitude: (old.aptitude || []).map(([, name, grade]: string[]) => [name, grade]) }
   const calendarDate = { year: 2028, month: 4 }
-  const state: Career = { version: 1, horse, age: parseInt(old.age) || 2, month: legacy.month || 1, calendarDate, careerTurnIndex: legacy.month || 1, values: { ...stats, fatigue: old.fatigue ?? 5, bodyLoad: old.bodyLoad ?? 5 }, condition: old.condition || '보통', health: '정상', record: old.record || '0전 0승', prize: old.prize || '₩0', raceRecords: [], action: null, recent: [] }
+  const state: Career = { version: 1, horse, age: parseInt(old.age) || 2, month: legacy.month || 1, calendarDate, careerTurnIndex: 1, contractedJockeyIds: ['HAN_DOYUN', 'SEO_JIAN', 'YOON_TAESUNG'], values: { ...stats, fatigue: old.fatigue ?? 5, bodyLoad: old.bodyLoad ?? 5 }, condition: old.condition || '보통', health: '정상', record: old.record || '0전 0승', prize: old.prize || '₩0', raceRecords: [], action: null, recent: [] }
   assertCareer(state)
   writeCareer(state)
   return state

@@ -41,7 +41,7 @@ export function lockRaceEntry(career: Career, draft: RaceEntryDraft, identity: (
   if (career.raceRun) return career
   const reason = entryRestriction(career)
   if (reason) throw new Error(reason)
-  const race = raceDefinitions.find(r => r.id === draft.raceId && r.month === career.month)
+  const race = raceDefinitions.find(r => r.id === draft.raceId && r.month === career.careerTurnIndex)
   const jockey = contractedJockeys.find(j => j.id === draft.jockeyId)
   if (!race || !jockey || !draft.tactic || !tactics.includes(draft.tactic)) throw new Error('경주·기수·전술을 모두 선택해 주세요.')
   const horseSnapshot: HorseSnapshot = { id: career.horse.id, name: career.horse.name, age: career.age, values: { ...career.values }, aptitude: career.horse.aptitude, health: 'HEALTHY', condition: career.condition, record: career.record }
@@ -56,7 +56,7 @@ export function lockRaceEntry(career: Career, draft: RaceEntryDraft, identity: (
 }
 export function assertRaceRun(run: RaceRunInput, career: Career) {
   const fail = () => { throw new Error('저장된 출전 정보를 읽을 수 없습니다. 기존 저장은 유지됩니다.') }
-  if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || run.month !== 3 || career.month !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || !run.raceDefinitionSnapshot || !raceDefinitions.some(r => r.id === run.raceDefinitionSnapshot.id) || run.raceDefinitionSnapshot.month !== run.month || !Array.isArray(run.runners) || run.runners.length !== run.raceDefinitionSnapshot.runners || ![10, 12].includes(run.runners.length)) fail()
+  if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || run.month !== 3 || career.careerTurnIndex !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || !run.raceDefinitionSnapshot || !raceDefinitions.some(r => r.id === run.raceDefinitionSnapshot.id) || run.raceDefinitionSnapshot.month !== run.month || !Array.isArray(run.runners) || run.runners.length !== run.raceDefinitionSnapshot.runners || ![10, 12].includes(run.runners.length)) fail()
   for (const runner of run.runners) {
     if (!runner?.horseSnapshot?.id || !runner.horseSnapshot.name || runner.horseSnapshot.health !== 'HEALTHY' || !Array.isArray(runner.horseSnapshot.aptitude) || !runner.horseSnapshot.values || !runner.jockeySnapshot?.id || !tactics.includes(runner.tactic)) fail()
     for (const key of ['speed', 'stamina', 'power', 'guts', 'intelligence', 'fatigue', 'bodyLoad'] as const) if (!Number.isFinite(runner.horseSnapshot.values[key]) || runner.horseSnapshot.values[key] < 0) fail()

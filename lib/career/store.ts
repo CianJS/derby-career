@@ -71,7 +71,7 @@ export const careerStore = {
     if (!saved || saved.horse.id !== horseId || saved.month !== month) throw new Error('육성 상태가 변경되었습니다. 다시 불러와 주세요.')
     return lockRaceEntry(saved, draft)
   }),
-  select: (horseId: string) => mutate(saved => saved ?? startCareer(horseId)),
+  select: (horseId: string) => mutate(saved => { const next = startCareer(horseId); return saved ? { ...next, calendarDate: saved.calendarDate, contractedJockeyIds: saved.contractedJockeyIds } : next }),
   commit: (choice: Choice, expectedMonth: number) => mutate(saved => {
     if (!saved || saved.month !== expectedMonth || saved.action || saved.raceRun) return saved
     const committed = commitAction(saved, choice)
