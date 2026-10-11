@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Button } from '@/components/ui/button'
+import { PositionHistory } from '@/components/career/race-position-history'
 import type { RaceRunInput } from '@/lib/career/race-entry'
 import { readRaceLog } from '@/lib/career/race-log-repository'
 import { frameAt, highlightText, validateRaceLog, type RaceSimulationLog } from '@/lib/career/race-simulation'
@@ -70,8 +71,9 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
   const finished = time >= log.durationMs
   const player = frame.runners.find(r => r.horseId === run.playerHorseId)!
   const phaseIndex = phases.indexOf(frame.phase)
-  const highlight = log.highlights.filter(h => h.tMs <= time && highlightText(h)).at(-1)
-  const jump = (next: number) => { timeRef.current = next; setTime(next) }
+  const visibleHighlights = log.highlights.filter(h => h.tMs <= time && highlightText(h))
+  const highlight = visibleHighlights.at(-1)
+  const feed = visibleHighlights.map(h => ({ id: h.id, tMs: h.tMs, text: highlightText(h) })).reverse()
   const race = run.raceDefinitionSnapshot
 
   return <div className="mt-5">
@@ -92,11 +94,19 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
       </div>
       <div className="race-stage-footer"><span>{frame.remaining}m remaining</span><div className="race-progress-bar"><i style={{ width: `${(time / log.durationMs) * 100}%` }} /></div><span>{frame.remaining <= 100 ? 'PHOTO FINISH' : frame.remaining <= 400 ? 'FINAL 400M' : ''}</span></div>
     </main>
-    <section className="race-live-grid"><div className="race-ranking-panel"><div className="panel-title"><span>LIVE RANKING</span><span>{player.rank}위 / {frame.runners.length}두</span></div>{frame.runners.map(r => <div key={r.horseId} className={`race-rank-row ${r.horseId === run.playerHorseId ? 'player' : ''}`}><b>{r.rank}</b><span>{names.get(r.horseId)} {r.horseId === run.playerHorseId && <em>YOU</em>}</span><i><span style={{ width: `${Math.max(4, (r.distance / log.raceDistance) * 100)}%` }} /></i></div>)}</div></section>
+    <section className="race-live-grid">
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="race-ranking-panel"><div className="panel-title"><span>LIVE RANKING</span><span>{player.rank}위 / {frame.runners.length}두</span></div>{frame.runners.map(r => <div key={r.horseId} className={`race-rank-row ${r.horseId === run.playerHorseId ? 'player' : ''}`}><b>{r.rank}</b><span>{names.get(r.horseId)} {r.horseId === run.playerHorseId && <em>YOU</em>}</span><i><span style={{ width: `${Math.max(4, (r.distance / log.raceDistance) * 100)}%` }} /></i></div>)}</div>
+        <PositionHistory log={log} frame={frame} playerHorseId={run.playerHorseId} names={names} />
+      </div>
+      <div className="race-ranking-panel self-start">
+        <div className="panel-title"><span>RACE FEED</span><span>{feed.length}건</span></div>
+        {feed.length ? <ul aria-label="경주 중계 기록" className="max-h-[28rem] overflow-y-auto">{feed.map(item => <li key={item.id} className="flex gap-3 border-b border-border px-3 py-2 text-xs leading-5 last:border-b-0"><span className="w-12 shrink-0 tabular-nums text-muted-foreground">{(item.tMs / 1000).toFixed(1)}s</span><span>{item.text}</span></li>)}</ul> : <p className="px-3 py-3 text-xs text-muted-foreground">아직 기록된 이벤트가 없습니다.</p>}
+      </div>
+    </section>
     <footer className="race-control-deck">
       {finished ? <Button onClick={onFinish}>결과 확인</Button> : <Button onClick={() => setPaused(v => !v)}>{paused ? '계속' : '일시정지'}</Button>}
       <div className="race-speed-group" role="group" aria-label="재생 속도"><span className="ui-metadata">PLAYBACK</span>{speeds.map(value => <button key={value} type="button" aria-pressed={speed === value} className={speed === value ? 'active' : ''} onClick={() => { setSpeed(value); setPaused(false) }}>{value}x</button>)}</div>
-      {!finished && <Button variant="outline" onClick={() => jump(log.durationMs)}>결과로 건너뛰기</Button>}
     </footer>
   </div>
 }

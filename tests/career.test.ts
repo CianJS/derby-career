@@ -6,13 +6,15 @@ import { applyCareer } from '../lib/career/lifecycle'
 import { readLifecycleSave, writeLifecycleSave } from '../lib/career/lifecycle-repository'
 
 test('monthly state extends the existing lifecycle without replacing management data', () => {
-  const original = { activeHorse: null, month: 4, stableName: '보존할 마방', funds: '₩42,800,000', archive: [{ id: 'retired' }], country: '대한민국', year: 2028 }
+  const original = { activeHorse: null, month: 9, stableName: '보존할 마방', funds: '₩42,800,000', archive: [{ id: 'retired' }], country: '대한민국', year: 2030 }
   const career = resolveAction(commitAction(startCareer(horses[1].id), 'stamina'))
   const merged = applyCareer(original, career)
   assert.equal(merged.stableName, original.stableName)
   assert.equal(merged.archive, original.archive)
   assert.equal(merged.funds, original.funds)
-  assert.equal(merged.month, 1)
+  assert.equal(merged.month, career.calendarDate.month)
+  assert.equal(merged.year, career.calendarDate.year)
+  assert.notEqual(merged.month, career.month)
   assert.equal((merged.activeHorse as unknown as { name: string }).name, '세레네 스텝')
   assert.equal(original.activeHorse, null)
 })

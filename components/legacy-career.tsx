@@ -729,7 +729,7 @@ function CareerComplete({
         onClick={onNext}
         className="mt-5 rounded-lg bg-primary px-5 py-2 text-xs text-primary-foreground"
       >
-        다음 달 시작
+        새 육성마 선택
       </button>
         <button
           onClick={() => setView("stable")}
@@ -984,7 +984,7 @@ function Training({
     ["speed", "스피드", "속도 ↑↑ · 파워 ↑", "보통", "높음"],
     ["stamina", "스태미나", "지구력 ↑↑ · 근성 ↑", "높음", "보통"],
     ["power", "파워", "파워 ↑↑ · 속도 ↑", "보통", "높음"],
-    ["guts", "근성", "근성 ↑↑ · 지구력 ↑", "높음", "보��~높음"],
+    ["guts", "근성", "근성 ↑↑ · 지구력 ↑", "높음", "보통~높음"],
     ["intelligence", "지능", "지능 ↑↑", "낮음", "낮음"],
   ] as const;
   return (
@@ -1088,7 +1088,7 @@ function Training({
             <div className="grid gap-3 md:grid-cols-3">
               {[
                 ["3월", "휴식 · 컨디션 회복"],
-                ["2��", "파워 훈련 · 능력 성장"],
+                ["2월", "파워 훈련 · 능력 성장"],
                 ["1월", "한신 컵 · 3착"],
               ].map(([month, text]) => (
                 <div key={month} className="border-b border-border pb-2">
@@ -2032,7 +2032,7 @@ function Race({ setView }: { setView: (v: View) => void }) {
             ["거리", "2000m"],
             ["방향", "우회전"],
             ["연령", "3세"],
-            ["���별", "수말·암말"],
+            ["성별", "수말·암말"],
             ["상금", "₩120,000,000"],
           ].map(([a, b]) => (
             <div key={a} className="border-b border-r border-border px-4 py-3">
@@ -2479,7 +2479,7 @@ function RaceEntryLegacy({ setView }: { setView: (v: View) => void }) {
   const steps = ["경주 선택", "기수 선택", "전술", "최종 확인"];
   const selectedTactics = [
     ["도주", "C", "초반부터 선두권을 노립니다."],
-    ["선행", "A", "앞쪽 그룹에서 안정적으로 전개합니��."],
+    ["선행", "A", "앞쪽 그룹에서 안정적으로 전개합니다."],
     ["선입", "A", "중단에서 경주를 진행한 뒤 후반을 노립니다."],
     ["추입", "B", "후방에서 체력을 아끼고 막판 추격을 노립니다."],
   ];
@@ -3912,7 +3912,7 @@ function RaceExperimental({ setView }: { setView: (v: View) => void }) {
           onClick={() => setPaused((v) => !v)}
           className="rounded-lg bg-primary px-5 py-2 text-xs text-primary-foreground"
         >
-          {started && !paused ? "일시정지" : "레이스 ���작"}
+          {started && !paused ? "일시정지" : "레이스 시작"}
         </button>
         <button
           onClick={() => setView("raceplay")}

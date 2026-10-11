@@ -7,7 +7,7 @@ export function applyCareer<T extends { activeHorse: LifecycleHorse | null; mont
   const previous = state.activeHorse?.id === career.horse.id ? state.activeHorse : null
   const records = career.raceRecords
   const summary = summarizeRecords(records)
-  return { ...state, month: career.month, year: career.calendarDate.year, activeHorse: {
+  return { ...state, month: career.calendarDate.month, year: career.calendarDate.year, activeHorse: {
     ...previous,
     id: career.horse.id, name: career.horse.name, age: `${career.age}세`, sex: previous?.sex ?? '수말',
     growth: career.horse.growth, growthNote: career.horse.description,
