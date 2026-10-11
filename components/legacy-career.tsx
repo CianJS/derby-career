@@ -20,7 +20,7 @@ import { RaceReflection } from "@/components/career/race-reflection";
 import { careerStore, useCareer } from "@/lib/career/store";
 import { applyCareer } from "@/lib/career/lifecycle";
 import { INJURY_NOTICE, isHealthy, isStrained } from "@/lib/career/status";
-import { contractedJockeys } from "@/lib/career/race-entry";
+import { contractedJockeys, freeAgentJockeys, jockeyProfiles } from "@/lib/career/race-entry";
 import { summarizeRecords, type HorseRaceRecord } from "@/lib/career/records";
 import {
   readLifecycleSave,
@@ -329,7 +329,7 @@ const races = [
     prize: "₩110,000,000",
   },
 ];
-const jockeys = contractedJockeys.map(j => ({ ...j, meta: j.style, contract: '—', chem: j.chemistry, abilities: [j.start, j.pace, j.path, j.timing, j.stability] }));
+const jockeys = [...contractedJockeys, ...freeAgentJockeys].map(j => ({ ...j, meta: j.style, contract: '—', chem: j.chemistry, abilities: [j.start, j.pace, j.path, j.timing, j.stability] }));
 function Meter({ value }: { value: number }) {
   return (
     <div className="h-1 rounded-full bg-muted">
@@ -563,7 +563,7 @@ function StableSetup({
           마방을 시작합니다.
         </h1>
         <p className="mt-5 max-w-md text-sm leading-7 text-muted-foreground">
-          앞으로 육성한 경주마들의 기록은 이 마방의 역사로 남습니다.
+          앞으로 ��성한 경주마들의 기록은 이 마방의 역사로 남습니다.
         </p>
         <div className="mt-10 border-y border-border py-6">
           <label className="block text-xs text-muted-foreground">
@@ -2108,7 +2108,7 @@ function Jockeys({ setView, onSelect }: { setView: (v: View) => void; onSelect: 
             <p className="mt-1 text-xs text-primary">
               {contractedIds.includes(j.id) ? '계약 중' : '계약 가능'}
             </p>
-            {career ? (
+            {career?.horse ? (
               <p className="mt-1 text-xs">
                 현재 육성마 호흡도 ·{" "}
                 <b className="text-primary">{j.chem} / 100</b>
@@ -2159,12 +2159,12 @@ function Jockey({ setView, jockeyId, horses }: { setView: (v: View) => void; joc
       <Section eyebrow="PROFILE / CONTRACT" title="프로필 · 계약">
         <div className="grid grid-cols-2 md:grid-cols-3">
           {[
-            ["나이", "—"],
-            ["국가", "—"],
+            ["나이", jockeyProfiles[j.id] ? `${jockeyProfiles[j.id].age}세` : "—"],
+            ["국가", jockeyProfiles[j.id]?.nationality ?? "—"],
             ["주요 스타일", j.style],
             ["계약 상태", (career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS).includes(j.id) ? "계약 중" : "미계약"],
             ["잔여 기간", (career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS).includes(j.id) ? "2029년 12월까지" : "—"],
-            career ? ["현재 육성마와 호흡도", `${j.chem} / 100`] : ["현재 육성마", "없음"],
+            career?.horse ? ["현재 육성마와 호흡도", `${j.chem} / 100`] : ["현재 육성마", "현재 육성마 없음"],
           ].map(([a, b]) => (
             <div key={a} className="border-b border-r border-border px-4 py-3">
               <span className="text-xs text-muted-foreground">{a}</span>
@@ -2511,7 +2511,7 @@ function RaceEntryLegacy({ setView }: { setView: (v: View) => void }) {
           <h1 className="ui-page-title mt-2 font-serif text-3xl">경주 출전</h1>
         </div>
         <span className="text-xs text-muted-foreground">
-          천둥의 전설 · 3세 수말
+          천��의 전설 · 3세 수말
         </span>
       </div>
       <div className="mt-6 flex items-center gap-2 text-xs">
@@ -3898,7 +3898,7 @@ function RaceExperimental({ setView }: { setView: (v: View) => void }) {
           onClick={() => setPaused((v) => !v)}
           className="rounded-lg bg-primary px-5 py-2 text-xs text-primary-foreground"
         >
-          {started && !paused ? "일시정지" : "레이스 시작"}
+          {started && !paused ? "일��정지" : "레이스 시작"}
         </button>
         <button
           onClick={() => setView("raceplay")}

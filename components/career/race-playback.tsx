@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { SkipForward } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PositionHistory } from '@/components/career/race-position-history'
 import type { RaceRunInput } from '@/lib/career/race-entry'
@@ -12,6 +11,8 @@ import { useCareer } from '@/lib/career/store'
 
 const phases = ['START', 'MID', 'FINAL_CORNER', 'STRETCH', 'FINISH'] as const
 const STRIP_MAX_ROWS = 9
+const speeds = [1, 4, 8, 16] as const
+type PlaybackSpeed = typeof speeds[number]
 
 function loadLog(run: RaceRunInput): { log: RaceSimulationLog | null; error: string | null } {
   try {
@@ -87,9 +88,12 @@ export function PositionBoard({ frame, playerHorseId, names, raceDistance }: { f
 function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationLog; onFinish: () => void }) {
   const [time, setTime] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [speed, setSpeed] = useState<PlaybackSpeed>(1)
   const timeRef = useRef(0)
   const pausedRef = useRef(false)
+  const speedRef = useRef<PlaybackSpeed>(1)
   pausedRef.current = paused
+  speedRef.current = speed
 
   useEffect(() => {
     let raf = 0
@@ -99,7 +103,7 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
       const delta = Math.min(Math.max(0, now - previous), 250)
       previous = now
       if (!pausedRef.current && timeRef.current < log.durationMs) {
-        timeRef.current = Math.min(log.durationMs, timeRef.current + delta)
+        timeRef.current = Math.min(log.durationMs, timeRef.current + delta * speedRef.current)
         if (now - lastHud >= 100 || timeRef.current >= log.durationMs) {
           lastHud = now
           setTime(timeRef.current)
@@ -126,8 +130,10 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
       </div>
       <div className="flex items-center gap-2">
         {finished ? <Button onClick={onFinish}>결과 확인</Button> : <>
+          <div role="group" aria-label="재생 배속" className="flex items-center gap-1">
+            {speeds.map(value => <Button key={value} size="sm" variant={speed === value ? 'default' : 'outline'} aria-pressed={speed === value} onClick={() => setSpeed(value)}>x{value}</Button>)}
+          </div>
           <Button variant="outline" onClick={() => setPaused(v => !v)}>{paused ? '계속' : '일시정지'}</Button>
-          <Button variant="outline" onClick={onFinish} aria-label="경주 연출을 건너뛰고 결과 보기"><SkipForward data-icon="inline-start" aria-hidden />건너뛰기</Button>
         </>}
       </div>
     </header>

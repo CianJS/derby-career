@@ -24,6 +24,14 @@ export const freeAgentJockeys: JockeySnapshot[] = [
   { id: 'CHOI_MINJAE', name: '최민재', start: 66, pace: 80, path: 82, timing: 79, stability: 70, chemistry: 0, style: '선입 / 페이스 판단 강점' },
   { id: 'KANG_HAJUN', name: '강하준', start: 72, pace: 69, path: 74, timing: 88, stability: 68, chemistry: 0, style: '추입 / 승부 타이밍 강점' },
 ]
+export const jockeyProfiles: Record<string, { age: number; nationality: string }> = {
+  HAN_DOYUN: { age: 29, nationality: '대한민국' },
+  SEO_JIAN: { age: 33, nationality: '대한민국' },
+  YOON_TAESUNG: { age: 41, nationality: '대한민국' },
+  PARK_SEOYUN: { age: 27, nationality: '대한민국' },
+  CHOI_MINJAE: { age: 35, nationality: '일본' },
+  KANG_HAJUN: { age: 31, nationality: '대한민국' },
+}
 // Only reachable through saved state, never listed in the entry screen; lets the 18-runner layout be exercised.
 export const stressRaceDefinitions: RaceDefinitionSnapshot[] = [
   { id: 'DEV_M3_FULL_GATE_1600', name: '풀게이트 마일', month: 3, surface: 'Turf', distance: 1600, raceClass: '미승리', runners: 18, courseProfile: '표준 직선 / 표준 코너', prize: 8000000, entryFee: 0 },
