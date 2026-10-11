@@ -39,7 +39,6 @@ import {
   ChevronRight,
   Coins,
   CornerUpRight,
-  Crown,
   Dumbbell,
   Flag,
   Flame,
@@ -394,12 +393,12 @@ function Section({
 }) {
   return (
     <section className="ui-section border border-border bg-card">
-      <div className="mb-4 flex items-end justify-between gap-3">
+      <div className="mb-3 flex items-end justify-between gap-3">
         <div>
-          <p className="font-mono text-[10px] tracking-[.18em] text-primary">
+          <p className="ui-label">
             {eyebrow}
           </p>
-          <h2 className="mt-1 font-serif text-xl font-semibold">{title}</h2>
+          <h2 className="mt-0.5 text-lg font-bold">{title}</h2>
         </div>
         {action}
       </div>
@@ -413,15 +412,13 @@ function Header({ setView }: { setView: (v: View) => void }) {
   const [note, setNote] = useState(false);
   return (
     <header className="lab-topbar sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1540px] items-center justify-between px-4 md:px-8">
+      <div className="mx-auto flex h-14 max-w-[1540px] items-center justify-between px-4 md:px-8">
         <button
-          className="flex items-center gap-2 lg:hidden"
+          className="lab-brand flex items-center"
           onClick={() => setView("home")}
         >
-          <Crown size={18} />
-          <span className="font-serif">DERBY CAREER</span>
+          DERBY CAREER
         </button>
-        <div className="lab-topbar-mark hidden md:flex">RACING CLUB <span>/</span> <strong>DERBY CAREER</strong></div>
         <div className="ml-auto flex items-center gap-2 text-muted-foreground">
           <span className="hidden text-xs sm:block">₩42,800,000</span>
           <button
@@ -517,15 +514,9 @@ function Sidebar({
     <aside className="lab-sidebar hidden w-[var(--layout-sidebar)] shrink-0 border-r border-border/70 bg-sidebar px-4 py-6 lg:block">
       <button
         onClick={() => setView("home")}
-        className="mb-10 flex items-center gap-3 px-3"
+        className="mb-10 flex items-center px-3"
       >
-        <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <Crown size={18} />
-        </div>
-        <div className="text-left">
-          <p className="font-serif font-semibold">DERBY CAREER</p>
-          <p className="text-[10px] text-muted-foreground">RACING STABLE</p>
-        </div>
+        <p className="text-left">DERBY CAREER</p>
       </button>
       <nav className="flex flex-col gap-1">
         {items.map(([key, label, Icon]) => (
@@ -555,7 +546,7 @@ function StableSetup({
   const [name, setName] = useState("");
   const [country, setCountry] = useState("대한민국");
   return (
-    <div className="lab-stable-setup flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-12 md:py-16">
+    <div className="lab-stable-setup flex min-h-[calc(100vh-57px)] items-center justify-center px-6 py-12 md:py-16">
       <div className="w-full max-w-xl">
         <p className="font-mono text-[10px] tracking-[.32em] text-primary">
           DERBY CAREER
@@ -731,7 +722,7 @@ function CareerComplete({
   onNext: () => void;
 }) {
   return (
-    <div className="lab-complete flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-16">
+    <div className="lab-complete flex min-h-[calc(100vh-57px)] items-center justify-center px-6 py-16">
       <div className="w-full max-w-xl">
         <p className="ui-label text-primary">CAREER COMPLETE</p>
         <h1 className="mt-3 font-serif text-5xl">{horse.name}</h1>
@@ -782,7 +773,7 @@ function RetirementConfirm({
   onConfirm: () => void;
 }) {
   return (
-    <div className="lab-retirement flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-16">
+    <div className="lab-retirement flex min-h-[calc(100vh-57px)] items-center justify-center px-6 py-16">
       <div className="w-full max-w-md border border-border bg-card p-7">
         <p className="ui-label text-primary">RETIREMENT</p>
         <h1 className="mt-3 font-serif text-3xl">은퇴하시겠습니까?</h1>
@@ -799,7 +790,7 @@ function RetirementConfirm({
           </button>
           <button
             onClick={onConfirm}
-            className="rounded-lg border border-amber-700/70 bg-amber-950/30 px-4 py-2 text-xs text-amber-200"
+            className="rounded-lg border border-rose/50 bg-rose/10 px-4 py-2 text-xs text-foreground"
           >
             은퇴 확정
           </button>
@@ -818,10 +809,10 @@ function Home({
   onNewCareer: () => void;
 }) {
   return (
-    <div className="lab-home relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-6 py-16">
+    <div className="lab-home relative flex min-h-[calc(100vh-57px)] items-center justify-center overflow-hidden px-6 py-16">
       <div className="pointer-events-none absolute inset-0 opacity-40">
         <div className="absolute left-1/2 top-1/2 size-[680px] -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-[48%] border border-primary/20" />
-        <div className="absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-[48%] border border-teal-400/10" />
+        <div className="absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-[48%] border border-accent-sage/20" />
       </div>
       <div className="lab-home-content relative z-10 w-full max-w-5xl text-center">
         <p className="font-mono text-[10px] tracking-[.42em] text-primary">
@@ -902,22 +893,21 @@ function Cockpit({
         </button>
       }
     >
-      <div className="ui-focus-grid ui-compact-grid grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr]">
+      <div className="ui-focus-grid grid items-start gap-x-6 gap-y-3 lg:grid-cols-[minmax(11rem,.9fr)_minmax(0,1.7fr)_minmax(0,1.1fr)]">
         <div>
           <p className="text-xs text-muted-foreground">
-            {horse?.age} · 성장형 {horse?.growth}
+            {horse?.age} · 성장형 {horse?.growth} · 통산 {horse?.record || "0전 0승"} · 누적 {horse?.prize || "₩0"}
           </p>
-          <p className="mt-3 text-sm">
-            통산 {state.activeHorse?.record || "0전 0승"} · 누적{" "}
-            {state.activeHorse?.prize || "₩0"}
+          <p className="mt-1 text-xs text-primary">
+            최고 성적 {horse?.best ?? "미출전"}
           </p>
           {!injured && isStrained(horse?.fatigue ?? 0, horse?.bodyLoad ?? 0) && (
             <div
               role="status"
-              className="mt-4 border-l-2 border-amber-500/70 bg-amber-500/5 px-3 py-2 text-xs text-amber-200"
+              className="lab-warn mt-2 px-3 py-2 text-xs"
             >
-              <b className="block font-medium">피로가 높습니다.</b>
-              <span className="text-amber-200/75">
+              <b className="font-semibold">피로가 높습니다.</b>{" "}
+              <span className="text-muted-foreground">
                 훈련 시 부상 위험이 증가할 수 있습니다.
               </span>
             </div>
@@ -925,81 +915,45 @@ function Cockpit({
           {injured && (
             <div
               role="status"
-              className="mt-4 border-l-2 border-rose/70 bg-rose/5 px-3 py-2 text-xs"
+              className="lab-warn mt-2 px-3 py-2 text-xs"
             >
-              <b className="block font-medium">부상 중 · {health}</b>
+              <b className="font-semibold">부상 중 · {health}</b>{" "}
               <span className="text-muted-foreground">{INJURY_NOTICE}</span>
             </div>
           )}
-          <p className="mt-1 text-xs text-primary">
-            최고 성적 {horse?.best ?? "미출전"}
-          </p>
         </div>
-        <div>
-          <p className="mb-3 text-xs text-muted-foreground">능력</p>
-          <div className="flex flex-col gap-2">
-            {stats.map(([n, v]) => (
-              <div
-                key={n}
-                className="grid grid-cols-[45px_1fr_35px] items-center gap-2 text-xs"
-              >
-                <span>{n}</span>
-                <Meter value={v} />
-                <b>{v}</b>
+        <dl className="grid grid-cols-5 gap-3 lg:border-x lg:border-border lg:px-6">
+          {stats.map(([n, v]) => (
+            <div key={n}>
+              <dt className="text-xs text-muted-foreground">{n}</dt>
+              <dd className="mt-1 text-lg font-bold tabular-nums">{v}</dd>
+              <div aria-hidden className="lab-meter mt-1.5">
+                <i style={{ width: `${Math.min(100, v / 10)}%` }} />
               </div>
-            ))}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          {[
-            [
-              Sparkles,
-              "컨디션",
-              state.activeHorse?.condition || "좋음",
-              "text-sage",
-            ],
-            [
-              BatteryLow,
-              "피로",
-              String(state.activeHorse?.fatigue ?? 36),
-              "text-rose",
-            ],
-            [
-              Activity,
-              "부하",
-              String(state.activeHorse?.bodyLoad ?? 48),
-              "text-primary",
-            ],
-            [HeartPulse, "건강", health, injured ? "text-rose" : "text-sage"],
-          ].map(([Icon, a, b, c]) => (
-            <div key={a as string} className="rounded-lg bg-accent p-3">
-              <IconLabel
-                icon={
-                  Icon as ComponentType<{
-                    size?: number;
-                    className?: string;
-                    strokeWidth?: number;
-                    "aria-hidden"?: boolean;
-                  }>
-                }
-                className="text-muted-foreground"
-              >
-                {String(a)}
-              </IconLabel>
-              <p className={`mt-1 ${String(c)}`}>{String(b)}</p>
             </div>
           ))}
-        </div>
+        </dl>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+          {[
+            ["컨디션", state.activeHorse?.condition || "좋음", "text-sage"],
+            ["피로", String(state.activeHorse?.fatigue ?? 36), "text-rose"],
+            ["부하", String(state.activeHorse?.bodyLoad ?? 48), "text-primary"],
+            ["건강", health, injured ? "text-rose" : "text-sage"],
+          ].map(([a, b, c]) => (
+            <div key={a} className="flex items-center justify-between gap-2">
+              <dt className="text-muted-foreground">{a}</dt>
+              <dd className={`font-semibold tabular-nums ${c}`}>{b}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-2 text-xs">
+        <span className="text-muted-foreground">주요 적성</span>
         {apt
           .filter(([, , grade]) => grade === "A")
           .map(([, n, g]) => (
-            <span
-              key={n}
-              className="rounded-full border border-border px-3 py-1 text-xs"
-            >
-              {n} <b className="ml-1 text-primary">{g}</b>
+            <span key={n}>
+              {n} <b className="ml-0.5 text-primary">{g}</b>
             </span>
           ))}
       </div>
@@ -1443,7 +1397,7 @@ function Delta({
           {from} <span className="text-muted-foreground">→</span> {to}
         </p>
       </div>
-      <b className={tone === "good" ? "text-primary" : "text-amber-400"}>
+      <b className={tone === "good" ? "text-primary" : "text-rose"}>
         {value}
       </b>
     </div>
@@ -2123,7 +2077,7 @@ function Jockeys({ setView, onSelect }: { setView: (v: View) => void; onSelect: 
                 "페이스 판단",
                 "진로 판단",
                 "승부 타이밍",
-                "기승 안정",
+                "기승 안���",
               ].map((a, i) => (
                 <span
                   key={a}
@@ -2818,7 +2772,7 @@ function PositionBoard({ stage }: { stage: number }) {
           </span>
           <div className="relative h-2 rounded-full bg-accent">
             <div
-              className={`absolute inset-y-0 left-0 rounded-full ${name === "천둥의 전설" ? "bg-primary" : "bg-teal-700/70"}`}
+              className={`absolute inset-y-0 left-0 rounded-full ${name === "천둥의 전설" ? "bg-primary" : "bg-blue/70"}`}
               style={{ width: `${100 - (ranks[stage] - 1) * 17}%` }}
             />
             <span
@@ -3043,7 +2997,7 @@ function RacePlay({ setView }: { setView: (v: View) => void }) {
                   </span>
                   <div className="h-2 rounded-full bg-accent">
                     <div
-                      className={`h-full rounded-full ${name === "천둥의 전설" ? "bg-primary" : "bg-teal-700"}`}
+                      className={`h-full rounded-full ${name === "천둥의 전설" ? "bg-primary" : "bg-blue"}`}
                       style={{ width: `${positions[segment][i]}%` }}
                     />
                   </div>
@@ -4246,7 +4200,7 @@ function RaceResult({
             ))}
         </div>
         {playerState.bodyAfter >= 60 && (
-          <p className="mt-3 text-xs text-amber-300">
+          <p className="mt-3 text-xs text-rose">
             신체 부하가 높아졌습니다.
           </p>
         )}
@@ -4631,7 +4585,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header setView={setView} />
-      <div className="flex min-h-[calc(100vh-4rem)]">
+      <div className="flex min-h-[calc(100vh-57px)]">
         {management && <Sidebar view={view} setView={setView} />}
         <main className="min-w-0 flex-1">
           {saveError && (

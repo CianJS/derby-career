@@ -12,7 +12,7 @@ export function RaceAction({ onOpen }: { onOpen: () => void }) {
   if (!career) return null
   const restriction = entryRestriction(career)
   const open = racesForTurn(career.careerTurnIndex).filter(r => !raceEligibility(career, r)).length
-  return <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3"><p className="text-xs text-muted-foreground">{career.raceRun ? '저장된 출전 정보를 확인할 수 있습니다.' : restriction ?? `현재 전적으로 출전 가능한 경주 ${open}개`}</p><Button variant="outline" disabled={busy || (!career.raceRun && !!restriction)} onClick={onOpen}>{career.raceRun ? '출전 정보 확인' : '경주 출전'}</Button></div>
+  return <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">{career.raceRun ? '저장된 출전 정보를 확인할 수 있습니다.' : restriction ?? `현재 전적으로 출전 가능한 경주 ${open}개`}</p><Button disabled={busy || (!career.raceRun && !!restriction)} onClick={onOpen}>{career.raceRun ? '출전 정보 확인' : '경주 출전 준비'}</Button></div>
 }
 
 export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }) {
