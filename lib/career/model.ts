@@ -1,3 +1,5 @@
+import { assertRaceRun, type RaceRunInput } from './race-entry'
+
 export const statKeys = ['speed', 'stamina', 'power', 'guts', 'intelligence'] as const
 export type Stat = typeof statKeys[number]
 export const labels: Record<Stat | 'fatigue' | 'bodyLoad', string> = { speed: '속도', stamina: '지구력', power: '파워', guts: '근성', intelligence: '지능', fatigue: '피로', bodyLoad: '신체 부하' }
@@ -20,7 +22,7 @@ export const trainings: Record<Stat, { name: string; secondary?: Stat; preview: 
 export type Choice = Stat | 'rest'
 export type Change = { key: keyof Values; before: number; after: number }
 export type ActionRecord = { actionId: string; horseId: string; month: number; actionType: 'training' | 'rest'; trainingType: Stat | null; seed: number; result: Change[] | null }
-export type Career = { version: 1; horse: Horse; age: number; month: number; values: Values; condition: string; health: string; record: string; prize: string; action: ActionRecord | null; recent: ActionRecord[] }
+export type Career = { version: 1; horse: Horse; age: number; month: number; values: Values; condition: string; health: string; record: string; prize: string; action: ActionRecord | null; recent: ActionRecord[]; raceRun?: RaceRunInput }
 export function startCareer(horseId: string): Career {
   const horse = horses.find(h => h.id === horseId)
   if (!horse) throw new Error('육성마를 선택해 주세요.')
@@ -32,7 +34,7 @@ export function hashSeed(text: string): number {
   return value >>> 0
 }
 export function commitAction(state: Career, choice: Choice): Career {
-  if (state.action) return state
+  if (state.action || state.raceRun) return state
   if (choice !== 'rest' && !statKeys.includes(choice)) throw new Error('지원하지 않는 행동입니다.')
   const actionId = `${state.horse.id}:month-${state.month}`
   return { ...state, action: { actionId, horseId: state.horse.id, month: state.month, actionType: choice === 'rest' ? 'rest' : 'training', trainingType: choice === 'rest' ? null : choice, seed: hashSeed(`${actionId}:${choice}:v1`), result: null } }
@@ -63,7 +65,7 @@ export function resolveAction(state: Career): Career {
   return { ...state, values, action: { ...action, result } }
 }
 export function advanceMonth(state: Career, expectedActionId: string): Career {
-  if (!state.action || state.action.actionId !== expectedActionId || state.action.result === null) return state
+  if (state.raceRun || !state.action || state.action.actionId !== expectedActionId || state.action.result === null) return state
   return { ...state, month: state.month + 1, action: null, recent: [state.action, ...state.recent].slice(0, 3) }
 }
 export function actionName(action: ActionRecord): string { return action.actionType === 'rest' ? '휴식' : trainings[action.trainingType!].name }
@@ -72,6 +74,7 @@ export function assertCareer(value: unknown): asserts value is Career {
   const state = value as Career
   if (!state || state.version !== 1 || !state.horse?.id || !state.horse.name || !Array.isArray(state.horse.aptitude) || !Number.isInteger(state.month) || state.month < 1 || !state.values || !Array.isArray(state.recent) || state.recent.length > 3) throw new Error('저장된 육성 데이터를 읽을 수 없습니다. 기존 저장은 유지됩니다.')
   for (const key of [...statKeys, 'fatigue', 'bodyLoad'] as (keyof Values)[]) if (!Number.isFinite(state.values[key]) || state.values[key] < 0) throw new Error('저장된 능력치가 유효하지 않습니다.')
+  if (state.raceRun !== undefined) assertRaceRun(state.raceRun, state)
   for (const action of [...state.recent, ...(state.action ? [state.action] : [])]) {
     if (!action.actionId || action.horseId !== state.horse.id || !Number.isInteger(action.month) || !Number.isInteger(action.seed) || !['training', 'rest'].includes(action.actionType) || (action.actionType === 'training' && !statKeys.includes(action.trainingType!)) || (action.result !== null && (!Array.isArray(action.result) || action.result.some(c => !(c.key in labels) || !Number.isFinite(c.before) || !Number.isFinite(c.after))))) throw new Error('저장된 행동 기록이 유효하지 않습니다.')
   }

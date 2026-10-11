@@ -1,5 +1,6 @@
 import { assertCareer, type Career, type Horse, type Stat, labels, statKeys } from './model'
 import { readLifecycleSave } from './lifecycle-repository'
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
 
 const key = 'derby-career-lifecycle-checkpoint-1'
 function readCookie(name: string): string | null {
@@ -29,7 +30,9 @@ export function readCareer(): Career | null {
     if (chunk === null) throw new Error('저장 데이터 일부를 읽을 수 없습니다. 쿠키 설정을 확인해 주세요.')
     payload += chunk
   }
-  const state: unknown = JSON.parse(decodeURIComponent(payload))
+  const decoded = payload.startsWith('z1:') ? decompressFromEncodedURIComponent(payload.slice(3)) : decodeURIComponent(payload)
+  if (!decoded) throw new Error('저장된 육성 데이터를 읽을 수 없습니다. 기존 저장은 유지됩니다.')
+  const state: unknown = JSON.parse(decoded)
   assertCareer(state)
   return state
 }
@@ -37,7 +40,7 @@ export function writeCareer(state: Career): void {
   assertCareer(state)
   const previous = readCookie(key)
   const generation = crypto.randomUUID()
-  const payload = encodeURIComponent(JSON.stringify(state))
+  const payload = `z1:${compressToEncodedURIComponent(JSON.stringify(state))}`
   const chunks = payload.match(/.{1,2800}/g)!
   if (chunks.length > 16) throw new Error('저장 용량을 초과했습니다.')
   // Publish the pointer only after every chunk is verified, so interrupted writes keep the prior save intact.

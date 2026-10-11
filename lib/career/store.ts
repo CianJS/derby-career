@@ -4,6 +4,8 @@ import { useSyncExternalStore } from 'react'
 import { advanceMonth, commitAction, resolveAction, startCareer, type Career, type Choice } from './model'
 import { clearCareer, readCareer, writeCareer } from './repository'
 
+import { lockRaceEntry, type RaceEntryDraft } from './race-entry'
+
 type Snapshot = { ready: boolean; busy: boolean; career: Career | null; error: string | null }
 const initial: Snapshot = { ready: false, busy: false, career: null, error: null }
 let snapshot = initial
@@ -65,9 +67,13 @@ export const careerStore = {
       return false
     } finally { publish({ busy: false }) }
   },
+  lockRace: (draft: RaceEntryDraft, horseId: string, month: number) => mutate(saved => {
+    if (!saved || saved.horse.id !== horseId || saved.month !== month) throw new Error('육성 상태가 변경되었습니다. 다시 불러와 주세요.')
+    return lockRaceEntry(saved, draft)
+  }),
   select: (horseId: string) => mutate(saved => saved ?? startCareer(horseId)),
   commit: (choice: Choice, expectedMonth: number) => mutate(saved => {
-    if (!saved || saved.month !== expectedMonth || saved.action) return saved
+    if (!saved || saved.month !== expectedMonth || saved.action || saved.raceRun) return saved
     const committed = commitAction(saved, choice)
     // Persist the commitment before calculating growth. Recovery uses this exact seed.
     writeCareer(committed)
