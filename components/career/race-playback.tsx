@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { SkipForward } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PositionHistory } from '@/components/career/race-position-history'
 import type { RaceRunInput } from '@/lib/career/race-entry'
@@ -134,6 +135,7 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
             {speeds.map(value => <Button key={value} size="sm" variant={speed === value ? 'default' : 'outline'} aria-pressed={speed === value} onClick={() => setSpeed(value)}>x{value}</Button>)}
           </div>
           <Button variant="outline" onClick={() => setPaused(v => !v)}>{paused ? '계속' : '일시정지'}</Button>
+          <Button variant="outline" onClick={onFinish} aria-label="경주 연출을 건너뛰고 결과 보기"><SkipForward data-icon="inline-start" aria-hidden />건너뛰기</Button>
         </>}
       </div>
     </header>
