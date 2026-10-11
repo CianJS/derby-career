@@ -31,4 +31,15 @@ export const BALANCE = {
     ],
   },
   condition: { goodFatigue: 10, goodBodyLoad: 10 },
+  race: {
+    // Cost a race adds to the horse by distance; unknown distances use `fallbackCost`.
+    cost: {
+      1400: { fatigue: 22, bodyLoad: 16 },
+      1600: { fatigue: 25, bodyLoad: 18 },
+      2000: { fatigue: 30, bodyLoad: 22 },
+    } as Record<number, { fatigue: number; bodyLoad: number }>,
+    fallbackCost: { fatigue: 25, bodyLoad: 18 },
+    // A race this tiring pushes the derived condition down one step (never below 나쁨).
+    tiredFatigue: 40,
+  },
 } as const

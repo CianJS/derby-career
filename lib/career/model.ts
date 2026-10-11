@@ -1,6 +1,7 @@
 import { assertRaceRun, type RaceRunInput } from './race-entry'
 import { BALANCE } from './balance'
 import { deriveCondition, isHealthy, rollsInjury } from './status'
+import { raceAftermath } from './post-race'
 
 export const statKeys = ['speed', 'stamina', 'power', 'guts', 'intelligence'] as const
 export type Stat = typeof statKeys[number]
@@ -38,7 +39,9 @@ export function applyRaceResult(career: Career, raceRunId: string, placing: numb
   const expected = run.simulation?.result
   if (expected && (expected.placing !== placing || expected.prizeMoney !== prizeMoney)) throw new Error('저장된 시뮬레이션 결과와 일치하지 않습니다.')
   const raceRecords = [...career.raceRecords, { raceRunId, month: career.month, race: run.raceDefinitionSnapshot.name, result: `${placing}착`, date: `${career.calendarDate.year}.${String(career.calendarDate.month).padStart(2, '0')}`, placing, prizeMoney, jockeyId: run.player.jockeySnapshot.id, jockeyName: run.player.jockeySnapshot.name, distance: run.raceDefinitionSnapshot.distance, grade: run.raceDefinitionSnapshot.raceClass }]
-  return { ...career, raceRecords, ...summarizeRecords(raceRecords) }
+  const { after } = raceAftermath(career, run)
+  const values = { ...career.values, fatigue: after.values.fatigue, bodyLoad: after.values.bodyLoad }
+  return { ...career, values, condition: after.condition, raceRecords, ...summarizeRecords(raceRecords) }
 }
 export function completeRace(career: Career, raceRunId: string, placing: number, prizeMoney: number): Career {
   const run = career.raceRun

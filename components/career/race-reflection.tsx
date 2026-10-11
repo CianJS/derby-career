@@ -46,7 +46,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
   const starts = career.raceRecords.length
   const wins = career.raceRecords.filter(record => record.placing === 1).length
   const winnerTime = log.finishOrder[0]?.finishTime ?? result.finishTime
-  const changes = postRaceChanges(career, run, result.placing)
+  const changes = postRaceChanges(career, run)
   const nextMonth = career.calendarDate.month === 12 ? 1 : career.calendarDate.month + 1
 
   const advance = async () => {
