@@ -19,6 +19,7 @@ import { RacePlayback } from "@/components/career/race-playback";
 import { RaceReflection } from "@/components/career/race-reflection";
 import { careerStore, useCareer } from "@/lib/career/store";
 import { applyCareer } from "@/lib/career/lifecycle";
+import { INJURY_NOTICE, isHealthy, isStrained } from "@/lib/career/status";
 import { contractedJockeys } from "@/lib/career/race-entry";
 import { summarizeRecords, type HorseRaceRecord } from "@/lib/career/records";
 import {
@@ -76,6 +77,18 @@ type View =
   | "race"
   | "jockeys"
   | "jockey";
+const VIEW_NAMES = [
+  "home",
+  "candidates",
+  "careerComplete",
+  "training",
+  "raceplay",
+  "result",
+  "stable",
+  "horse",
+  "races",
+  "jockeys",
+] as const;
 type CareerHorse = {
   id: string;
   name: string;
@@ -616,6 +629,22 @@ function HorseCandidates({
         현재 능력과 적성을 비교해 직접 선택합니다. 후보는 고정되어 새로고침해도
         바뀌지 않습니다.
       </p>
+      <dl className="mt-6 grid grid-cols-2 gap-4 border-y border-border py-4 text-xs md:grid-cols-4">
+        {[
+          ["마방", state.stableName || "—"],
+          ["보유 자금", state.funds],
+          [
+            "계약 기수",
+            `${STABLE_CONTRACTED_JOCKEY_IDS.length}명 · ${contractedJockeys.map((j) => j.name).join(", ")}`,
+          ],
+          ["Career Archive", `${state.archive.length}마리 보존`],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="mt-1 font-serif text-sm">{value}</dd>
+          </div>
+        ))}
+      </dl>
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         {state.candidates.map((horse) => (
           <button
@@ -781,9 +810,11 @@ function RetirementConfirm({
 function Home({
   setView,
   hasActiveHorse,
+  onNewCareer,
 }: {
   setView: (v: View) => void;
   hasActiveHorse: boolean;
+  onNewCareer: () => void;
 }) {
   return (
     <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-6 py-16">
@@ -808,9 +839,17 @@ function Home({
           onClick={() => setView(hasActiveHorse ? "training" : "candidates")}
           className="group mx-auto mt-12 flex items-center gap-4 border-b border-primary pb-3 font-serif text-2xl hover:gap-6"
         >
-          {hasActiveHorse ? "육성 시작" : "새 육성마 시작"}
+          {hasActiveHorse ? "육성 계속" : "새 육성마 시작"}
           <ChevronRight className="text-primary" />
         </button>
+        {hasActiveHorse && (
+          <button
+            onClick={onNewCareer}
+            className="mx-auto mt-5 block text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            새 커리어 시작
+          </button>
+        )}
         <div className="mx-auto mt-20 grid max-w-3xl border-y border-border/70 md:grid-cols-3">
           {[
             ["stable", "마구간", "STABLE"],
@@ -846,6 +885,9 @@ function Cockpit({
   const horse = state.activeHorse;
   const stats = horse?.stats ?? [];
   const apt = horse?.aptitude ?? [];
+  const { career } = useCareer();
+  const health = career?.health ?? "정상";
+  const injured = !isHealthy(health);
   return (
     <Section
       eyebrow="HORSE IN FOCUS"
@@ -868,13 +910,24 @@ function Cockpit({
             통산 {state.activeHorse?.record || "0전 0승"} · 누적{" "}
             {state.activeHorse?.prize || "₩0"}
           </p>
-          {(horse?.bodyLoad ?? 0) >= 60 && (
-            <div className="mt-4 border-l-2 border-red-900/70 px-3 py-2 text-xs text-red-200">
-              <span className="ui-label text-red-300">WARNING</span> 신체 부하가
-              높은 편입니다.{" "}
-              <span className="text-red-200/70">
-                이번 달은 회복 행동을 고려하세요.
+          {!injured && isStrained(horse?.fatigue ?? 0, horse?.bodyLoad ?? 0) && (
+            <div
+              role="status"
+              className="mt-4 border-l-2 border-amber-500/70 bg-amber-500/5 px-3 py-2 text-xs text-amber-200"
+            >
+              <b className="block font-medium">피로가 높습니다.</b>
+              <span className="text-amber-200/75">
+                훈련 시 부상 위험이 증가할 수 있습니다.
               </span>
+            </div>
+          )}
+          {injured && (
+            <div
+              role="status"
+              className="mt-4 border-l-2 border-rose/70 bg-rose/5 px-3 py-2 text-xs"
+            >
+              <b className="block font-medium">부상 중 · {health}</b>
+              <span className="text-muted-foreground">{INJURY_NOTICE}</span>
             </div>
           )}
           <p className="mt-1 text-xs text-primary">
@@ -916,7 +969,7 @@ function Cockpit({
               String(state.activeHorse?.bodyLoad ?? 48),
               "text-primary",
             ],
-            [HeartPulse, "건강", "정상", "text-sage"],
+            [HeartPulse, "건강", health, injured ? "text-rose" : "text-sage"],
           ].map(([Icon, a, b, c]) => (
             <div key={a as string} className="rounded-lg bg-accent p-3">
               <IconLabel
@@ -2097,6 +2150,12 @@ function Jockey({ setView, jockeyId, horses }: { setView: (v: View) => void; joc
       eyebrow="JOCKEY RECORD"
       description="기수의 능력과 기승 기록을 조회합니다."
     >
+      <button
+        onClick={() => setView("jockeys")}
+        className="w-fit text-xs text-muted-foreground hover:text-foreground"
+      >
+        ← 기수 목록
+      </button>
       <Section eyebrow="PROFILE / CONTRACT" title="프로필 · 계약">
         <div className="grid grid-cols-2 md:grid-cols-3">
           {[
@@ -4395,7 +4454,14 @@ export default function App() {
     try {
       const saved = { ...initialLifecycle, ...readLifecycle() };
       setState(saved);
-      setView("home");
+      const requested = new URLSearchParams(window.location.search).get("view");
+      setView(
+        process.env.NODE_ENV !== "production" &&
+          requested &&
+          (VIEW_NAMES as readonly string[]).includes(requested)
+          ? (requested as View)
+          : "home",
+      );
       setHydrated(true);
     } catch {
       setSaveError("마방 기록을 읽지 못했습니다. 기존 저장은 유지됩니다.");
@@ -4596,7 +4662,8 @@ export default function App() {
           {view === "home" && (
             <Home
               setView={setView}
-              hasActiveHorse={Boolean(state.activeHorse)}
+              hasActiveHorse={Boolean(state.activeHorse || career)}
+              onNewCareer={() => setView("retirementConfirm")}
             />
           )}{" "}
           {(view === "training" || view === "candidates") && (

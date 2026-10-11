@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { SkipForward } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PositionHistory } from '@/components/career/race-position-history'
 import type { RaceRunInput } from '@/lib/career/race-entry'
@@ -10,7 +11,7 @@ import { frameAt, validateRaceLog, type RaceSimulationLog } from '@/lib/career/r
 import { useCareer } from '@/lib/career/store'
 
 const phases = ['START', 'MID', 'FINAL_CORNER', 'STRETCH', 'FINISH'] as const
-const STRIP_ROWS = 6
+const STRIP_MAX_ROWS = 9
 
 function loadLog(run: RaceRunInput): { log: RaceSimulationLog | null; error: string | null } {
   try {
@@ -46,16 +47,18 @@ export function PhaseMarker({ phaseIndex }: { phaseIndex: number }) {
 export function RaceStrip({ frame, runners, playerHorseId, names, raceDistance }: { frame: ReturnType<typeof frameAt>; runners: RaceRunInput['runners']; playerHorseId: string; names: Map<string, string>; raceDistance: number }) {
   const gates = useMemo(() => new Map(runners.map((runner, index) => [runner.horseSnapshot.id, index + 1])), [runners])
   const ordered = [...frame.runners].sort((a, b) => (a.horseId === playerHorseId ? 1 : 0) - (b.horseId === playerHorseId ? 1 : 0))
-  return <div className="race-strip" role="img" aria-label={`레이스 스트립. 결승까지 ${frame.remaining}미터 남았습니다.`}>
+  const rows = Math.min(STRIP_MAX_ROWS, Math.ceil(runners.length / 2))
+  return <div className="race-strip" role="img" aria-label={`레이스 스트립. 결승까지 ${frame.remaining}미터 남았습니다.`} style={{ '--strip-rows': rows } as CSSProperties}>
     <div className="race-strip-lanes" />
     <span className="race-strip-start" />
     <span className="race-strip-finish" />
     {ordered.map(runner => {
       const gate = gates.get(runner.horseId) ?? 0
       const isPlayer = runner.horseId === playerHorseId
-      const row = (gate - 1) % STRIP_ROWS
+      const row = (gate - 1) % rows
+      const nudge = Math.floor((gate - 1) / rows)
       const progress = Math.min(100, Math.max(0, (runner.distance / raceDistance) * 100))
-      return <div key={runner.horseId} className={`race-strip-runner ${isPlayer ? 'is-player' : ''}`} style={{ '--strip-x': progress / 100, '--strip-row': row } as CSSProperties}>
+      return <div key={runner.horseId} className={`race-strip-runner ${isPlayer ? 'is-player' : ''}`} style={{ '--strip-x': progress / 100, '--strip-row': row, '--strip-nudge': nudge } as CSSProperties}>
         <b>{gate}</b>
         {isPlayer && <span>{names.get(runner.horseId)} · YOU</span>}
       </div>
@@ -67,7 +70,7 @@ export function PositionBoard({ frame, playerHorseId, names, raceDistance }: { f
   const player = frame.runners.find(runner => runner.horseId === playerHorseId)
   return <div className="race-ranking-panel">
     <div className="panel-title"><span>POSITION BOARD</span><span>{player?.rank}위 / {frame.runners.length}두</span></div>
-    <ol className="race-board">
+    <ol className={`race-board ${frame.runners.length > 12 ? 'is-dense' : ''}`}>
       {frame.runners.map(runner => {
         const isPlayer = runner.horseId === playerHorseId
         return <li key={runner.horseId} className={isPlayer ? 'player' : ''}>
@@ -115,13 +118,18 @@ function Stage({ run, log, onFinish }: { run: RaceRunInput; log: RaceSimulationL
   const feed = useMemo(() => significantFeed(log, names, Math.floor(time / 500) * 500), [log, names, time])
   const race = run.raceDefinitionSnapshot
 
-  return <div className="mt-4">
+  return <div className="mt-3">
     <header className="race-broadcast-header">
       <div>
         <h1 className="ui-page-title font-serif">{race.name}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{race.surface} {race.distance}m · {run.runners.length}두 · {run.player.jockeySnapshot.name} · {run.player.tactic} · 남은 거리 {frame.remaining}m</p>
       </div>
-      {finished ? <Button onClick={onFinish}>결과 확인</Button> : <Button variant="outline" onClick={() => setPaused(v => !v)}>{paused ? '계속' : '일시정지'}</Button>}
+      <div className="flex items-center gap-2">
+        {finished ? <Button onClick={onFinish}>결과 확인</Button> : <>
+          <Button variant="outline" onClick={() => setPaused(v => !v)}>{paused ? '계속' : '일시정지'}</Button>
+          <Button variant="outline" onClick={onFinish} aria-label="경주 연출을 건너뛰고 결과 보기"><SkipForward data-icon="inline-start" aria-hidden />건너뛰기</Button>
+        </>}
+      </div>
     </header>
     <PhaseMarker phaseIndex={phaseIndex} />
     <RaceStrip frame={frame} runners={run.runners} playerHorseId={run.playerHorseId} names={names} raceDistance={log.raceDistance} />

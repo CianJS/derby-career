@@ -6,6 +6,7 @@ import type { RaceRunInput } from '@/lib/career/race-entry'
 import { readRaceLog } from '@/lib/career/race-log-repository'
 import { PositionHistory } from '@/components/career/race-position-history'
 import { keyMoments } from '@/lib/career/race-feed'
+import { postRaceChanges } from '@/lib/career/post-race'
 import { frameAt, validateRaceLog, type RaceSimulationLog } from '@/lib/career/race-simulation'
 import { careerStore, useCareer } from '@/lib/career/store'
 
@@ -45,6 +46,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
   const starts = career.raceRecords.length
   const wins = career.raceRecords.filter(record => record.placing === 1).length
   const winnerTime = log.finishOrder[0]?.finishTime ?? result.finishTime
+  const changes = postRaceChanges(career, run, result.placing)
   const nextMonth = career.calendarDate.month === 12 ? 1 : career.calendarDate.month + 1
 
   const advance = async () => {
@@ -66,7 +68,9 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
     </section>
     <section aria-label="순위 변화"><PositionHistory log={log} frame={finalFrame} playerHorseId={run.playerHorseId} names={names} markers={markers} /></section>
     <section aria-label="핵심 장면"><h2 className="mb-2 text-sm font-semibold">핵심 장면</h2><ul className="flex flex-col">{moments.map(moment => <li key={moment.id} className="flex gap-4 border-b border-border py-2 text-sm last:border-b-0"><span className="w-28 shrink-0 font-mono text-[0.6rem] tracking-[0.12em] text-muted-foreground">{moment.label}</span><span>{moment.text}</span></li>)}</ul></section>
-    <section aria-label="경주 후 상태"><h2 className="mb-2 text-sm font-semibold">경주 후 상태</h2><p className="text-sm text-muted-foreground">결과를 확정하면 {nextMonth}월로 넘어가며 출전 기록이 경주 기록에 추가됩니다.</p></section>
+    <section aria-label="경주 후 상태"><h2 className="mb-2 text-sm font-semibold">경주 후 상태</h2>
+      <ul className="grid gap-x-6 md:grid-cols-2">{changes.map(change => <li key={change.label} className="flex items-baseline justify-between border-b border-border py-2 text-sm"><span className="ui-metadata">{change.label}</span><span className="font-medium tabular-nums">{change.before} → {change.after}{change.delta && <span className="ml-2 text-xs text-muted-foreground">({change.delta})</span>}</span></li>)}</ul>
+      <p className="mt-2 text-sm text-muted-foreground">결과를 확정하면 {nextMonth}월로 넘어가며 출전 기록이 경주 기록에 추가됩니다.</p></section>
     <details className="border border-border"><summary className="cursor-pointer px-3 py-2 text-sm font-semibold">전체 착순 {run.runners.length}두</summary><ol className="flex flex-col px-3 pb-2">{log.finishOrder.slice().sort((a, b) => a.placing - b.placing).map(record => <li key={record.horseId} className={`flex flex-wrap justify-between gap-2 border-b border-border py-1.5 text-xs tabular-nums last:border-b-0 ${record.horseId === run.playerHorseId ? 'font-medium text-primary' : ''}`}><span>{record.placing}착 · {nameOf(record.horseId)}</span><span className="text-muted-foreground">{record.finishTime.toFixed(2)}초{record.placing > 1 ? ` (+${(record.finishTime - winnerTime).toFixed(2)})` : ''}</span></li>)}</ol></details>
     {error && <p role="alert" className="ui-error-state">{error}</p>}
     <div><Button disabled={busy || submitting} onClick={() => void advance()}>{submitting ? '저장 중…' : '결과 확정 · 다음 달 시작'}</Button></div>

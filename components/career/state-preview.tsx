@@ -1,23 +1,31 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { startCareer, type Career } from '@/lib/career/model'
-import { writeCareer } from '@/lib/career/repository'
+import { buildFixture, fixtureIds, fixtureLifecycle } from '@/lib/career/fixtures'
+import { writeLifecycleSave } from '@/lib/career/lifecycle-repository'
+import { writeRaceLog } from '@/lib/career/race-log-repository'
+import { clearCareer, writeCareer } from '@/lib/career/repository'
 
-const states: { id: string; label: string; build: () => Career }[] = [
-  { id: 'normal', label: 'normal', build: () => startCareer('DEV_HORSE_SERENE_STEP') },
-  { id: 'high-fatigue', label: 'high-fatigue', build: () => { const c = startCareer('DEV_HORSE_SERENE_STEP'); return { ...c, condition: '피로 높음', values: { ...c.values, fatigue: 84, bodyLoad: 80 } } } },
-  { id: 'injured', label: 'injured', build: () => { const c = startCareer('DEV_HORSE_SERENE_STEP'); return { ...c, health: '경상', condition: '치료 중', values: { ...c.values, fatigue: 48, bodyLoad: 66 } } } },
-  { id: 'later-month', label: 'later-month', build: () => { const c = startCareer('DEV_HORSE_RED_COMET'); return { ...c, month: 3, careerTurnIndex: 3, calendarDate: { year: 2028, month: 6 } } } },
-]
+const labels = fixtureIds.map(id => ({ id, label: buildLabel(id) }))
+function buildLabel(id: (typeof fixtureIds)[number]) {
+  return ({ normal: '육성 · 일반', 'active-home': '홈 · 육성마 있음', 'high-fatigue': '육성 · 피로 높음', injured: '육성 · 부상', 'later-month': '육성 · 경주 달', 'playback-12': '경주 · 12두', 'playback-18': '경주 · 18두', 'result-win': '결과 · 1착', 'result-lose': '결과 · 하위권', retired: '은퇴 직후', 'new-career': '새 육성마 선택', 'no-horse': '기수 · 육성마 없음' })[id]
+}
 
 export function StatePreview() {
   const router = useRouter()
+  const load = (id: string) => {
+    const fixture = buildFixture(id)
+    writeLifecycleSave(fixtureLifecycle(fixture.archive))
+    if (fixture.career) writeCareer(fixture.career)
+    else clearCareer()
+    if (fixture.log) writeRaceLog(fixture.log)
+    router.push(`/?view=${fixture.view}`)
+  }
   return <main className="mx-auto max-w-xl p-8">
     <h1 className="font-serif text-xl">State preview (development only)</h1>
-    <p className="mt-2 text-sm text-muted-foreground">선택한 상태의 저장 데이터를 만들고 홈으로 이동합니다. 프로덕션 빌드에서는 열리지 않습니다.</p>
-    <ul className="mt-6 grid gap-2">
-      {states.map(state => <li key={state.id}><button type="button" onClick={() => { writeCareer(state.build()); router.push('/') }} className="w-full rounded-lg border border-border bg-card px-4 py-3 text-left text-sm hover:bg-accent/40">{state.label}</button></li>)}
+    <p className="mt-2 text-sm text-muted-foreground">선택한 상태의 저장 데이터를 만들고 해당 화면으로 이동합니다. 프로덕션 빌드에서는 열리지 않습니다.</p>
+    <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+      {labels.map(state => <li key={state.id}><button type="button" onClick={() => load(state.id)} className="w-full rounded-lg border border-border bg-card px-4 py-3 text-left text-sm hover:bg-accent/40"><span className="block">{state.label}</span><span className="block text-xs text-muted-foreground">{state.id}</span></button></li>)}
     </ul>
   </main>
 }
