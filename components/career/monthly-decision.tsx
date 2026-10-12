@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { isRaceTurn, raceEligibility, racesForTurn } from '@/lib/career/race-entry'
 import { ArrowLeft, ArrowRight, Brain, Check, Dumbbell, Flag, Flame, HeartPulse, LockKeyhole, Moon, Wind, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ActionResult } from '@/components/career/action-result'
 import { BALANCE } from '@/lib/career/balance'
 import { actionName, labels, statKeys, statusLabels, trainings, type Career, type Stat } from '@/lib/career/model'
 import { careerStore } from '@/lib/career/store'
@@ -15,6 +16,7 @@ type Panel = 'training' | 'rest' | 'treatment' | 'race'
 
 export function MonthlyDecision({ career, busy, raceEntry }: { career: Career; busy: boolean; raceEntry?: ReactNode }) {
   const [panel, setPanel] = useState<Panel | null>(null)
+  const [committedMonth, setCommittedMonth] = useState<number | null>(null)
   const injured = !isHealthy(career.health)
   const strained = !injured && isStrained(career.values.fatigue, career.values.bodyLoad)
   const riskPercent = injuryRiskPercent(career.values)
@@ -29,7 +31,7 @@ export function MonthlyDecision({ career, busy, raceEntry }: { career: Career; b
     { id: 'race', name: '경주', Icon: Flag, hint: raceHint },
   ]
   const title = panel ? tabs.find(tab => tab.id === panel)!.name : locked ? '이번 달의 육성 결과' : '이번 달, 무엇에 집중할까요?'
-  const commit = (choice: Stat | 'rest' | 'treatment') => void careerStore.commit(choice, career.month)
+  const commit = (choice: Stat | 'rest' | 'treatment') => { setCommittedMonth(career.month); void careerStore.commit(choice, career.month) }
   const back = <button type="button" onClick={() => setPanel(null)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"><ArrowLeft size={13} aria-hidden />행동 선택으로</button>
   return <section aria-labelledby="monthly-decision" className="lab-monthly px-4 py-3.5 md:px-5">
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-3">{panel && !locked && back}<h2 id="monthly-decision" className="text-base font-bold">{title}</h2></div><span className="flex items-center gap-1.5 text-xs text-muted-foreground">{locked ? <LockKeyhole size={13} aria-hidden /> : null}{locked ? '행동 확정 · 결과 잠김' : '한 달에 핵심 행동 1회'}</span></div>
@@ -49,7 +51,7 @@ export function MonthlyDecision({ career, busy, raceEntry }: { career: Career; b
       {!panel && injured && <p role="status" className="lab-warn mt-3 px-3 py-2 text-xs"><b className="font-semibold">건강 · {career.health}</b> <span className="text-muted-foreground">{INJURY_NOTICE}</span></p>}
       {!panel && strained && <p role="status" className="lab-warn mt-3 px-3 py-2 text-xs"><b className="font-semibold">피로가 높습니다.</b> <span className="text-muted-foreground">{STRAIN_WARNING.replace('피로가 높습니다. ', '')}</span></p>}
     </> : <div aria-live="polite"><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary"><Check size={16} aria-hidden /><span>Month {career.month} · {actionName(career.action!)}</span></div>
-      {result !== null && result !== undefined ? <><div className="grid gap-x-8 sm:grid-cols-2">{result.map(change => { const delta = change.after - change.before; return <div key={change.key} className="flex items-center justify-between gap-3 border-b border-border py-2 text-sm tabular-nums"><span className="text-muted-foreground">{labels[change.key]}</span><span className="flex items-center gap-3"><span className="text-muted-foreground">{change.before}</span><ArrowRight size={12} aria-label="에서" /><b>{change.after}</b><b className={cn('min-w-10 text-right', delta < 0 || !['fatigue', 'bodyLoad'].includes(change.key) ? 'text-sage' : 'text-rose')}>{delta > 0 ? '+' : ''}{delta}</b></span></div> })}{(career.action?.statusChanges ?? []).map(change => <div key={change.key} className="flex items-center justify-between gap-3 border-b border-border py-2 text-sm"><span className="text-muted-foreground">{statusLabels[change.key]}</span><span className="flex items-center gap-3"><span className="text-muted-foreground">{change.before}</span><ArrowRight size={12} aria-label="에서" /><b className={change.key === 'health' && change.after !== '정상' ? 'text-rose' : 'text-sage'}>{change.after}</b></span></div>)}</div>{result.length === 0 && !career.action?.statusChanges?.length && <p className="py-3 text-sm text-muted-foreground">피로와 신체 부하가 이미 0입니다. 변경된 수치가 없습니다.</p>}{career.action?.statusChanges?.some(c => c.key === 'health' && c.after !== '정상') && <p role="status" className="lab-warn mt-3 px-3 py-2 text-xs text-muted-foreground">훈련 중 부상이 발생했습니다. {INJURY_NOTICE}</p>}<div className="mt-3 flex flex-wrap items-center justify-between gap-4"><p className="text-xs text-muted-foreground">결과가 저장되었습니다. 다음 달에 새로운 행동을 선택할 수 있습니다.</p><Button size="lg" disabled={busy} onClick={() => void careerStore.next(career.action!.actionId)}>다음 달 시작<ArrowRight data-icon="inline-end" aria-hidden /></Button></div></> : <p className="py-4 text-sm text-muted-foreground">행동은 확정되었습니다. 저장된 결과를 불러오고 있습니다.</p>}
+      {result !== null && result !== undefined ? <><ActionResult action={career.action!} animate={committedMonth === career.month} /><div className="mt-3 flex flex-wrap items-center justify-between gap-4"><p className="text-xs text-muted-foreground">결과가 저장되었습니다. 다음 달에 새로운 행동을 선택할 수 있습니다.</p><Button size="lg" disabled={busy} onClick={() => void careerStore.next(career.action!.actionId)}>다음 달 시작<ArrowRight data-icon="inline-end" aria-hidden /></Button></div></> : <p className="py-4 text-sm text-muted-foreground">행동은 확정되었습니다. 저장된 결과를 불러오고 있습니다.</p>}
     </div>}
   </section>
 }
