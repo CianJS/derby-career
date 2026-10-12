@@ -1,7 +1,9 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
-import { advanceMonth, commitAction, completeRace, resolveAction, startCareer, type Career, type Choice } from './model'
+import { advanceMonth, chooseEvent, commitAction, completeRace, resolveAction, startCareer, type Career, type Choice } from './model'
+import { withMonthEvent } from './events/director'
+import type { EventChoiceId } from './events/types'
 import { clearCareer, readCareer, writeCareer } from './repository'
 import { lockRaceEntryWithLog, type RaceEntryDraft } from './race-entry'
 import { hasRaceLog, removeRaceLog, writeRaceLog } from './race-log-repository'
@@ -39,7 +41,7 @@ function ensureRaceLog(career: Career): Career {
 function restored(): Career | null {
   const saved = readCareer()
   if (!saved) return null
-  const resolved = resolveAction(saved)
+  const resolved = withMonthEvent(resolveAction(saved))
   if (resolved !== saved) writeCareer(resolved)
   return ensureRaceLog(resolved)
 }
@@ -102,7 +104,11 @@ export const careerStore = {
     if (log) writeRaceLog(log)
     return career
   }),
-  select: (horseId: string) => mutate(saved => { const next = startCareer(horseId); return saved ? { ...next, calendarDate: saved.calendarDate, contractedJockeyIds: saved.contractedJockeyIds } : next }),
+  select: (horseId: string) => mutate(saved => { const next = startCareer(horseId); return withMonthEvent(saved ? { ...next, calendarDate: saved.calendarDate, contractedJockeyIds: saved.contractedJockeyIds } : next) }),
+  chooseEvent: (eventId: string, choice: EventChoiceId, expectedMonth: number) => mutate(saved => {
+    if (!saved || saved.month !== expectedMonth) throw new Error('육성 상태가 변경되었습니다. 다시 불러와 주세요.')
+    return chooseEvent(saved, eventId, choice)
+  }),
   commit: (choice: Choice, expectedMonth: number) => mutate(saved => {
     if (!saved || saved.month !== expectedMonth || saved.action || saved.raceRun) return saved
     const committed = commitAction(saved, choice)
