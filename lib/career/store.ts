@@ -30,7 +30,7 @@ function ensureRaceLog(career: Career): Career {
     return next
   }
   if (!hasRaceLog(run.raceRunId)) {
-    const log = simulateRace(run)
+    const log = simulateRace(run, run.simulation.engineVersion)
     if (raceLogDigest(log) !== run.simulation.digest) throw new Error('저장된 경주 기록을 복원하지 못했습니다.')
     writeRaceLog(log)
   }

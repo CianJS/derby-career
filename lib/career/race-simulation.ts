@@ -1,6 +1,5 @@
 import type { RaceRunInput, RaceRunnerInput } from './race-entry'
 
-export const SIMULATION_ENGINE_VERSION = 'race-sim-v1'
 export type RacePhase = 'START' | 'MID' | 'FINAL_CORNER' | 'STRETCH' | 'FINISH'
 export type RaceSample = { tMs: number; runners: { horseId: string; distance: number; lane: number }[] }
 export type InternalRaceEvent = { id: string; tMs: number; type: 'START' | 'BLOCKED' | 'PATH_CLEAR' | 'OVERTAKE' | 'SPRINT_START' | 'FINISH'; horseId?: string; relatedHorseId?: string; distance: number; rank?: number }
@@ -26,10 +25,80 @@ export type RaceSimulationSummary = { engineVersion: string; digest: string; dur
 const STEP_SECONDS = 0.25
 const STEPS_PER_SAMPLE = 4
 const PRIZE_SHARES = [1, 0.4, 0.25, 0.15, 0.1]
-const GRADE_BONUS: Record<string, number> = { A: 0.18, B: 0.06, C: -0.08, D: -0.25 }
-const EARLY_BONUS: Record<string, number> = { 도주: 0.55, 선행: 0.3, 선입: -0.1, 추입: -0.35 }
-const MID_BONUS: Record<string, number> = { 도주: 0.1, 선행: 0.1, 선입: 0, 추입: -0.05 }
-const LATE_BONUS: Record<string, number> = { 도주: -0.4, 선행: -0.1, 선입: 0.2, 추입: 0.5 }
+
+/**
+ * Every number that shapes how a race unfolds. A stored RaceRun remembers the engine version it was simulated with,
+ * so an existing profile must never be edited: add a new version instead and keep the old one for log recovery.
+ */
+export type EngineProfile = {
+  version: string
+  gradeBonus: Record<string, number>
+  earlyBonus: Record<string, number>
+  midBonus: Record<string, number>
+  lateBonus: Record<string, number>
+  /** Stamina shortfall (stamina below the distance requirement) turns into speed loss, growing over the last 40%. */
+  fadePerPoint: number
+  requiredBase: number
+  requiredPerMeter: number
+  /** null = every runner holds its target speed from the first step (v1). Otherwise speed ramps toward the target. */
+  accel: null | { base: number; powerSlope: number; startSlope: number; decel: number }
+  /**
+   * null = v1: a runner close behind a slower one is held back by a per-step probability latch that ignores lanes.
+   * Otherwise a runner is held back only while it overlaps the lane of the slower runner ahead, and it steers sideways to get clear.
+   */
+  laneClearance: null | number
+  steerPerStep: number
+  blockBase: number
+  blockPathSlope: number
+  blockLatchSteps: number
+}
+
+const V1_PROFILE: EngineProfile = {
+  version: 'race-sim-v1',
+  gradeBonus: { A: 0.18, B: 0.06, C: -0.08, D: -0.25 },
+  earlyBonus: { 도주: 0.55, 선행: 0.3, 선입: -0.1, 추입: -0.35 },
+  midBonus: { 도주: 0.1, 선행: 0.1, 선입: 0, 추입: -0.05 },
+  lateBonus: { 도주: -0.4, 선행: -0.1, 선입: 0.2, 추입: 0.5 },
+  fadePerPoint: 0.004,
+  requiredBase: 400,
+  requiredPerMeter: 0.06,
+  accel: null,
+  laneClearance: null,
+  steerPerStep: 0,
+  blockBase: 0.55,
+  blockPathSlope: 0.01,
+  blockLatchSteps: 4,
+}
+
+/**
+ * v2 fixes what the v1 audit showed:
+ * - tactic bonuses summed to +0.13 m/s for 도주 and about 0 for 추입, so late runners were beaten before the race began;
+ *   each tactic now averages zero and only moves speed between phases.
+ * - runners started at full speed, so the start order was just the speed order; they now accelerate from rest.
+ * - a held-back runner was released by a per-step die that ignored lanes (early/final rank match 35%, Spearman 0.82);
+ *   it is now held only while it overlaps the lane of the runner ahead and steers sideways to get clear.
+ * - stamina only mattered below a low requirement, so a stayer gained nothing; the requirement now grows faster with distance.
+ */
+const V2_PROFILE: EngineProfile = {
+  ...V1_PROFILE,
+  version: 'race-sim-v2',
+  earlyBonus: { 도주: 0.3, 선행: 0.18, 선입: -0.06, 추입: -0.2 },
+  midBonus: { 도주: 0.03, 선행: 0.03, 선입: 0, 추입: -0.03 },
+  lateBonus: { 도주: -0.4, 선행: -0.24, 선입: 0.08, 추입: 0.29 },
+  fadePerPoint: 0.006,
+  requiredBase: 380,
+  requiredPerMeter: 0.1,
+  accel: { base: 3, powerSlope: 0.004, startSlope: 0.01, decel: 2 },
+  laneClearance: 3,
+  steerPerStep: 0.6,
+}
+export const ENGINE_PROFILES: Record<string, EngineProfile> = { [V1_PROFILE.version]: V1_PROFILE, [V2_PROFILE.version]: V2_PROFILE }
+export const SIMULATION_ENGINE_VERSION = V2_PROFILE.version
+export const engineProfileFor = (version: string): EngineProfile => {
+  const profile = ENGINE_PROFILES[version]
+  if (!profile) throw new Error(`지원하지 않는 경주 엔진 버전입니다: ${version}`)
+  return profile
+}
 
 function hashText(text: string): number {
   let value = 2166136261
@@ -60,6 +129,8 @@ type RunnerState = {
   required: number
   jockeyStart: number
   jockeyTiming: number
+  accel: number
+  steer: number
   noiseAmp: number
   blockProbability: number
   rng: () => number
@@ -73,14 +144,14 @@ type RunnerState = {
   finishTime: number | null
 }
 
-function createRunnerState(run: RaceRunInput, runner: RaceRunnerInput, index: number, gate: number): RunnerState {
+function createRunnerState(run: RaceRunInput, runner: RaceRunnerInput, index: number, gate: number, profile: EngineProfile): RunnerState {
   const D = run.raceDefinitionSnapshot.distance
   const rng = createRng(`${run.raceSeed}:${run.raceDefinitionSnapshot.id}:${runner.horseSnapshot.id}`)
   const values = runner.horseSnapshot.values
   const distanceKey = D <= 1400 ? '단거리' : D <= 1600 ? '마일' : '중거리'
   const form = (rng() - 0.5) * 0.5
   const condition = Math.max(0, values.fatigue - 30) * 0.01 + Math.max(0, values.bodyLoad - 30) * 0.01
-  const base = 14.6 + values.speed * 0.002 + values.power * 0.0008 + (GRADE_BONUS[gradeOf(runner, distanceKey)] ?? 0) + (GRADE_BONUS[gradeOf(runner, runner.tactic)] ?? 0) * 0.6 + form - condition
+  const base = 14.6 + values.speed * 0.002 + values.power * 0.0008 + (profile.gradeBonus[gradeOf(runner, distanceKey)] ?? 0) + (profile.gradeBonus[gradeOf(runner, runner.tactic)] ?? 0) * 0.6 + form - condition
   const jockey = runner.jockeySnapshot
   return {
     id: runner.horseSnapshot.id,
@@ -88,11 +159,13 @@ function createRunnerState(run: RaceRunInput, runner: RaceRunnerInput, index: nu
     base,
     tactic: runner.tactic,
     stamina: values.stamina + (values.guts - 450) * 0.3 + (jockey.pace - 75) * 0.4,
-    required: 400 + D * 0.06,
+    required: profile.requiredBase + D * profile.requiredPerMeter,
+    accel: profile.accel ? profile.accel.base + (values.power - 480) * profile.accel.powerSlope + (jockey.start - 75) * profile.accel.startSlope : 0,
+    steer: Math.max(0.5, jockey.path / 75) * profile.steerPerStep,
     jockeyStart: (jockey.start - 75) * 0.004,
     jockeyTiming: (jockey.timing - 75) * 0.003,
     noiseAmp: clamp(0.22 - (values.intelligence - 480) * 0.0003 - (jockey.stability - 75) * 0.0012, 0.08, 0.3),
-    blockProbability: clamp(0.55 - (jockey.path - 75) * 0.01, 0.1, 0.8),
+    blockProbability: clamp(profile.blockBase - (jockey.path - 75) * profile.blockPathSlope, 0.1, 0.8),
     rng,
     noise: 0,
     drift: 0,
@@ -105,10 +178,12 @@ function createRunnerState(run: RaceRunInput, runner: RaceRunnerInput, index: nu
   }
 }
 
-function targetSpeed(state: RunnerState, progress: number): number {
-  const early = progress < 0.4 ? EARLY_BONUS[state.tactic] ?? 0 : progress < 0.7 ? MID_BONUS[state.tactic] ?? 0 : LATE_BONUS[state.tactic] ?? 0
+const laneOf = (state: RunnerState, D: number) => clamp(state.laneOrigin * (1 - 0.45 * Math.min(1, state.distance / D)) + state.drift, -40, 40)
+
+function targetSpeed(state: RunnerState, progress: number, profile: EngineProfile): number {
+  const early = progress < 0.4 ? profile.earlyBonus[state.tactic] ?? 0 : progress < 0.7 ? profile.midBonus[state.tactic] ?? 0 : profile.lateBonus[state.tactic] ?? 0
   const lateness = Math.max(0, (progress - 0.6) / 0.4)
-  const fade = Math.max(0, state.required - state.stamina) * 0.004 * lateness
+  const fade = Math.max(0, state.required - state.stamina) * profile.fadePerPoint * lateness
   const startBoost = progress < 0.15 ? state.jockeyStart : 0
   const kick = progress > 0.7 ? state.jockeyTiming : 0
   return state.base + early + startBoost + kick - fade + state.noise
@@ -121,13 +196,17 @@ export function summarizeRaceLog(log: RaceSimulationLog): RaceSimulationSummary 
   return { engineVersion: log.engineVersion, digest: raceLogDigest(log), durationMs: log.durationMs, result: log.result }
 }
 
-export function simulateRace(run: RaceRunInput): RaceSimulationLog {
+export function simulateRace(run: RaceRunInput, version: string = SIMULATION_ENGINE_VERSION): RaceSimulationLog {
+  return simulateWithProfile(run, engineProfileFor(version))
+}
+
+export function simulateWithProfile(run: RaceRunInput, profile: EngineProfile): RaceSimulationLog {
   const race = run.raceDefinitionSnapshot
   const D = race.distance
   const n = run.runners.length
   const gateOrder = run.runners.map((runner, index) => ({ index, key: hashText(`${run.raceSeed}:gate:${runner.horseSnapshot.id}`) })).sort((a, b) => a.key - b.key || a.index - b.index)
   const gates = new Map(gateOrder.map((entry, gate) => [entry.index, gate]))
-  const states = run.runners.map((runner, index) => createRunnerState(run, runner, index, n === 1 ? 5.5 : (gates.get(index)! * 11) / (n - 1)))
+  const states = run.runners.map((runner, index) => createRunnerState(run, runner, index, n === 1 ? 5.5 : (gates.get(index)! * 11) / (n - 1), profile))
   const nameOf = new Map(run.runners.map(runner => [runner.horseSnapshot.id, runner.horseSnapshot.name]))
   const player = states.find(state => state.id === run.playerHorseId)!
   const samples: RaceSample[] = []
@@ -143,7 +222,7 @@ export function simulateRace(run: RaceRunInput): RaceSimulationLog {
   const rankOf = (id: string) => states.slice().sort((a, b) => b.distance - a.distance || a.index - b.index).findIndex(state => state.id === id) + 1
 
   const takeSample = (tMs: number) => {
-    samples.push({ tMs, runners: states.map(state => ({ horseId: state.id, distance: round1(Math.min(D, state.distance)), lane: round1(clamp(state.laneOrigin * (1 - 0.45 * Math.min(1, state.distance / D)) + state.drift, -40, 40)) })) })
+    samples.push({ tMs, runners: states.map(state => ({ horseId: state.id, distance: round1(Math.min(D, state.distance)), lane: round1(laneOf(state, D)) })) })
   }
   takeSample(0)
   previousRank = rankOf(player.id)
@@ -156,15 +235,29 @@ export function simulateRace(run: RaceRunInput): RaceSimulationLog {
       else state.rng()
       state.drift = state.drift * 0.98 + (state.rng() - 0.5) * 0.8
     }
-    const draws = states.map(state => state.rng())
-    for (const state of states) state.speed = state.finishTime === null ? targetSpeed(state, state.distance / D) : 0
+    const draws = profile.laneClearance === null ? states.map(state => state.rng()) : []
+    for (const state of states) {
+      if (state.finishTime !== null) state.speed = 0
+      else if (profile.accel) {
+        const target = targetSpeed(state, state.distance / D, profile)
+        state.speed += clamp(target - state.speed, -profile.accel.decel * STEP_SECONDS, state.accel * STEP_SECONDS)
+      } else state.speed = targetSpeed(state, state.distance / D, profile)
+    }
     const ordered = states.slice().sort((a, b) => b.distance - a.distance || a.index - b.index)
     ordered.forEach((state, position) => {
       if (state.finishTime !== null) return
       const ahead = ordered.slice(0, position).reverse().find(other => other.finishTime === null)
-      if (ahead && ahead.distance - state.distance < 2 && ahead.speed < state.speed && draws[state.index] < state.blockProbability && state.latch <= 0) state.latch = 4
-      if (state.latch > 0) {
-        state.latch -= 1
+      let held: boolean
+      if (profile.laneClearance === null) {
+        if (ahead && ahead.distance - state.distance < 2 && ahead.speed < state.speed && draws[state.index] < state.blockProbability && state.latch <= 0) state.latch = profile.blockLatchSteps
+        held = state.latch > 0
+        if (held) state.latch -= 1
+      } else {
+        const gap = ahead ? laneOf(ahead, D) - laneOf(state, D) : 0
+        held = !!ahead && ahead.distance - state.distance < 2 && ahead.speed < state.speed && Math.abs(gap) < profile.laneClearance
+        if (held) state.drift += (gap === 0 ? (state.index % 2 === 0 ? 1 : -1) : -Math.sign(gap)) * state.steer
+      }
+      if (held) {
         if (ahead) state.speed = Math.min(state.speed, ahead.speed)
         if (state.blockedSince === null) state.blockedSince = tMs
       } else if (state.blockedSince !== null) {
@@ -238,7 +331,7 @@ export function simulateRace(run: RaceRunInput): RaceSimulationLog {
   }
   return {
     raceRunId: run.raceRunId,
-    engineVersion: SIMULATION_ENGINE_VERSION,
+    engineVersion: profile.version,
     seed: run.raceSeed,
     raceDistance: D,
     durationMs: samples[samples.length - 1].tMs,

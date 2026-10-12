@@ -1,21 +1,12 @@
 import { startCareer, type Career } from './model'
 import { summarizeRecords, type HorseRaceRecord } from './records'
-import { raceDefinitions, stressRaceDefinitions, tactics, contractedJockeys, type RaceDefinitionSnapshot, type RaceRunInput, type RaceRunnerInput } from './race-entry'
+import { buildOpponents, raceDefinitions, stressRaceDefinitions, contractedJockeys, type RaceDefinitionSnapshot, type RaceRunInput, type RaceRunnerInput } from './race-entry'
 import { simulateRace, summarizeRaceLog, type RaceSimulationLog } from './race-simulation'
 
 export type FixtureView = 'home' | 'training' | 'raceplay' | 'result' | 'careerComplete' | 'candidates' | 'jockeys' | 'races'
 export type FixtureState = { id: string; label: string; view: FixtureView; career: Career | null; log?: RaceSimulationLog; archive: boolean }
 
-const fieldNames = ['새벽빛', '은빛 바람', '푸른 물결', '해오름', '별빛 길', '가을 하늘', '솔바람', '붉은 노을', '초록 언덕', '달빛 강', '첫눈', '구름 다리', '새봄', '들꽃', '한여름', '은하수', '아침 안개']
 const baseHorse = () => startCareer('DEV_HORSE_SERENE_STEP')
-
-function fieldRunners(def: RaceDefinitionSnapshot): RaceRunnerInput[] {
-  return fieldNames.slice(0, def.runners - 1).map((name, i) => ({
-    horseSnapshot: { id: `${def.id}_RUNNER_${i + 1}`, name, age: 2, values: { speed: 480 + i * 6, stamina: 470 + i * 5, power: 480 + i * 4, guts: 460 + i * 5, intelligence: 490 + i * 3, fatigue: 5, bodyLoad: 5 }, aptitude: [['잔디', 'A'], ['단거리', 'B'], ['마일', 'B'], ['중거리', 'B'], ['장거리', 'C'], ...tactics.map(t => [t, 'B'] as [string, string])], health: 'HEALTHY', condition: '보통', record: '0전 0승' },
-    jockeySnapshot: { id: `FIELD_JOCKEY_${i + 1}`, name: `참가 기수 ${i + 1}`, start: 75, pace: 75, path: 75, timing: 75, stability: 75, chemistry: 0, style: '균형' },
-    tactic: tactics[i % tactics.length],
-  }))
-}
 
 function raceCareer(def: RaceDefinitionSnapshot, kind: string, outcome: 'any' | 'win' | 'lose'): { career: Career; log: RaceSimulationLog } {
   const career = baseHorse()
@@ -26,7 +17,7 @@ function raceCareer(def: RaceDefinitionSnapshot, kind: string, outcome: 'any' | 
   let run!: RaceRunInput
   let log!: RaceSimulationLog
   for (let i = 0; i < 300; i++) {
-    run = structuredClone({ raceRunId: `FIXTURE_RUN_${kind}`, month: 3, raceDefinitionSnapshot: def, playerHorseId: career.horse.id, player, runners: [player, ...fieldRunners(def)], raceSeed: `fixture-${kind}-${i}`, engineVersion: 'entry-contract-v1' }) as RaceRunInput
+    run = structuredClone({ raceRunId: `FIXTURE_RUN_${kind}`, month: 3, raceDefinitionSnapshot: def, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(def)], raceSeed: `fixture-${kind}-${i}`, engineVersion: 'entry-contract-v1' }) as RaceRunInput
     log = simulateRace(run)
     const placing = log.result.placing
     if (outcome === 'any' || (outcome === 'win' && placing === 1) || (outcome === 'lose' && placing >= Math.ceil(def.runners * 0.6))) break

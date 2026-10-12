@@ -81,11 +81,19 @@ export function ridingFit(career: Career, race: RaceDefinitionSnapshot | undefin
 }
 const opponentNames = ['새벽빛', '은빛 바람', '푸른 물결', '해오름', '별빛 길', '가을 하늘', '솔바람', '붉은 노을', '초록 언덕', '달빛 강', '첫눈']
 // Opponent count follows the race definition; names beyond the list are numbered so every runner id stays unique.
+// Strength spans the same stat range as the starter horses. Even-numbered runners lean on speed and odd-numbered ones
+// on stamina, so distance changes who is strong instead of only how strong everyone is.
 export function buildOpponents(race: RaceDefinitionSnapshot): RaceRunnerInput[] {
-  return Array.from({ length: race.runners - 1 }, (_, i): RaceRunnerInput => ({
-    horseSnapshot: { id: `${race.id}_RUNNER_${i + 1}`, name: opponentNames[i] ?? `출전마 ${i + 1}`, age: 2, values: { speed: 480 + i * 6, stamina: 470 + i * 5, power: 480 + i * 4, guts: 460 + i * 5, intelligence: 490 + i * 3, fatigue: 5, bodyLoad: 5 }, aptitude: [['잔디', 'A'], ['단거리', 'B'], ['마일', 'B'], ['중거리', 'B'], ['장거리', 'C'], ...tactics.map(t => [t, 'B'] as [string, string])], health: 'HEALTHY', condition: '보통', record: '0전 0승' },
-    jockeySnapshot: { id: `FIELD_JOCKEY_${i + 1}`, name: `참가 기수 ${i + 1}`, start: 75, pace: 75, path: 75, timing: 75, stability: 75, chemistry: 0, style: '균형' }, tactic: tactics[i % tactics.length],
-  }))
+  const count = race.runners - 1
+  return Array.from({ length: count }, (_, i): RaceRunnerInput => {
+    const t = count > 1 ? i / (count - 1) : 0.5
+    const staying = i % 2 === 1
+    const values = { speed: Math.round(460 + 110 * (staying ? 1 - t : t)), stamina: Math.round(450 + 110 * (staying ? t : 1 - t)), power: Math.round(470 + 90 * t), guts: 450 + (i % 3) * 35, intelligence: 470 + (i % 5) * 12, fatigue: 5, bodyLoad: 5 }
+    return {
+      horseSnapshot: { id: `${race.id}_RUNNER_${i + 1}`, name: opponentNames[i] ?? `출전마 ${i + 1}`, age: 2, values, aptitude: [['잔디', 'A'], ['단거리', 'B'], ['마일', 'B'], ['중거리', 'B'], ['장거리', 'C'], ...tactics.map(t => [t, 'B'] as [string, string])], health: 'HEALTHY', condition: '보통', record: '0전 0승' },
+      jockeySnapshot: { id: `FIELD_JOCKEY_${i + 1}`, name: `참가 기수 ${i + 1}`, start: 75, pace: 75, path: 75, timing: 75, stability: 75, chemistry: 0, style: '균형' }, tactic: tactics[i % tactics.length],
+    }
+  })
 }
 // Builds the immutable RaceRun snapshot only; callers are responsible for eligibility checks.
 export function createRaceRun(career: Career, race: RaceDefinitionSnapshot, jockey: JockeySnapshot, tactic: RunningTactic, identity: () => string): RaceRunInput {

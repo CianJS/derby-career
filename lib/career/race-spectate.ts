@@ -140,27 +140,40 @@ export const stripHeightRem = (runners: number) => Math.min(24, Math.max(11, run
 export type MarkerSpot = { id: string; x: number; y: number }
 
 /**
- * Greedy overlap avoidance. Items are placed in the order given (give the player first), and a marker that would sit
- * on top of an already placed neighbor is nudged vertically to the nearest free slot. x is never changed.
+ * Vertical overlap avoidance. Markers whose x values chain within minDx form a cluster; each cluster is sorted by its
+ * preferred y and pushed apart to at least minDy with the smallest total movement (isotonic regression on y - i * minDy),
+ * then shifted into [yMin, yMax]. x is never changed. A cluster taller than the strip is compressed evenly.
  */
 export function spreadMarkers(items: MarkerSpot[], minDx: number, minDy: number, yMin = 0.08, yMax = 0.92): Map<string, number> {
-  const placed: MarkerSpot[] = []
   const result = new Map<string, number>()
-  const clashes = (x: number, y: number) => placed.some(other => Math.abs(other.x - x) < minDx && Math.abs(other.y - y) < minDy)
-  for (const item of items) {
-    const base = Math.min(yMax, Math.max(yMin, item.y))
-    let y = base
-    if (clashes(item.x, base)) {
-      const steps = Math.ceil((yMax - yMin) / minDy)
-      for (let k = 1; k <= steps; k += 1) {
-        const down = base + k * minDy
-        const up = base - k * minDy
-        if (down <= yMax && !clashes(item.x, down)) { y = down; break }
-        if (up >= yMin && !clashes(item.x, up)) { y = up; break }
+  const byX = items.map((item, order) => ({ ...item, order })).sort((a, b) => a.x - b.x || a.order - b.order)
+  const clusters: typeof byX[] = []
+  for (const item of byX) {
+    const last = clusters[clusters.length - 1]
+    if (last && item.x - last[last.length - 1].x < minDx) last.push(item)
+    else clusters.push([item])
+  }
+  for (const cluster of clusters) {
+    const sorted = cluster.slice().sort((a, b) => a.y - b.y || a.order - b.order)
+    const blocks: { sum: number; count: number }[] = []
+    sorted.forEach((item, i) => {
+      blocks.push({ sum: Math.min(yMax, Math.max(yMin, item.y)) - i * minDy, count: 1 })
+      while (blocks.length > 1 && blocks[blocks.length - 2].sum / blocks[blocks.length - 2].count > blocks[blocks.length - 1].sum / blocks[blocks.length - 1].count) {
+        const top = blocks.pop()!
+        blocks[blocks.length - 1].sum += top.sum
+        blocks[blocks.length - 1].count += top.count
       }
-    }
-    placed.push({ id: item.id, x: item.x, y })
-    result.set(item.id, y)
+    })
+    const ys = blocks.flatMap(block => Array(block.count).fill(block.sum / block.count) as number[]).map((q, i) => q + i * minDy)
+    const span = ys[ys.length - 1] - ys[0]
+    const room = yMax - yMin
+    const squeeze = span > room ? room / span : 1
+    let offset = 0
+    const low = ys[0]
+    const high = low + span * squeeze
+    if (low < yMin) offset = yMin - low
+    else if (high > yMax) offset = yMax - high
+    sorted.forEach((item, i) => result.set(item.id, low + (ys[i] - low) * squeeze + offset))
   }
   return result
 }
