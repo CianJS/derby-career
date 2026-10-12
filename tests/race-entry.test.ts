@@ -10,7 +10,9 @@ const draft: RaceEntryDraft = { raceId: raceDefinitions[1].id, jockeyId: contrac
 const month3 = () => ({ ...startCareer(horses[1].id), month: 3, careerTurnIndex: 3 })
 test('only healthy maiden horses in month three may enter, irrespective of aptitude', () => {
   assert.match(entryRestriction({ ...month3(), month: 2, careerTurnIndex: 2 })!, /3개월/)
-  assert.match(entryRestriction({ ...month3(), health: '부상' })!, /건강/)
+  assert.match(entryRestriction({ ...month3(), health: '중상' })!, /중상/)
+  assert.equal(entryRestriction({ ...month3(), health: '경상' }), null)
+  assert.equal(entryRestriction({ ...month3(), health: '중등도 부상' }), null)
   const winner = { ...month3(), raceRecords: [{ race: '기록', result: '1착', date: '2028.05', placing: 1 }] }
   assert.match(raceEligibility(winner, raceDefinitions[1])!, /미승리/)
   assert.match(entryRestriction(winner)!, /출전할 수 있는 경주가 없습니다/)
@@ -20,7 +22,8 @@ test('only healthy maiden horses in month three may enter, irrespective of aptit
   state.horse = { ...state.horse, aptitude: state.horse.aptitude.map(([name]) => [name, 'D']) }
   assert.ok(lockRaceEntry(state, draft).raceRun)
   assert.throws(() => lockRaceEntry({ ...month3(), month: 2, careerTurnIndex: 2 }, draft))
-  assert.throws(() => lockRaceEntry({ ...month3(), health: '부상' }, draft))
+  assert.throws(() => lockRaceEntry({ ...month3(), health: '중상' }, draft))
+  assert.ok(lockRaceEntry({ ...month3(), health: '경상' }, draft).raceRun)
 })
 test('draft selection is not a monthly commitment and incomplete selections are rejected', () => {
   const state = month3()

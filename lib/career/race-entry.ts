@@ -1,5 +1,6 @@
 import type { Career, Horse, Values } from './model'
 import { summarizeRecords } from './records'
+import { canRace, careerHealth } from './health'
 import { simulateRace, summarizeRaceLog, type RaceSimulationLog, type RaceSimulationSummary } from './race-simulation'
 
 export const tactics = ['도주', '선행', '선입', '추입'] as const
@@ -8,7 +9,7 @@ export type RaceClass = '미승리' | '1승' | 'Listed'
 // minWins / maxWins are optional so snapshots saved before month-six races existed stay valid.
 export type RaceDefinitionSnapshot = { id: string; name: string; month: number; surface: 'Turf'; distance: number; raceClass: RaceClass; runners: number; courseProfile: string; prize: number; entryFee: number; minWins?: number; maxWins?: number }
 export type JockeySnapshot = { id: string; name: string; start: number; pace: number; path: number; timing: number; stability: number; chemistry: number; style: string }
-export type HorseSnapshot = { id: string; name: string; age: number; values: Values; aptitude: Horse['aptitude']; health: 'HEALTHY'; condition: string; record: string }
+export type HorseSnapshot = { id: string; name: string; age: number; values: Values; aptitude: Horse['aptitude']; health: string; healthRecovery?: number; condition: string; record: string }
 export type RaceRunnerInput = { horseSnapshot: HorseSnapshot; jockeySnapshot: JockeySnapshot; tactic: RunningTactic }
 export type RaceRunInput = { raceRunId: string; month: number; raceDefinitionSnapshot: RaceDefinitionSnapshot; playerHorseId: string; runners: RaceRunnerInput[]; player: RaceRunnerInput; raceSeed: string; engineVersion: string; simulation?: RaceSimulationSummary }
 export type RaceEntryDraft = { raceId: string | null; jockeyId: string | null; tactic: RunningTactic | null }
@@ -47,7 +48,6 @@ export const jockeyProfiles: Record<string, { age: number; nationality: string }
 export const stressRaceDefinitions: RaceDefinitionSnapshot[] = [
   { id: 'DEV_M3_FULL_GATE_1600', name: '풀게이트 마일', month: 3, surface: 'Turf', distance: 1600, raceClass: '미승리', runners: 18, courseProfile: '표준 직선 / 표준 코너', prize: 8000000, entryFee: 0, maxWins: 0 },
 ]
-export const healthy = (career: Career) => ['정상', 'HEALTHY'].includes(career.health)
 export const jockeyCatalog: JockeySnapshot[] = [...contractedJockeys, ...freeAgentJockeys]
 export const contractedRoster = (career: Career) => jockeyCatalog.filter(j => career.contractedJockeyIds.includes(j.id))
 export const winCount = (career: Career) => summarizeRecords(career.raceRecords).wins
@@ -62,7 +62,7 @@ export function raceEligibility(career: Career, race: RaceDefinitionSnapshot): s
 export function entryRestriction(career: Career): string | null {
   if (career.raceRun || career.action) return '이번 달 행동을 이미 확정했습니다.'
   if (!isRaceTurn(career.careerTurnIndex)) return `경주 출전은 ${raceMonths.map(m => `${m}개월 차`).join(', ')}에 열립니다.`
-  if (!healthy(career)) return '건강이 정상일 때 출전할 수 있습니다.'
+  if (!canRace(career.health)) return '중상 상태에서는 출전할 수 없습니다. 치료나 휴식으로 먼저 회복해 주세요.'
   if (racesForTurn(career.careerTurnIndex).every(race => raceEligibility(career, race))) return '현재 전적으로 출전할 수 있는 경주가 없습니다.'
   return null
 }
@@ -97,7 +97,8 @@ export function buildOpponents(race: RaceDefinitionSnapshot): RaceRunnerInput[] 
 }
 // Builds the immutable RaceRun snapshot only; callers are responsible for eligibility checks.
 export function createRaceRun(career: Career, race: RaceDefinitionSnapshot, jockey: JockeySnapshot, tactic: RunningTactic, identity: () => string): RaceRunInput {
-  const horseSnapshot: HorseSnapshot = { id: career.horse.id, name: career.horse.name, age: career.age, values: { ...career.values }, aptitude: career.horse.aptitude, health: 'HEALTHY', condition: career.condition, record: career.record }
+  const { health, recovery } = careerHealth(career)
+  const horseSnapshot: HorseSnapshot = { id: career.horse.id, name: career.horse.name, age: career.age, values: { ...career.values }, aptitude: career.horse.aptitude, health, healthRecovery: recovery, condition: career.condition, record: career.record }
   const player: RaceRunnerInput = { horseSnapshot, jockeySnapshot: jockey, tactic }
   return structuredClone({ raceRunId: identity(), month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(race)], raceSeed: identity(), engineVersion: 'entry-contract-v1' })
 }
@@ -125,7 +126,7 @@ export function assertRaceRun(run: RaceRunInput, career: Career) {
   const summary = run.simulation
   if (summary !== undefined && (!summary.digest || !summary.engineVersion || !summary.result || summary.result.playerHorseId !== run.playerHorseId || !Number.isInteger(summary.result.placing) || summary.result.placing < 1 || summary.result.placing > run.runners.length || !Number.isFinite(summary.result.prizeMoney) || summary.result.prizeMoney < 0)) fail()
   for (const runner of run.runners) {
-    if (!runner?.horseSnapshot?.id || !runner.horseSnapshot.name || runner.horseSnapshot.health !== 'HEALTHY' || !Array.isArray(runner.horseSnapshot.aptitude) || !runner.horseSnapshot.values || !runner.jockeySnapshot?.id || !tactics.includes(runner.tactic)) fail()
+    if (!runner?.horseSnapshot?.id || !runner.horseSnapshot.name || typeof runner.horseSnapshot.health !== 'string' || (runner.horseSnapshot.healthRecovery !== undefined && !Number.isFinite(runner.horseSnapshot.healthRecovery)) || !Array.isArray(runner.horseSnapshot.aptitude) || !runner.horseSnapshot.values || !runner.jockeySnapshot?.id || !tactics.includes(runner.tactic)) fail()
     for (const key of ['speed', 'stamina', 'power', 'guts', 'intelligence', 'fatigue', 'bodyLoad'] as const) if (!Number.isFinite(runner.horseSnapshot.values[key]) || runner.horseSnapshot.values[key] < 0) fail()
     for (const key of ['start', 'pace', 'path', 'timing', 'stability', 'chemistry'] as const) if (!Number.isFinite(runner.jockeySnapshot[key])) fail()
   }

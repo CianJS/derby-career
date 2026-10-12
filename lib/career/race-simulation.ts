@@ -1,4 +1,6 @@
 import type { RaceRunInput, RaceRunnerInput } from './race-entry'
+import { RACE_SIM_V3_VERSION } from './race-balance'
+import { simulateRaceV3 } from './race-sim-v3'
 
 export type RacePhase = 'START' | 'MID' | 'FINAL_CORNER' | 'STRETCH' | 'FINISH'
 export type RaceSample = { tMs: number; runners: { horseId: string; distance: number; lane: number }[] }
@@ -93,7 +95,9 @@ const V2_PROFILE: EngineProfile = {
   steerPerStep: 0.6,
 }
 export const ENGINE_PROFILES: Record<string, EngineProfile> = { [V1_PROFILE.version]: V1_PROFILE, [V2_PROFILE.version]: V2_PROFILE }
-export const SIMULATION_ENGINE_VERSION = V2_PROFILE.version
+/** New races use the continuous v3 engine. v1/v2 stay here only to replay races that were stored with them. */
+export const SIMULATION_ENGINE_VERSION = RACE_SIM_V3_VERSION
+export const LEGACY_ENGINE_VERSIONS = [V1_PROFILE.version, V2_PROFILE.version]
 export const engineProfileFor = (version: string): EngineProfile => {
   const profile = ENGINE_PROFILES[version]
   if (!profile) throw new Error(`지원하지 않는 경주 엔진 버전입니다: ${version}`)
@@ -197,6 +201,7 @@ export function summarizeRaceLog(log: RaceSimulationLog): RaceSimulationSummary 
 }
 
 export function simulateRace(run: RaceRunInput, version: string = SIMULATION_ENGINE_VERSION): RaceSimulationLog {
+  if (version === RACE_SIM_V3_VERSION) return simulateRaceV3(run)
   return simulateWithProfile(run, engineProfileFor(version))
 }
 

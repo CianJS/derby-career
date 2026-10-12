@@ -1,10 +1,11 @@
 import { BALANCE } from './balance'
+import { healthSeverity } from './health'
 
 type Load = { fatigue: number; bodyLoad: number }
 export const isStrained = (fatigue: number, bodyLoad: number) => fatigue >= BALANCE.strain.fatigue || bodyLoad >= BALANCE.strain.bodyLoad
-export const isHealthy = (health: string | undefined) => !health || ['정상', 'HEALTHY'].includes(health)
+export const isHealthy = (health: string | undefined) => healthSeverity(health) === 0
 export const STRAIN_WARNING = '피로가 높습니다. 훈련 시 부상 위험이 증가할 수 있습니다.'
-export const INJURY_NOTICE = '부상 중에는 훈련과 경주 출전이 제한됩니다. 휴식하거나 치료를 선택할 수 있습니다.'
+export const INJURY_NOTICE = '부상 중에는 훈련할 수 없습니다. 경상·중등도 부상은 출전할 수 있지만 주행 능력이 떨어지고 악화될 수 있습니다. 중상은 출전할 수 없습니다.'
 
 export function injuryRiskPercent({ fatigue, bodyLoad }: Load): number {
   const tier = BALANCE.injury.tiers.find(t => fatigue >= t.minFatigue || bodyLoad >= t.minBodyLoad)

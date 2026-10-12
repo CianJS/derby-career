@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { commitAction, horses, resolveAction, startCareer, statKeys, type Career } from '../lib/career/model'
+import { advanceMonth, commitAction, horses, resolveAction, startCareer, statKeys, type Career } from '../lib/career/model'
 import { BALANCE } from '../lib/career/balance'
 import { deriveCondition, injuryRiskPercent, isHealthy, isStrained, rollsInjury } from '../lib/career/status'
 
@@ -71,11 +71,13 @@ test('injured horses cannot train but can rest or treat', () => {
 test('treatment heals the injury and records the status change', () => {
   const injured = withValues({ fatigue: 20, bodyLoad: 30 }, { health: '경상', condition: '나쁨' })
   const treated = resolveAction(commitAction(injured, 'treatment'))
-  assert.equal(treated.health, '정상')
+  assert.equal(treated.health, '경상')
+  assert.equal(treated.healthRecovery, BALANCE.health.recoveryNeeded[1] - BALANCE.health.recovery.treatment)
   assert.equal(treated.values.bodyLoad, 30 + BALANCE.treatment.bodyLoad)
   assert.equal(treated.action?.actionType, 'treatment')
-  assert.ok(treated.action?.statusChanges?.some(c => c.key === 'health' && c.before === '경상' && c.after === '정상'))
-  assert.ok(isHealthy(treated.health))
+  const second = resolveAction(commitAction(advanceMonth(treated, treated.action!.actionId), 'treatment'))
+  assert.equal(second.health, '정상')
+  assert.ok(isHealthy(second.health))
 })
 
 test('treatment is rejected when the horse is healthy', () => {
