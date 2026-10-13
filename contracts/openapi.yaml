@@ -22,6 +22,10 @@ paths:
                 $ref: '#/components/schemas/Liveness'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -51,6 +55,10 @@ paths:
                 $ref: '#/components/schemas/Readiness'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -79,6 +87,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/EventList'
         '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
           $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
@@ -173,6 +185,10 @@ paths:
                 $ref: '#/components/schemas/EventDefinition'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -210,6 +226,10 @@ paths:
                 $ref: '#/components/schemas/HorseCatalog'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -238,6 +258,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/JockeyCatalog'
         '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
           $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
@@ -268,6 +292,10 @@ paths:
                 $ref: '#/components/schemas/RaceCatalog'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -296,6 +324,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/CareerList'
         '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
           $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
@@ -329,6 +361,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/CareerResponse'
         '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
           $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
@@ -369,6 +405,10 @@ paths:
                 $ref: '#/components/schemas/CareerResponse'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -407,6 +447,10 @@ paths:
                 $ref: '#/components/schemas/ActionList'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -443,6 +487,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActionResponse'
         '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
           $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
@@ -488,6 +536,10 @@ paths:
                 $ref: '#/components/schemas/CareerResponse'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -530,6 +582,10 @@ paths:
                 $ref: '#/components/schemas/CareerEventList'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -567,6 +623,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/CareerResponse'
         '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
           $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
@@ -615,6 +675,10 @@ paths:
                 $ref: '#/components/schemas/RecordList'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -652,6 +716,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/RaceEntryResponse'
         '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
           $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
@@ -698,6 +766,10 @@ paths:
                 $ref: '#/components/schemas/RaceRunResponse'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -738,6 +810,10 @@ paths:
                 $ref: '#/components/schemas/RaceLogResponse'
         '400':
           $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
@@ -777,6 +853,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/RaceCompleteResponse'
         '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
           $ref: '#/components/responses/ApiError'
         '401':
           $ref: '#/components/responses/ApiError'

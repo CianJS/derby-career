@@ -901,6 +901,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -930,6 +932,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -967,6 +971,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -998,6 +1004,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1027,6 +1035,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1056,6 +1066,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1085,6 +1097,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1117,6 +1131,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1150,6 +1166,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1181,6 +1199,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1215,6 +1235,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1250,6 +1272,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1285,6 +1309,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1319,6 +1345,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1355,6 +1383,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1389,6 +1419,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1424,6 +1456,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1456,6 +1490,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1488,6 +1524,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
@@ -1524,6 +1562,8 @@ export interface operations {
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];

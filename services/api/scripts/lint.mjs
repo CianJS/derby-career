@@ -1,5 +1,6 @@
 import { ESLint } from 'eslint'
 import { fileURLToPath } from 'node:url'
+import { FRONTEND_FILES } from '../eslint.config.mjs'
 
 const fix = process.argv.includes('--fix')
 const eslint = new ESLint({
@@ -13,6 +14,7 @@ const results = await eslint.lintFiles([
   'services/api/tests/**/*.{js,mjs,ts}',
   'services/api/eslint.config.mjs',
   'packages/shared/src/**/*.ts',
+  ...FRONTEND_FILES,
 ])
 if (fix) {
   await ESLint.outputFixes(results)

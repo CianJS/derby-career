@@ -6,7 +6,7 @@ import { EventRepository } from './events'
 import { conditionsMatch, planDraw, drawEvent } from '../modules/events/director'
 import {
   applyImmediateEffects,
-  applyActionModifiers,
+  modifyActionDeltas,
   finalizeActionRecord,
 } from '../modules/events/resolver'
 import {
@@ -23,6 +23,7 @@ import {
   type Choice,
   type RaceDefinitionSnapshot,
   type JockeySnapshot,
+  type Change,
 } from '../../../../packages/shared/src/domain'
 import {
   startServerCareer,
@@ -37,6 +38,9 @@ import type {
   EventTiming,
   EventEffect,
 } from '../../../../packages/shared/src/events'
+import { publicEventDefinition } from '../../../../packages/shared/src/events'
+
+const REQUEST_ID_CONSTRAINTS = new Set(['careers_pkey', 'monthly_actions_pkey', 'race_runs_pkey'])
 
 type Row = {
   id: string
@@ -72,7 +76,7 @@ const historyDto = (h?: History) =>
         revision: h.event_revision,
         choiceId: h.choice_id,
         state: h.state,
-        definition: h.definition_snapshot,
+        definition: publicEventDefinition(h.definition_snapshot),
         result: h.result,
       }
     : null
@@ -159,41 +163,56 @@ export class CareerRepository {
     careerId: string | null,
     fn: (tx: Query) => Promise<T>,
   ): Promise<T> {
-    return this.db.transaction(async (tx) => {
-      // All commands for an owner lock the same principal first: stable funds, month and replay are atomic.
-      // This also makes retries with a different action ID serialize before checking the monthly unique key.
-      if (
-        !(await tx.query('SELECT id FROM principals WHERE id=$1 FOR UPDATE', [owner])).rows.length
-      ) {
-        throw new ApiError(401, 'UNAUTHORIZED', '유효한 세션이 필요합니다.')
-      }
-      if (careerId) {
-        await this.row(tx, owner, careerId)
-      }
-      const hash = digest({ operation, careerId, body })
-      const existing = (
-        await tx.query('SELECT * FROM commands WHERE principal_id=$1 AND request_id=$2', [
-          owner,
-          id,
-        ])
-      ).rows[0]
-      if (existing) {
+    try {
+      return await this.db.transaction(async (tx) => {
+        // All commands for an owner lock the same principal first: stable funds, month and replay are atomic.
+        // This also makes retries with a different action ID serialize before checking the monthly unique key.
         if (
-          existing.operation !== operation ||
-          existing.request_hash !== hash ||
-          existing.career_id !== careerId
+          !(await tx.query('SELECT id FROM principals WHERE id=$1 FOR UPDATE', [owner])).rows.length
         ) {
-          throw conflict('동일한 요청 ID를 다른 요청에 사용할 수 없습니다.')
+          throw new ApiError(401, 'UNAUTHORIZED', '유효한 세션이 필요합니다.')
         }
-        return existing.response
+        if (careerId) {
+          await this.row(tx, owner, careerId)
+        }
+        const hash = digest({ operation, careerId, body })
+        const existing = (
+          await tx.query('SELECT * FROM commands WHERE principal_id=$1 AND request_id=$2', [
+            owner,
+            id,
+          ])
+        ).rows[0]
+        if (existing) {
+          if (
+            existing.operation !== operation ||
+            existing.request_hash !== hash ||
+            existing.career_id !== careerId
+          ) {
+            throw conflict('동일한 요청 ID를 다른 요청에 사용할 수 없습니다.')
+          }
+          return existing.response
+        }
+        const response = await fn(tx)
+        await tx.query(
+          'INSERT INTO commands(principal_id,request_id,operation,career_id,request_hash,response) VALUES($1,$2,$3,$4,$5,$6)',
+          [owner, id, operation, careerId, hash, JSON.stringify(response)],
+        )
+        return response
+      })
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === '23505' &&
+        'constraint' in error &&
+        typeof error.constraint === 'string' &&
+        REQUEST_ID_CONSTRAINTS.has(error.constraint)
+      ) {
+        throw conflict('요청 ID가 이미 사용 중입니다. 새 요청 ID로 다시 시도해 주세요.')
       }
-      const response = await fn(tx)
-      await tx.query(
-        'INSERT INTO commands(principal_id,request_id,operation,career_id,request_hash,response) VALUES($1,$2,$3,$4,$5,$6)',
-        [owner, id, operation, careerId, hash, JSON.stringify(response)],
-      )
-      return response
-    })
+      throw error
+    }
   }
   private active(row: Row) {
     if (row.status !== 'active') {
@@ -343,16 +362,17 @@ export class CareerRepository {
       [row.id, row.turn, JSON.stringify([...draw.evaluated_timings, timing])],
     )
   }
-  private async consumeModifiers(tx: Query, row: Row, before: Career, choice?: Choice) {
+  private async consumeModifiers(
+    tx: Query,
+    row: Row,
+    choice?: Choice,
+    actionChanges: Change[] = [],
+  ) {
     const history = await this.history(tx, row)
     if (history?.state === 'pending') {
       throw conflict('월간 이벤트 선택을 먼저 확정해 주세요.')
     }
     if (history?.state === 'selected') {
-      const resolved = choice
-        ? applyActionModifiers(before, row.state, choice, history.modifiers)
-        : { career: row.state, changes: [] }
-      row.state = resolved.career
       const matched =
         choice &&
         history.modifiers.some(
@@ -366,7 +386,7 @@ export class CareerRepository {
         [
           history.id,
           matched ? 'applied' : 'expired',
-          JSON.stringify({ ...(history.result as object), actionChanges: resolved.changes }),
+          JSON.stringify({ ...(history.result as object), actionChanges }),
         ],
       )
     }
@@ -527,16 +547,27 @@ export class CareerRepository {
       if (row.turn !== body.expectedTurn || row.state.action || row.state.raceRun) {
         throw conflict('이번 월 행동이 이미 확정되었거나 월이 변경되었습니다.')
       }
-      if ((await this.history(tx, row))?.state === 'pending') {
+      const history = await this.history(tx, row)
+      if (history?.state === 'pending') {
         throw conflict('이벤트 선택을 먼저 확정해 주세요.')
       }
       const before = structuredClone(row.state)
+      let modifierChanges: Change[] = []
       try {
-        row.state = resolveServerAction(row.state, body.choice)
+        row.state = resolveServerAction(row.state, body.choice, (deltas, action) => {
+          const modified = modifyActionDeltas(
+            before,
+            deltas,
+            action,
+            history?.state === 'selected' ? history.modifiers : [],
+          )
+          modifierChanges = modified.changes
+          return modified.deltas
+        })
       } catch (error) {
         throw new ApiError(422, 'ACTION_RESTRICTED', (error as Error).message)
       }
-      await this.consumeModifiers(tx, row, before, body.choice)
+      await this.consumeModifiers(tx, row, body.choice, modifierChanges)
       await this.finishResultEvent(tx, row, body.choice, before)
       row.state = finalizeActionRecord(before, row.state)
       await tx.query(
@@ -642,7 +673,7 @@ export class CareerRepository {
             [row.horse_id, body.jockeyId],
           )
         ).rows[0]?.chemistry ?? 0
-      await this.consumeModifiers(tx, row, row.state)
+      await this.consumeModifiers(tx, row)
       const seed = randomUUID()
       let first = true
       const run = createRaceRun(row.state, race, { ...jockey, chemistry }, body.tactic, () => {

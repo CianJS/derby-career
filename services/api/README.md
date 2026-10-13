@@ -16,7 +16,7 @@ npm run db:seed
 npm run dev
 ```
 
-`http://127.0.0.1:4000/health/ready`와 `GET /v1/events?category=common&enabled=true`로 확인한다. `db:seed`는 기존 playable 코드의 말 3두·기수 6명·경주 8개와 실제 Notion 이벤트를 넣는다. 말/기수/경주는 `development_fixture`로 명시하며 운영 환경에서 `db:seed`는 거부한다. 이벤트만 가져오려면 `npm run events:import -- seeds/events.catalog.json`을 사용한다.
+`http://127.0.0.1:4000/health/ready`와 `GET /v1/events?category=common&enabled=true`로 확인한다. `db:seed`는 기존 playable 코드의 말 3두·기수 6명·경주 17개와 실제 Notion 이벤트를 넣는다. 말/기수/경주는 `development_fixture`로 명시하며 운영 환경에서 `db:seed`는 거부한다. 이벤트만 가져오려면 `npm run events:import -- seeds/events.catalog.json`을 사용한다.
 
 빌드 후 실행도 독립적으로 가능하다.
 
@@ -51,14 +51,14 @@ npm run session:create -- local-developer 8
 
 ## 계약과 연동
 
-`contracts/openapi.yaml`이 HTTP 계약의 기준이다. 서버는 이 파일로 요청을 검증하고 응답을 직렬화하며, 공유 타입도 여기서 생성한다.
+`contracts/openapi.yaml`이 HTTP 계약의 기준이다. 서버는 이 파일로 요청을 검증하고 응답을 직렬화하며, 공유 타입과 공개 이벤트 응답 검증기도 여기서 생성한다.
 
 ```bash
 npm run contract:generate
 npm run contract:check
 ```
 
-계약을 변경할 때 YAML과 `packages/shared/src/generated/api.ts`를 함께 커밋한다. 기존 프론트엔드 페이지·store·Local Save는 연결하거나 이전하지 않았다. 루트 `tsconfig.json`의 서비스/패키지 제외는 API의 독립 타입 검사를 위한 설정이다. 기존 pnpm lockfile과 Next 실행 스크립트는 그대로다.
+계약을 변경할 때 YAML과 `packages/shared/src/generated/api.ts`를 함께 커밋한다. 공개 이벤트는 Next `/api/event-catalog`과 개발용 `/dev/event-catalog` 화면에서 조회할 수 있다. 루트의 `.env.local`에 서버 전용 `DERBY_API_URL`을 설정한다. 기존 육성 페이지·store·Local Save의 쓰기는 연결하거나 이전하지 않았다. 실행 방법과 오류 규칙은 루트 `README.md`를 따른다. 루트 `tsconfig.json`의 서비스/패키지 제외는 API의 독립 타입 검사를 위한 설정이다. 기존 pnpm lockfile과 Next 실행 스크립트는 그대로다.
 
 프론트엔드에서 안전하게 시작할 연동은 공개 카탈로그 Adapter다.
 
@@ -92,7 +92,7 @@ Career의 `state`는 기존 순수 도메인이 사용하는 authoritative aggre
 
 월간 명령은 principal → Career 순으로 잠그고 월당 행동 UNIQUE, 소유권 FK, 입력 해시, 불변 응답 receipt를 함께 저장한다. 성장·이벤트·기록·상금은 같은 트랜잭션으로 반영한다. RaceRun·시뮬레이션 로그·결과·상금 ledger·은퇴 snapshot은 SQL trigger로 수정/삭제를 막는다. 이벤트 선택과 완료된 행동도 변경할 수 없다.
 
-`packages/shared/src/domain.ts`는 `lib/career`의 기존 순수 함수만 재내보낸다. `server-domain.ts`는 이 함수들을 사용하면서 브라우저 fixture 이벤트를 등록하지 않는다. 서버 이벤트는 별도 envelope/DB로만 관리하고, 성장·치료·회복·기본 이벤트 성장/비용 계산은 최신 공유 함수로 처리한다. 서버용 계산 사본이나 새로운 v3 엔진을 작성하지 않았다.
+`packages/shared/src/domain.ts`는 `lib/career`의 기존 순수 함수만 재내보낸다. `server-domain.ts`는 이 함수들을 사용하면서 브라우저 fixture 이벤트를 등록하지 않는다. 서버 이벤트의 행동 보정도 이 순수 함수의 0/1000 제한 전에 적용하며, 제한된 결과에서 기본 성장·회복량을 역산하지 않는다. 서버 이벤트는 별도 envelope/DB로만 관리하고, 성장·치료·회복·기본 이벤트 성장/비용 계산은 최신 공유 함수로 처리한다. 서버용 계산 사본이나 새로운 v3 엔진을 작성하지 않았다.
 
 기준 브랜치 최신 `8430c1a`에는 v0가 추가한 v3 기본 엔진·건강 회복·Local 이벤트가 있다. 이번 API의 기본 엔진은 요청 범위에 맞춰 **`race-sim-v2`로 명시 고정**하며 v1도 지원한다. 기존 frontend 기본 v3를 변경하지 않고, API에서 v3 요청은 거부한다. 이 차이는 전체 서버 전환 전에 조율해야 한다. 로그는 v1/v2 해시 호환성을 위해 **원본 JSON 문자열과 JSONB**를 함께 저장하고 원본 필드 순서로 반환한다. 저장 결과는 재시뮬레이션하지 않는다.
 

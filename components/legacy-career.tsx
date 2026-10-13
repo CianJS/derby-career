@@ -18,7 +18,7 @@ import {
 import { RacePlayback } from "@/components/career/race-playback";
 import { RaceReflection } from "@/components/career/race-reflection";
 import { careerStore, useCareer } from "@/lib/career/store";
-import { applyCareer } from "@/lib/career/lifecycle";
+import { applyCareer, archiveActiveHorse } from '@/lib/career/lifecycle'
 import { INJURY_NOTICE, isHealthy, isStrained } from "@/lib/career/status";
 import { contractedJockeys, freeAgentJockeys, jockeyProfiles } from "@/lib/career/race-entry";
 import { summarizeRecords, type HorseRaceRecord } from "@/lib/career/records";
@@ -4471,21 +4471,8 @@ export default function App() {
   const confirmRetire = async () => {
     const horse = state.activeHorse;
     if (!horse || !(await careerStore.release())) return;
-    setState((current) => {
-      if (
-        !current.activeHorse ||
-        current.archive.some((item) => item.id === horse.id && item.retiredAt)
-      )
-        return current;
-      const retired = { ...horse, retiredAt: "2028.04" };
-      return {
-        ...current,
-        activeHorse: null,
-        archive: [retired, ...current.archive],
-        lastRetiredId: retired.id,
-        lifecycleView: "careerComplete",
-      };
-    });
+    const archiveId = crypto.randomUUID()
+    setState((current) => archiveActiveHorse(current, horse.id, archiveId))
     setView("careerComplete");
   };
   const startCandidates = () => {

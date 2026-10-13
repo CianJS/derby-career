@@ -60,6 +60,17 @@ export type DirectorConfig = {
   pityAfterMisses: number
   monthStartShare: number
 }
+/** Internal provenance stays in the immutable catalog; responses expose game descriptions only. */
+export function publicEventDefinition(event: EventDefinition): EventDefinition {
+  return {
+    ...event,
+    source: {
+      url: null,
+      conditionText: event.source.conditionText,
+      effectText: event.source.effectText,
+    },
+  }
+}
 export const DEFAULT_DIRECTOR_CONFIG: DirectorConfig = {
   version: 'event-director-v1',
   monthlyProbability: 0.3,

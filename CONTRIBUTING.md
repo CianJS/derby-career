@@ -26,7 +26,7 @@
 
 ## 자동 검사
 
-자동 검사 범위는 `services/api`의 직접 작성한 JS/TS와 `packages/shared/src`다. 기존 프론트엔드는 별도 담당 범위를 유지하며, 새 코드의 기본 포맷과 이름은 위 규칙을 따른다.
+자동 검사 범위는 `services/api`의 직접 작성한 JS/TS와 `packages/shared/src`, 공개 카탈로그 연동의 `app/api/event-catalog`, `app/dev/event-catalog`, `components/dev/event-catalog.tsx`, `components/dev/event-detail.tsx`, `lib/event-catalog`과 리뷰에서 수정한 게임 계산·건강·중계·경주 재생·고정 이벤트 route 및 회귀 테스트다. 정확한 파일 목록은 `services/api/eslint.config.mjs`의 `FRONTEND_FILES`를 따른다. 기존 프론트엔드는 별도 담당 범위를 유지하며, 새 코드의 기본 포맷과 이름은 위 규칙을 따른다.
 
 개발 도구는 Node.js 22 LTS의 최신 패치 또는 Node.js 24 이상에서 실행한다. API 디렉터리에서 실행한다.
 
@@ -44,6 +44,6 @@ npm test
 
 CI는 `format:check`와 `lint`를 실행하며 린트 경고도 실패로 처리한다. 코드 변경 후 검사 결과가 통과해야 한다.
 
-`packages/shared/src/generated`는 계약 생성기로 갱신한다. 이벤트 Seed는 변환기로 갱신하고, 적용된 SQL migration은 체크섬을 보존하여 새 migration으로 변경한다. 이 파일들은 일괄 포맷 대상에서 제외한다.
+`packages/shared/src/generated`의 타입과 이벤트 응답 검증기는 `npm run contract:generate`로 함께 갱신하고 `contract:check`로 계약 일치를 검사한다. 이벤트 Seed는 변환기로 갱신하고, 적용된 SQL migration은 체크섬을 보존하여 새 migration으로 변경한다. 이 파일들은 일괄 포맷 대상에서 제외한다.
 
 도구 참고: [Prettier CLI](https://prettier.io/docs/cli), [typescript-eslint 설정](https://typescript-eslint.io/getting-started/).

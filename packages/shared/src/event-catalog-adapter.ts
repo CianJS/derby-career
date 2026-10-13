@@ -1,4 +1,5 @@
 import { createApiClient, type EventListQuery } from './client'
+import { parseCatalogEvent, parseCatalogPage } from './event-catalog-validation'
 // Safe first integration: public catalog only. No Career/local-save imports, migration or mutation.
 export function createEventCatalogAdapter(
   baseUrl: string,
@@ -6,7 +7,7 @@ export function createEventCatalogAdapter(
 ) {
   const client = createApiClient({ baseUrl, fetch: fetcher })
   return {
-    list: (query: EventListQuery = {}) => client.listEvents(query),
-    detail: (id: string) => client.getEvent(id),
+    list: async (query: EventListQuery = {}) => parseCatalogPage(await client.listEvents(query)),
+    detail: async (id: string) => parseCatalogEvent(await client.getEvent(id)),
   }
 }
