@@ -99,6 +99,10 @@ export function createApiClient(options: {
     createCareer: (body: Models['CreateCareer']) =>
       request<Models['CareerResponse']>('/v1/careers', body, true),
     getCareer: (id: string) => request<Models['CareerResponse']>(careerPath(id), undefined, true),
+    retireCareer: (id: string, body: Models['RetireCareer']) =>
+      request<Models['RetireCareerResponse']>(careerPath(id) + '/retirement', body, true),
+    getRetirement: (id: string) =>
+      request<Models['RetirementResponse']>(careerPath(id) + '/retirement', undefined, true),
     confirmAction: (id: string, body: Models['ConfirmAction']) =>
       request<Models['ActionResponse']>(careerPath(id) + '/actions', body, true),
     advanceMonth: (id: string, body: Models['AdvanceMonth']) =>

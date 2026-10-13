@@ -180,6 +180,18 @@ test('private reads and writes require unexpired owned sessions; default/product
   )
   try {
     assert.equal((await app.inject({ url: '/v1/careers' })).statusCode, 503)
+    const retirementUrl = `/v1/careers/${randomUUID()}/retirement`
+    assert.equal((await app.inject({ url: retirementUrl })).statusCode, 503)
+    assert.equal(
+      (
+        await app.inject({
+          method: 'POST',
+          url: retirementUrl,
+          payload: { commandId: randomUUID(), expectedRevision: 1 },
+        })
+      ).statusCode,
+      503,
+    )
     assert.equal((await app.inject({ url: '/health/live' })).statusCode, 200)
     assert.equal((await app.inject({ url: '/health/ready' })).statusCode, 503)
   } finally {

@@ -74,21 +74,32 @@ const detail = await events.detail('COM-0001')
 
 주요 요청 ID 규칙:
 
-| 작업                | 유지해야 할 UUID                 | 동작                                         |
-| ------------------- | -------------------------------- | -------------------------------------------- |
-| Career 생성         | `careerId`                       | 동일 본문 재시도는 기존 응답 재생            |
-| 월간 행동           | `actionId`                       | 같은 월 다른 ID/행동은 409                   |
-| 이벤트 선택·다음 월 | `commandId`                      | 같은 ID 다른 본문은 409                      |
-| 출전 확정           | `raceRunId`                      | Seed·입력·로그 잠금                          |
-| 경주 완료           | `commandId` + 저장된 `raceRunId` | 다른 commandId로 재호출해도 상금·월 진행 1회 |
+| 작업                | 유지해야 할 UUID                 | 동작                                           |
+| ------------------- | -------------------------------- | ---------------------------------------------- |
+| Career 생성         | `careerId`                       | 동일 본문 재시도는 기존 응답 재생              |
+| 월간 행동           | `actionId`                       | 같은 월 다른 ID/행동은 409                     |
+| 이벤트 선택·다음 월 | `commandId`                      | 같은 ID 다른 본문은 409                        |
+| 출전 확정           | `raceRunId`                      | Seed·입력·로그 잠금                            |
+| 경주 완료           | `commandId` + 저장된 `raceRunId` | 다른 commandId로 재호출해도 상금·월 진행 1회   |
+| 수동 은퇴           | `commandId`                      | 같은 ID·본문만 최초 응답 재생, 다른 요청은 409 |
 
 API `actionId`는 UUID이며 `career.state.action.actionId`의 기존 도메인 문자열과 다르다. 다음 월 요청에는 행동 API가 반환한 UUID를 사용한다. 생성형 AI 호출, 클라이언트 state/result/seed 업로드, 결과 재추첨 API는 없다. 재시도에는 최초 요청 ID와 본문을 그대로 유지하고 현재 상태는 GET으로 다시 조회한다.
+
+## 서버 은퇴
+
+`POST /v1/careers/{careerId}/retirement`에 `{ commandId, expectedRevision }`을 전달한다. `expectedRevision`은 직전에 조회한 `career.revision`이다. 미완료 경주·행동, 변경된 revision, 이미 은퇴한 Career는 409다. 완료된 훈련·휴식·치료 결과가 있는 월에도 은퇴할 수 있으며 다음 월로 진행하지 않는다. 동일 commandId와 본문의 재시도는 최초 응답을 반환한다. 다른 본문이나 명령에 같은 ID를 재사용할 수 없다.
+
+응답은 `{ career, retirement }`다. `career.status`를 `retired`로 변경하고 revision을 1 증가시키며, 은퇴 snapshot과 명령 receipt를 같은 트랜잭션으로 저장한다. 실패하면 모두 롤백한다. 능력·건강·전적·자금·세계 날짜·이벤트 기록은 그대로 보존한다. 미선택 이벤트와 사용하지 않은 이벤트 보정도 당시 상태로 보존하며 추가 선택이나 효과 적용은 없다. 클라이언트 snapshot과 은퇴 사유는 받지 않으며 서버가 사유를 `manual`로 기록한다. 자동 은퇴 조건은 추가하지 않았다.
+
+`GET /v1/careers/{careerId}/retirement`는 `{ retirement }`를 반환한다. `retirement`에는 `careerId`, `reason`, 실제 저장 시각인 `retiredAt`(UTC), 게임 세계 날짜인 `retiredOn`, 은퇴 당시의 `snapshot`이 있다. snapshot의 자금과 날짜는 이후 마방의 새 Career가 진행되어도 바뀌지 않는다. 기존 `GET /v1/careers/{careerId}`는 현재 마방 자금을 포함하므로 은퇴 당시 정보는 은퇴 조회의 snapshot을 사용한다. 활성 Career, 없는 Career, 다른 소유자의 기록은 404다.
+
+은퇴 후 기존 조회·이력은 유지하고 새로운 쓰기는 409로 거부한다. 기존 명령을 같은 ID·본문으로 재시도하면 과거 receipt만 재생하므로 과거 응답의 status로 현재 상태를 덮어쓰지 말고 GET으로 확인한다. 새 Career는 기존 마방·자금·세계 날짜를 이어받고 새 소유 말 UUID를 사용한다. 은퇴 확정과 조회 모두 기존 소유자 인증이 필요하며 운영 인증 미설정 상태에서는 503이다. 공유 클라이언트의 `retireCareer`와 `getRetirement`로 호출할 수 있다. 기존 Local Save 화면은 이 API에 연결하지 않았다.
 
 ## DB와 도메인
 
 버전별 SQL 파일을 하나의 migration runner로 실행한다. 트랜잭션·advisory lock·적용 체크섬을 사용한다. 적용된 migration은 수정하지 않고 새 파일을 추가한다. destructive down migration은 제공하지 않는다.
 
-Career의 `state`는 기존 순수 도메인이 사용하는 authoritative aggregate이며 능력·건강도 여기에 있다. 별도 복제 계산용 stats 테이블은 만들지 않았다. 소유 말은 고유 UUID와 정의 FK를 가지며 Career·월간 행동·경주 결과·기수 관계는 이 UUID를 참조한다. 마방 자금·계약·세계 시간은 stable에 있다. 은퇴 기록을 위한 immutable snapshot 테이블도 준비했지만 은퇴 API는 이번 범위에 포함하지 않았다.
+Career의 `state`는 기존 순수 도메인이 사용하는 authoritative aggregate이며 능력·건강도 여기에 있다. 별도 복제 계산용 stats 테이블은 만들지 않았다. 소유 말은 고유 UUID와 정의 FK를 가지며 Career·월간 행동·경주 결과·기수 관계는 이 UUID를 참조한다. 마방 자금·계약·세계 시간은 stable에 있다. 서버 은퇴는 기존 `career_records` 테이블과 수정·삭제 방지 trigger를 사용하므로 추가 migration 없이 immutable snapshot을 보존한다.
 
 월간 명령은 principal → Career 순으로 잠그고 월당 행동 UNIQUE, 소유권 FK, 입력 해시, 불변 응답 receipt를 함께 저장한다. 성장·이벤트·기록·상금은 같은 트랜잭션으로 반영한다. RaceRun·시뮬레이션 로그·결과·상금 ledger·은퇴 snapshot은 SQL trigger로 수정/삭제를 막는다. 이벤트 선택과 완료된 행동도 변경할 수 없다.
 

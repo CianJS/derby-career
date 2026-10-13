@@ -164,6 +164,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/careers/{careerId}/retirement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 소유자의 불변 은퇴 기록 조회
+         * @description 은퇴 당시의 Career, 자금, 세계 날짜와 공개 이벤트 상태를 반환한다. 활성 Career나 다른 소유자의 Career는 404다.
+         */
+        get: operations["getCareerRetirement"];
+        put?: never;
+        /**
+         * 서버 Career 수동 은퇴 확정
+         * @description 현재 Career revision을 expectedRevision으로 전달한다. 미완료 경주나 행동, revision 불일치, 이미 은퇴한 Career는 409다. 동일 commandId와 본문 재시도는 최초 응답을 재생하고 다른 본문이나 명령에 ID를 재사용하면 409다. 서버 상태만 snapshot으로 저장하며 자금, 능력치, 월과 이벤트 기록은 변경하지 않는다. 은퇴 후 새 쓰기는 거부하고 기존 명령의 동일 요청 재시도만 원래 응답을 재생한다. 은퇴 이유는 서버가 manual로 고정하며 자동 은퇴 규칙은 없다.
+         */
+        post: operations["retireCareer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/careers/{careerId}/actions": {
         parameters: {
             query?: never;
@@ -654,6 +678,28 @@ export interface components {
         };
         CareerResponse: {
             career: components["schemas"]["Career"];
+        };
+        RetireCareer: {
+            /** Format: uuid */
+            commandId: string;
+            expectedRevision: number;
+        };
+        RetirementRecord: {
+            /** Format: uuid */
+            careerId: string;
+            /** @enum {string} */
+            reason: "manual";
+            /** Format: date-time */
+            retiredAt: string;
+            retiredOn: components["schemas"]["CalendarDate"];
+            snapshot: components["schemas"]["Career"];
+        };
+        RetirementResponse: {
+            retirement: components["schemas"]["RetirementRecord"];
+        };
+        RetireCareerResponse: {
+            career: components["schemas"]["Career"];
+            retirement: components["schemas"]["RetirementRecord"];
         };
         CreateCareer: {
             /** Format: uuid */
@@ -1202,6 +1248,71 @@ export interface operations {
             413: components["responses"]["ApiError"];
             415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    getCareerRetirement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                careerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetirementResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["ApiError"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    retireCareer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                careerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetireCareer"];
+            };
+        };
+        responses: {
+            /** @description 성공 또는 동일 요청 재생 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetireCareerResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["ApiError"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
             503: components["responses"]["ApiError"];

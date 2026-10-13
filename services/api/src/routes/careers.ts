@@ -53,6 +53,12 @@ export function careerRoutes(
     true,
   )
   register('GET', '/v1/careers/{careerId}', (r, o) => careers.get(o, (r.params as Params).careerId))
+  register('POST', '/v1/careers/{careerId}/retirement', (r, o) =>
+    careers.retire(o, (r.params as Params).careerId, r.body as Models['RetireCareer']),
+  )
+  register('GET', '/v1/careers/{careerId}/retirement', (r, o) =>
+    careers.retirement(o, (r.params as Params).careerId),
+  )
   register('GET', '/v1/careers/{careerId}/actions', (r, o) => {
     const p = r.query as Page
     return careers.actions(o, (r.params as Params).careerId, p.page, p.pageSize)
