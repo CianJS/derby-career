@@ -7,6 +7,11 @@ on:
       - 'contracts/**'
       - 'lib/career/**'
       - '.github/workflows/backend-foundation.yml'
+      - '.editorconfig'
+      - '.prettierrc.json'
+      - '.prettierignore'
+      - 'CONTRIBUTING.md'
+      - 'AGENTS.md'
   push:
     branches: ['feature/backend-api-foundation']
 jobs:
@@ -41,6 +46,8 @@ jobs:
           cache: npm
           cache-dependency-path: services/api/package-lock.json
       - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
       - run: npm run typecheck
       - run: npm run contract:check
       - run: npm run events:convert && git diff --exit-code -- seeds/events.catalog.json

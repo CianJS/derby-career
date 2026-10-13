@@ -74,13 +74,13 @@ const detail = await events.detail('COM-0001')
 
 주요 요청 ID 규칙:
 
-| 작업 | 유지해야 할 UUID | 동작 |
-| --- | --- | --- |
-| Career 생성 | `careerId` | 동일 본문 재시도는 기존 응답 재생 |
-| 월간 행동 | `actionId` | 같은 월 다른 ID/행동은 409 |
-| 이벤트 선택·다음 월 | `commandId` | 같은 ID 다른 본문은 409 |
-| 출전 확정 | `raceRunId` | Seed·입력·로그 잠금 |
-| 경주 완료 | `commandId` + 저장된 `raceRunId` | 다른 commandId로 재호출해도 상금·월 진행 1회 |
+| 작업                | 유지해야 할 UUID                 | 동작                                         |
+| ------------------- | -------------------------------- | -------------------------------------------- |
+| Career 생성         | `careerId`                       | 동일 본문 재시도는 기존 응답 재생            |
+| 월간 행동           | `actionId`                       | 같은 월 다른 ID/행동은 409                   |
+| 이벤트 선택·다음 월 | `commandId`                      | 같은 ID 다른 본문은 409                      |
+| 출전 확정           | `raceRunId`                      | Seed·입력·로그 잠금                          |
+| 경주 완료           | `commandId` + 저장된 `raceRunId` | 다른 commandId로 재호출해도 상금·월 진행 1회 |
 
 API `actionId`는 UUID이며 `career.state.action.actionId`의 기존 도메인 문자열과 다르다. 다음 월 요청에는 행동 API가 반환한 UUID를 사용한다. 생성형 AI 호출, 클라이언트 state/result/seed 업로드, 결과 재추첨 API는 없다. 재시도에는 최초 요청 ID와 본문을 그대로 유지하고 현재 상태는 GET으로 다시 조회한다.
 
@@ -100,7 +100,11 @@ Career의 `state`는 기존 순수 도메인이 사용하는 authoritative aggre
 
 ## 검증
 
+코딩 규칙은 저장소 루트의 `CONTRIBUTING.md`를 따른다. 개발 도구는 최신 Node.js 22 LTS 패치 또는 Node.js 24 이상에서 사용한다. API와 공유 코드의 포맷은 `npm run format`, 자동 수정 가능한 린트 항목은 `npm run lint:fix`로 정리한다.
+
 ```bash
+npm run format:check
+npm run lint
 npm run typecheck
 npm run contract:check
 npm test
