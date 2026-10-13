@@ -1,0 +1,64 @@
+name: Backend foundation
+on:
+  pull_request:
+    paths:
+      - 'services/api/**'
+      - 'packages/shared/**'
+      - 'contracts/**'
+      - 'lib/career/**'
+      - '.github/workflows/backend-foundation.yml'
+      - '.editorconfig'
+      - '.prettierrc.json'
+      - '.prettierignore'
+      - 'CONTRIBUTING.md'
+      - 'AGENTS.md'
+  push:
+    branches: ['feature/backend-api-foundation']
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: derby
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: derby_career_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U derby -d derby_career_test"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      DATABASE_URL: postgresql://derby:local_ci_only@127.0.0.1:5432/derby_career_test
+      TEST_DATABASE_URL: postgresql://derby:local_ci_only@127.0.0.1:5432/derby_career_test
+      NODE_ENV: test
+      AUTH_MODE: disabled
+      LOG_LEVEL: silent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run contract:check
+      - run: npm run events:convert && git diff --exit-code -- seeds/events.catalog.json
+      - run: npm test
+      - run: npm run db:migrate && npm run db:seed
+      - run: npm run test:postgres
+      - run: npm run build
+      - name: Verify compiled HTTP server against PostgreSQL
+        run: |
+          NODE_ENV=production node dist/server.js &
+          API_PROCESS_ID=$!
+          trap 'kill "$API_PROCESS_ID" 2>/dev/null || true' EXIT
+          curl --silent --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:4000/health/ready > /dev/null
+          node scripts/http-smoke.mjs

@@ -1,0 +1,14 @@
+{
+  "name": "@derby-career/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./domain": "./src/domain.ts",
+    "./server-domain": "./src/server-domain.ts",
+    "./events": "./src/events.ts",
+    "./api": "./src/generated/api.ts",
+    "./client": "./src/client.ts",
+    "./event-catalog-adapter": "./src/event-catalog-adapter.ts"
+  }
+}
