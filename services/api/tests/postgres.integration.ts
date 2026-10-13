@@ -175,12 +175,19 @@ test('real PostgreSQL maps simultaneous refreshed production JWTs to one owner a
         .length,
       1,
     )
-    assert.equal(
-      (await f.db.query('SELECT * FROM commands WHERE career_id=$1', [careerId])).rows.length,
-      2,
-    )
     const owner = (await f.db.query('SELECT owner_id FROM careers WHERE id=$1', [careerId])).rows[0]
       .owner_id
+    // Creation has no existing Career to lock, so its receipt has career_id=NULL.
+    assert.equal(
+      (
+        await f.db.query('SELECT * FROM commands WHERE principal_id=$1 AND request_id IN ($2,$3)', [
+          owner,
+          careerId,
+          actionId,
+        ])
+      ).rows.length,
+      2,
+    )
     assert.equal(
       (await f.db.query('SELECT provider FROM principals WHERE id=$1', [owner])).rows[0].provider,
       'external',
