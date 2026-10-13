@@ -11,6 +11,19 @@ import { eventRoutes } from './routes/events'
 import { careerRoutes } from './routes/careers'
 import { ApiError } from './errors'
 
+const CLIENT_ERROR_CODES: Record<number, string> = {
+  400: 'INVALID_REQUEST',
+  413: 'PAYLOAD_TOO_LARGE',
+  415: 'UNSUPPORTED_MEDIA_TYPE',
+  429: 'RATE_LIMITED',
+}
+const CLIENT_ERROR_MESSAGES: Record<number, string> = {
+  400: '요청 본문을 확인해 주세요.',
+  413: '요청 본문이 허용된 크기를 초과했습니다.',
+  415: '지원하지 않는 요청 본문 형식입니다.',
+  429: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+}
+
 export async function createApp(db: Database, config: Config) {
   if (
     config.authMode === 'dev-session' &&
@@ -40,8 +53,8 @@ export async function createApp(db: Database, config: Config) {
       ? error.status
       : validation
         ? 400
-        : fastifyError.statusCode === 429
-          ? 429
+        : fastifyError.statusCode && fastifyError.statusCode >= 400 && fastifyError.statusCode < 500
+          ? fastifyError.statusCode
           : 500
     if (status >= 500 && (!known || status !== 503)) {
       request.log.error({ err: error }, 'API request failed')
@@ -52,16 +65,12 @@ export async function createApp(db: Database, config: Config) {
           ? error.code
           : validation
             ? 'VALIDATION_ERROR'
-            : status === 429
-              ? 'RATE_LIMITED'
-              : 'INTERNAL_ERROR',
+            : (CLIENT_ERROR_CODES[status] ?? 'INTERNAL_ERROR'),
         message: known
           ? error.message
           : validation
             ? '요청 구조가 API 계약과 일치하지 않습니다.'
-            : status === 429
-              ? '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'
-              : '서버에서 요청을 처리하지 못했습니다.',
+            : (CLIENT_ERROR_MESSAGES[status] ?? '서버에서 요청을 처리하지 못했습니다.'),
         requestId: request.id,
       },
     })

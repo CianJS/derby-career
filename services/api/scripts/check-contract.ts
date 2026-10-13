@@ -2,6 +2,11 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import openapiTS, { astToString, COMMENT_HEADER } from 'openapi-typescript'
 import SwaggerParser from '@apidevtools/swagger-parser'
+import {
+  EVENT_VALIDATOR_PATH,
+  EVENT_VALIDATOR_TYPES_PATH,
+  generateEventValidation,
+} from './event-validation'
 const contract = resolve('../../contracts/openapi.yaml')
 await SwaggerParser.validate(contract)
 const generated = COMMENT_HEADER + astToString(await openapiTS(new URL(`file://${contract}`)))
@@ -11,4 +16,11 @@ if (generated !== current) {
     'Generated API types are stale. Run npm run contract:generate and commit both files.',
   )
 }
-console.log('OpenAPI is valid and generated types match')
+const validators = await generateEventValidation()
+if (
+  (await readFile(EVENT_VALIDATOR_PATH, 'utf8')) !== validators.source ||
+  (await readFile(EVENT_VALIDATOR_TYPES_PATH, 'utf8')) !== validators.types
+) {
+  throw new Error('Generated event response validators are stale. Run npm run contract:generate.')
+}
+console.log('OpenAPI is valid and generated types/response validators match')

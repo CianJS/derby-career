@@ -1,5 +1,6 @@
 import type { Database, Query } from '../db'
 import type { EventCategory, EventDefinition } from '../../../../packages/shared/src/events'
+import { publicEventDefinition } from '../../../../packages/shared/src/events'
 export type EventQuery = {
   page: number
   pageSize: number
@@ -38,7 +39,7 @@ export class EventRepository {
         [...values, query.pageSize, (query.page - 1) * query.pageSize],
       )
       return {
-        data: rows.rows.map((x) => x.definition as EventDefinition),
+        data: rows.rows.map((x) => publicEventDefinition(x.definition as EventDefinition)),
         pagination: {
           page: query.page,
           pageSize: query.pageSize,
@@ -49,12 +50,13 @@ export class EventRepository {
     })
   }
   async get(id: string): Promise<EventDefinition | undefined> {
-    return (
+    const event = (
       await this.db.query(
         'SELECT r.definition FROM event_definitions e JOIN event_revisions r ON r.event_id=e.id AND r.revision=e.current_revision WHERE e.id=$1',
         [id],
       )
-    ).rows[0]?.definition
+    ).rows[0]?.definition as EventDefinition | undefined
+    return event ? publicEventDefinition(event) : undefined
   }
   static async pool(tx: Query): Promise<EventDefinition[]> {
     return (

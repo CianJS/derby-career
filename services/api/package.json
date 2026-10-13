@@ -11,8 +11,8 @@
     "build": "tsup src/server.ts src/cli.ts --format esm --target node22 --out-dir dist --clean",
     "start": "node --env-file-if-exists=.env dist/server.js",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write --config ../../.prettierrc.json --ignore-path ../../.prettierignore src scripts tests eslint.config.mjs package.json README.md ../../packages/shared/src ../../packages/shared/README.md ../../app/api/event-catalog ../../app/dev/event-catalog ../../components/dev/event-catalog.tsx ../../components/dev/event-detail.tsx ../../lib/event-catalog ../../README.md ../../CONTRIBUTING.md ../../AGENTS.md ../../.prettierrc.json ../../.github/workflows/backend-foundation.yml",
-    "format:check": "prettier --check --config ../../.prettierrc.json --ignore-path ../../.prettierignore src scripts tests eslint.config.mjs package.json README.md ../../packages/shared/src ../../packages/shared/README.md ../../app/api/event-catalog ../../app/dev/event-catalog ../../components/dev/event-catalog.tsx ../../components/dev/event-detail.tsx ../../lib/event-catalog ../../README.md ../../CONTRIBUTING.md ../../AGENTS.md ../../.prettierrc.json ../../.github/workflows/backend-foundation.yml",
+    "format": "prettier --write --config ../../.prettierrc.json --ignore-path ../../.prettierignore src scripts tests eslint.config.mjs package.json README.md ../../packages/shared/src ../../packages/shared/README.md ../../app/api/event-catalog ../../app/dev/event-catalog ../../components/dev/event-catalog.tsx ../../components/dev/event-detail.tsx ../../lib/event-catalog ../../README.md ../../CONTRIBUTING.md ../../AGENTS.md ../../.prettierrc.json ../../.github/workflows/backend-foundation.yml ../../app/api/events/route.ts ../../components/career/race-playback.tsx ../../lib/career/model.ts ../../lib/career/health.ts ../../lib/career/race-feed.ts ../../tests/health.test.ts ../../tests/public-events.test.ts ../../tests/race-feed.test.ts ../../tests/race-golden.test.ts ../../next.config.mjs ../../lib/career/lifecycle.ts ../../tests/lifecycle.test.ts",
+    "format:check": "prettier --check --config ../../.prettierrc.json --ignore-path ../../.prettierignore src scripts tests eslint.config.mjs package.json README.md ../../packages/shared/src ../../packages/shared/README.md ../../app/api/event-catalog ../../app/dev/event-catalog ../../components/dev/event-catalog.tsx ../../components/dev/event-detail.tsx ../../lib/event-catalog ../../README.md ../../CONTRIBUTING.md ../../AGENTS.md ../../.prettierrc.json ../../.github/workflows/backend-foundation.yml ../../app/api/events/route.ts ../../components/career/race-playback.tsx ../../lib/career/model.ts ../../lib/career/health.ts ../../lib/career/race-feed.ts ../../tests/health.test.ts ../../tests/public-events.test.ts ../../tests/race-feed.test.ts ../../tests/race-golden.test.ts ../../next.config.mjs ../../lib/career/lifecycle.ts ../../tests/lifecycle.test.ts",
     "lint": "node scripts/lint.mjs",
     "lint:fix": "node scripts/lint.mjs --fix",
     "test": "node --import tsx --test tests/*.test.ts",
@@ -23,7 +23,7 @@
     "events:import": "node --env-file-if-exists=.env --import tsx src/cli.ts import-events",
     "session:create": "node --env-file-if-exists=.env --import tsx src/cli.ts session-create",
     "session:revoke": "node --env-file-if-exists=.env --import tsx src/cli.ts session-revoke",
-    "contract:generate": "openapi-typescript ../../contracts/openapi.yaml -o ../../packages/shared/src/generated/api.ts",
+    "contract:generate": "openapi-typescript ../../contracts/openapi.yaml -o ../../packages/shared/src/generated/api.ts && node --import tsx scripts/generate-event-validation.ts",
     "contract:check": "node --import tsx scripts/check-contract.ts"
   },
   "dependencies": {

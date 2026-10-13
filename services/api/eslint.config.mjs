@@ -3,12 +3,24 @@ import { defineConfig } from 'eslint/config'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
-const catalogFiles = [
+export const FRONTEND_FILES = [
   'app/api/event-catalog/**/*.ts',
   'app/dev/event-catalog/**/*.tsx',
   'components/dev/event-catalog.tsx',
   'components/dev/event-detail.tsx',
   'lib/event-catalog/**/*.ts',
+  'app/api/events/route.ts',
+  'components/career/race-playback.tsx',
+  'lib/career/model.ts',
+  'lib/career/lifecycle.ts',
+  'lib/career/health.ts',
+  'lib/career/race-feed.ts',
+  'tests/health.test.ts',
+  'tests/lifecycle.test.ts',
+  'tests/public-events.test.ts',
+  'tests/race-feed.test.ts',
+  'tests/race-golden.test.ts',
+  'next.config.mjs',
 ]
 
 export default defineConfig([
@@ -21,7 +33,7 @@ export default defineConfig([
     ],
   },
   {
-    files: ['services/api/**/*.{js,mjs,ts}', 'packages/shared/src/**/*.ts', ...catalogFiles],
+    files: ['services/api/**/*.{js,mjs,ts}', 'packages/shared/src/**/*.ts', ...FRONTEND_FILES],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
     linterOptions: { reportUnusedDisableDirectives: 'error' },
@@ -33,7 +45,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['services/api/**/*.ts', 'packages/shared/src/**/*.ts', ...catalogFiles],
+    files: ['services/api/**/*.ts', 'packages/shared/src/**/*.ts', ...FRONTEND_FILES],
     extends: [tseslint.configs.recommended],
     rules: {
       '@typescript-eslint/consistent-type-imports': [
@@ -51,5 +63,5 @@ export default defineConfig([
       ],
     },
   },
-  { files: catalogFiles, languageOptions: { globals: globals.browser } },
+  { files: FRONTEND_FILES, languageOptions: { globals: globals.browser } },
 ])

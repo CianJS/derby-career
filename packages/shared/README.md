@@ -3,6 +3,8 @@
 - `src/domain.ts`: 기존 `lib/career`의 순수 도메인 재내보내기. 브라우저 store/repository는 제외한다.
 - `src/server-domain.ts`: 공유 계산을 사용하면서 Local fixture 이벤트를 등록하지 않는 서버 권한 모드. API 기본 엔진은 명시적 v2이며 최신 frontend의 v3 기본값과 구분한다.
 - `src/events.ts`: 직렬화 가능한 이벤트 조건·효과·Director 설정.
+- `src/generated/event-validation.mjs`와 `.d.mts`: OpenAPI에서 생성한 의존성 없는 이벤트 응답 검증기와 타입 선언.
+- `src/event-catalog-validation.ts`: 외부 JSON 검증과 공개 source 정보 투영.
 - `src/generated/api.ts`: `contracts/openapi.yaml`에서 생성한 HTTP 타입.
 - `src/client.ts`: 공통 타입 기반 API 클라이언트. 재시도용 ID는 호출자가 유지한다.
 - `src/event-catalog-adapter.ts`: 공개 이벤트 읽기만 제공하는 최소 Adapter.

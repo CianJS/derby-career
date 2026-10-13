@@ -25,7 +25,7 @@ pnpm dev
 | `GET /api/event-catalog`           | OpenAPI `EventList`: `{ data, pagination }` |
 | `GET /api/event-catalog/{eventId}` | OpenAPI `EventDefinition`                   |
 
-목록의 query는 `category`, `enabled`, `status`, `sort`, `order`, `page`, `pageSize`다. 허용 값과 범위는 `contracts/openapi.yaml`과 동일하다. 중복·알 수 없는 query와 잘못된 값은 400으로 거부한다. 목록을 한 번에 전부 내려받지 않고 서버 페이지 단위로 조회한다.
+목록의 query는 `category`, `enabled`, `status`, `sort`, `order`, `page`, `pageSize`다. 허용 값과 범위는 `contracts/openapi.yaml`과 동일하다. 중복·알 수 없는 query와 잘못된 값은 400으로 거부한다. 공개 응답의 원문 body와 출처 URL은 제거하며, 내부 DB revision은 보존한다. 목록·상세 성공 응답도 OpenAPI에서 생성한 검증기로 서버와 브라우저 양쪽에서 검사한다. 목록을 한 번에 전부 내려받지 않고 서버 페이지 단위로 조회한다.
 
 설정이 없거나 잘못되면 503 `API_NOT_CONFIGURED`, API 연결 실패나 서버 오류는 502 `CATALOG_UNAVAILABLE`, 5초 초과는 504 `CATALOG_TIMEOUT`이다. 상세 404와 요청 제한 429도 구분한다. 성공·실패 응답은 캐시하지 않고 화면에서 재시도할 수 있다. 고정 이벤트 데이터로 대체하지 않는다.
 
@@ -49,7 +49,10 @@ npm run build
 루트 프런트엔드에서도 확인한다.
 
 ```bash
+pnpm exec next typegen
 pnpm exec tsc --noEmit --incremental false
 node --import ./services/api/node_modules/tsx/dist/loader.mjs --test tests/*.test.ts
 pnpm build
 ```
+
+Next 운영 빌드는 타입 오류를 건너뛰지 않는다. 기존 v1 경주 로그는 432개 고정 digest로 확인하며, DB migration과 Seed는 리뷰 수정에서도 원본을 보존한다.

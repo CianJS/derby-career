@@ -5,9 +5,9 @@ import {
   trainings,
   applyActionEffects,
   type Career,
-  type Choice,
   type Values,
   type Change,
+  type ActionRecord,
 } from '../../../../../packages/shared/src/domain'
 import type { EventEffect as BrowserEffect } from '../../../../../lib/career/events/types'
 import type { EventEffect } from '../../../../../packages/shared/src/events'
@@ -67,21 +67,18 @@ export function applyImmediateEffects(
     changes,
   }
 }
-export function applyActionModifiers(
+export function modifyActionDeltas(
   before: Career,
-  resolved: Career,
-  choice: Choice,
+  deltas: Readonly<Partial<Values>>,
+  action: Readonly<ActionRecord>,
   modifiers: EventEffect[],
 ) {
-  const values = { ...resolved.values }
-  const training = (statKeys as readonly string[]).includes(choice)
-    ? (choice as keyof typeof trainings)
-    : undefined
-  const action = training ? 'training' : choice
+  const adjusted = { ...deltas }
+  const training = action.actionType === 'training' ? action.trainingType : null
   const matching = modifiers.filter(
     (e): e is Extract<EventEffect, { type: 'action_modifier' }> =>
       e.type === 'action_modifier' &&
-      e.action === action &&
+      e.action === action.actionType &&
       (!e.training || e.training === training),
   )
   // Existing browser and server use the same primary-growth / signed-cost arithmetic.
@@ -98,23 +95,16 @@ export function applyActionModifiers(
       : { [e.field]: e.value }),
   }))
   const base = {
-    primary: training ? values[training] - before.values[training] : 0,
-    fatigue: values.fatigue - before.values.fatigue,
-    bodyLoad: values.bodyLoad - before.values.bodyLoad,
+    primary: training ? (deltas[training] ?? 0) : 0,
+    fatigue: deltas.fatigue ?? 0,
+    bodyLoad: deltas.bodyLoad ?? 0,
   }
-  const applied = applyActionEffects(
-    effects,
-    {
-      actionType: training ? 'training' : (choice as 'rest' | 'treatment'),
-      trainingType: training ?? null,
-    },
-    base,
-  )
+  const applied = applyActionEffects(effects, action, base)
   if (training) {
-    values[training] = bounded(training, before.values[training] + applied.primary)
+    adjusted[training] = applied.primary
   }
-  values.fatigue = bounded('fatigue', before.values.fatigue + applied.fatigue)
-  values.bodyLoad = bounded('bodyLoad', before.values.bodyLoad + applied.bodyLoad)
+  adjusted.fatigue = applied.fatigue
+  adjusted.bodyLoad = applied.bodyLoad
   for (const effect of matching.filter((e) => !common.includes(e))) {
     const key =
       effect.field === 'primaryGain'
@@ -125,23 +115,22 @@ export function applyActionModifiers(
     if (!key) {
       continue
     }
-    const delta = values[key] - before.values[key]
+    const delta = adjusted[key] ?? 0
     const modified =
       effect.operation === 'multiply' ? Math.round(delta * effect.value) : delta + effect.value
     // Negative cost reductions cannot create healing during a training action.
     const finalDelta =
       training && (key === 'fatigue' || key === 'bodyLoad') ? Math.max(0, modified) : modified
-    values[key] = bounded(key, before.values[key] + finalDelta)
+    adjusted[key] = finalDelta
   }
-  const changes = changesBetween(resolved.values, values)
-  return {
-    career: {
-      ...resolved,
-      values,
-      condition: changes.length ? deriveCondition(values, resolved.health) : resolved.condition,
-    },
-    changes,
+  const baseValues = { ...before.values }
+  const modifiedValues = { ...before.values }
+  for (const key of Object.keys(adjusted) as (keyof Values)[]) {
+    adjusted[key] = Math.round(adjusted[key]!)
+    baseValues[key] = bounded(key, before.values[key] + (deltas[key] ?? 0))
+    modifiedValues[key] = bounded(key, before.values[key] + adjusted[key]!)
   }
+  return { deltas: adjusted, changes: changesBetween(baseValues, modifiedValues) }
 }
 export function finalizeActionRecord(before: Career, after: Career): Career {
   if (!after.action) {

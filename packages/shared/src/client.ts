@@ -50,13 +50,37 @@ export function createApiClient(options: {
         cache: 'no-store',
       },
     )
-    const result = await response.json()
+    let result: unknown
+    try {
+      result = await response.json()
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error
+      }
+      throw new DerbyApiError(
+        response.ok ? 502 : response.status,
+        response.ok ? 'INVALID_RESPONSE' : 'HTTP_ERROR',
+        'API 응답을 읽지 못했습니다.',
+      )
+    }
     if (!response.ok) {
+      const details =
+        result &&
+        typeof result === 'object' &&
+        'error' in result &&
+        result.error &&
+        typeof result.error === 'object'
+          ? result.error
+          : {}
       throw new DerbyApiError(
         response.status,
-        result.error?.code ?? 'HTTP_ERROR',
-        result.error?.message ?? 'API 요청을 처리하지 못했습니다.',
-        result.error?.requestId,
+        'code' in details && typeof details.code === 'string' ? details.code : 'HTTP_ERROR',
+        'message' in details && typeof details.message === 'string'
+          ? details.message
+          : 'API 요청을 처리하지 못했습니다.',
+        'requestId' in details && typeof details.requestId === 'string'
+          ? details.requestId
+          : undefined,
       )
     }
     return result as T

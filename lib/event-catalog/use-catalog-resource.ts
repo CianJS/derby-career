@@ -21,7 +21,7 @@ function errorMessage(body: unknown): string {
 }
 
 /** Reads the same-origin, contract-backed catalog. Old responses cannot replace a newer selection. */
-export function useCatalogResource<T>(url: string) {
+export function useCatalogResource<T>(url: string, parse: (value: unknown) => T) {
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<{ url: string; attempt: number; resource: Resource<T> }>({
     url,
@@ -49,8 +49,7 @@ export function useCatalogResource<T>(url: string) {
         if (!response.ok) {
           throw new Error(errorMessage(body))
         }
-        // Successful responses use the generated OpenAPI type; the API validates its response schema.
-        publish({ status: 'ready', data: body as T })
+        publish({ status: 'ready', data: parse(body) })
       } catch (error) {
         if (!controller.signal.aborted) {
           publish({
@@ -65,7 +64,7 @@ export function useCatalogResource<T>(url: string) {
       active = false
       controller.abort()
     }
-  }, [url, attempt])
+  }, [url, attempt, parse])
 
   const resource: Resource<T> =
     result.url === url && result.attempt === attempt ? result.resource : { status: 'loading' }

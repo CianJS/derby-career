@@ -10,10 +10,12 @@ import {
   type CatalogEvent,
 } from '@/lib/event-catalog/presentation'
 import { useCatalogResource } from '@/lib/event-catalog/use-catalog-resource'
+import { parseCatalogEvent } from '@/packages/shared/src/event-catalog-validation'
 
 export function EventDetail({ id }: { id: string }) {
   const { resource, retry } = useCatalogResource<CatalogEvent>(
     `/api/event-catalog/${encodeURIComponent(id)}`,
+    parseCatalogEvent,
   )
 
   if (resource.status === 'loading') {

@@ -11,6 +11,7 @@ import {
   type CatalogPage,
 } from '@/lib/event-catalog/presentation'
 import { useCatalogResource } from '@/lib/event-catalog/use-catalog-resource'
+import { parseCatalogPage } from '@/packages/shared/src/event-catalog-validation'
 
 type Filters = { category: string; status: string; enabled: string; sort: string; order: string }
 const defaultFilters: Filters = {
@@ -32,7 +33,10 @@ export function EventCatalog() {
       params.set(key, value)
     }
   }
-  const { resource, retry } = useCatalogResource<CatalogPage>(`/api/event-catalog?${params}`)
+  const { resource, retry } = useCatalogResource<CatalogPage>(
+    `/api/event-catalog?${params}`,
+    parseCatalogPage,
+  )
   const updateFilter = (key: keyof Filters, value: string) => {
     setFilters((previous) => ({ ...previous, [key]: value }))
     setPage(1)

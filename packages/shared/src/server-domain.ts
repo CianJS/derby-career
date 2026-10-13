@@ -6,6 +6,7 @@ import {
   completeRace,
   type Career,
   type Choice,
+  type AdjustActionDeltas,
 } from './domain'
 import { createEventCatalog } from '../../../lib/career/events/repository'
 
@@ -22,9 +23,13 @@ export function withoutBrowserEvents(state: Career): Career {
 }
 export const startServerCareer = (definitionId: string) =>
   withoutBrowserEvents(startCareer(definitionId))
-export const resolveServerAction = (state: Career, choice: Choice) =>
+export const resolveServerAction = (
+  state: Career,
+  choice: Choice,
+  adjustDeltas?: AdjustActionDeltas,
+) =>
   withoutBrowserEvents(
-    resolveAction(commitAction(withoutBrowserEvents(state), choice), noBrowserEvents),
+    resolveAction(commitAction(withoutBrowserEvents(state), choice), noBrowserEvents, adjustDeltas),
   )
 export const advanceServerMonth = (state: Career, actionId: string) =>
   withoutBrowserEvents(advanceMonth(withoutBrowserEvents(state), actionId))

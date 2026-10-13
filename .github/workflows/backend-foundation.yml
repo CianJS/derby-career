@@ -5,12 +5,16 @@ on:
       - 'services/api/**'
       - 'packages/shared/**'
       - 'contracts/**'
-      - 'lib/career/**'
-      - 'app/api/event-catalog/**'
-      - 'app/dev/event-catalog/**'
-      - 'components/dev/event-catalog.tsx'
-      - 'components/dev/event-detail.tsx'
-      - 'lib/event-catalog/**'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.json'
+      - 'next.config.mjs'
+      - '.gitignore'
       - 'tests/**'
       - 'README.md'
       - '.env.example'
@@ -85,6 +89,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: npm ci --prefix services/api
+      - run: pnpm exec next typegen
       - run: pnpm exec tsc --noEmit --incremental false
       - run: node --import ./services/api/node_modules/tsx/dist/loader.mjs --test tests/*.test.ts
       - run: pnpm build
