@@ -72,14 +72,14 @@ OIDC_MAX_TOKEN_AGE_SECONDS=3600
 
 ## 계약과 연동
 
-`contracts/openapi.yaml`이 HTTP 계약의 기준이다. 서버는 이 파일로 요청을 검증하고 응답을 직렬화하며, 공유 타입과 공개 이벤트 응답 검증기도 여기서 생성한다.
+`contracts/openapi.yaml`이 HTTP 계약의 기준이다. 서버는 이 파일로 요청을 검증하고 응답을 직렬화하며, 공유 타입과 공개 이벤트·서버 저장 요청/응답 검증기도 여기서 생성한다.
 
 ```bash
 npm run contract:generate
 npm run contract:check
 ```
 
-계약을 변경할 때 YAML과 `packages/shared/src/generated/api.ts`를 함께 커밋한다. 공개 이벤트는 Next `/api/event-catalog`과 개발용 `/dev/event-catalog` 화면에서 조회할 수 있다. 루트의 `.env.local`에 서버 전용 `DERBY_API_URL`을 설정한다. 기존 육성 페이지·store·Local Save의 쓰기는 연결하거나 이전하지 않았다. 실행 방법과 오류 규칙은 루트 `README.md`를 따른다. 루트 `tsconfig.json`의 서비스/패키지 제외는 API의 독립 타입 검사를 위한 설정이다. 기존 pnpm lockfile과 Next 실행 스크립트는 그대로다.
+계약을 변경할 때 YAML과 `packages/shared/src/generated/api.ts`를 함께 커밋한다. 공개 이벤트는 Next `/api/event-catalog`과 개발용 `/dev/event-catalog` 화면에서 조회할 수 있다. 루트의 `.env.local`에 서버 전용 `DERBY_API_URL`을 설정한다. 로컬 서버 저장 모드는 기존 육성 페이지·store에서 별도 서버 경로로 실행하고, Local Save를 읽거나 이전하지 않는다. 실행 방법과 오류 규칙은 루트 `README.md`를 따른다. 루트 `tsconfig.json`의 서비스/패키지 제외는 API의 독립 타입 검사를 위한 설정이다. `pnpm dev:server-save`가 로컬 서버 저장 실행 명령이고 기존 `pnpm dev`와 pnpm lockfile은 유지한다.
 
 프론트엔드에서 안전하게 시작할 연동은 공개 카탈로그 Adapter다.
 
@@ -91,7 +91,9 @@ const page = await events.list({ category: 'common', enabled: true, page: 1, pag
 const detail = await events.detail('COM-0001')
 ```
 
-`createApiClient`에는 권한이 있는 Career 메서드도 있다. 서버 Career를 선택한 화면은 반환된 `career.state`만 표시·사용해야 한다. Local Save와 서버 상태를 병행 계산·동시 authoritative 저장으로 사용하지 않는다. Adapter는 local storage, cookie, 기존 브라우저 저장을 읽거나 수정하지 않는다. 운영 호출은 `getSessionToken`에서 공급자의 최신 API 전용 JWT를 반환한다. 로그인 공급자·토큰 갱신·저장 이관·v3 계약을 연결하고 검증하기 전에는 기존 브라우저 Career의 쓰기 경로를 전환하지 않는다.
+`createApiClient`에는 권한이 있는 Career 메서드도 있다. 서버 Career를 선택한 화면은 반환된 `career.state`만 표시·사용해야 한다. Local Save와 서버 상태를 병행 계산·동시 authoritative 저장으로 사용하지 않는다. Adapter는 local storage, cookie, 기존 브라우저 저장을 읽거나 수정하지 않는다. 운영 호출은 `getSessionToken`에서 공급자의 최신 API 전용 JWT를 반환한다. 로컬 서버 저장 모드는 Next 서버의 기존 dev-session으로 연결한다. 운영 로그인 공급자·토큰 갱신·저장 이관·v3 계약은 별도 범위이며, 운영 bridge로 개발 세션을 노출하지 않는다.
+
+`GET /v1/careers/workspace?page=1&pageSize=20`은 인증된 소유자의 현재 마방 자금/세계 날짜, 활성 Career 또는 null, 현재 월의 `confirmedActionId` UUID, 페이지 단위 은퇴 snapshot과 pagination을 일관된 읽기 transaction으로 반환한다. 활성 말이 없어도 마방과 은퇴 기록을 복원할 수 있다. 은퇴 snapshot의 자금/날짜는 당시 값을 유지하고 마방 자금은 현재 값이다. 조회는 캐시하지 않는다.
 
 주요 요청 ID 규칙:
 

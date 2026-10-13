@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { horses, labels, statKeys } from '@/lib/career/model'
-import { careerStore } from '@/lib/career/store'
+import { careerStore, useCareer } from '@/lib/career/store'
 import { cn } from '@/lib/utils'
 
 export function HorseSelection({ busy }: { busy: boolean }) {
+  const { mode, candidates } = useCareer()
+  const options = mode === 'server' ? candidates.map(h => h.definition) : horses
   const [selected, setSelected] = useState<string | null>(null)
   return <>
     <div className="mb-7">
@@ -18,7 +20,7 @@ export function HorseSelection({ busy }: { busy: boolean }) {
     <fieldset disabled={busy}>
       <legend className="sr-only">육성마 후보 비교</legend>
       <div className="grid gap-4 md:grid-cols-3">
-        {horses.map((horse, index) => <label key={horse.id} className={cn('lab-horse-candidate relative flex cursor-pointer flex-col gap-4 rounded-lg border bg-card p-5 transition-colors focus-within:ring-2 focus-within:ring-ring', selected === horse.id ? 'ui-selected' : 'border-border hover:border-primary/50')}>
+        {options.map((horse, index) => <label key={horse.id} className={cn('lab-horse-candidate relative flex cursor-pointer flex-col gap-4 rounded-lg border bg-card p-5 transition-colors focus-within:ring-2 focus-within:ring-ring', selected === horse.id ? 'ui-selected' : 'border-border hover:border-primary/50')}>
           <input className="sr-only" type="radio" name="horse" value={horse.id} checked={selected === horse.id} onChange={() => setSelected(horse.id)} />
           <div className="flex items-center justify-between text-xs"><span className="tracking-widest text-muted-foreground">CANDIDATE 0{index + 1}</span><span className={cn('flex size-5 items-center justify-center rounded-full border', selected === horse.id ? 'border-primary text-primary' : 'border-border')}>{selected === horse.id && <Check size={13} aria-hidden />}</span></div>
           <div><h2 className="font-serif text-2xl font-semibold">{horse.name}</h2><p className="mt-2 text-xs text-muted-foreground">2세 <span className="mx-2">·</span> 성장형 <span className="text-primary">{horse.growth}</span></p></div>
@@ -31,7 +33,7 @@ export function HorseSelection({ busy }: { busy: boolean }) {
       </div>
     </fieldset>
     <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5">
-      <p className="text-xs text-muted-foreground">{selected ? `${horses.find(h => h.id === selected)!.name} 선택됨 · 확정 후 Month 1이 시작됩니다.` : '후보를 선택하면 육성을 시작할 수 있습니다.'}</p>
+      <p className="text-xs text-muted-foreground">{selected ? `${options.find(h => h.id === selected)!.name} 선택됨 · 확정 후 Month 1이 시작됩니다.` : '후보를 선택하면 육성을 시작할 수 있습니다.'}</p>
       <Button size="lg" disabled={!selected || busy} onClick={() => selected && void careerStore.select(selected)}>{busy ? '저장 중…' : '이 말로 육성 시작'}<ArrowRight data-icon="inline-end" aria-hidden /></Button>
     </div>
   </>

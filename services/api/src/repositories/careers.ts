@@ -499,6 +499,61 @@ export class CareerRepository {
       return { career: await this.dto(tx, row) }
     })
   }
+  /** One consistent, owner-scoped read restores the UI without trusting browser saves or receipts. */
+  async workspace(owner: string, page: number, pageSize: number) {
+    return this.db.transaction(async (tx) => {
+      await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+      const stable = (
+        await tx.query<{
+          id: string
+          funds: string
+          calendar_year: number
+          calendar_month: number
+        }>('SELECT id,funds,calendar_year,calendar_month FROM stables WHERE owner_id=$1', [owner])
+      ).rows[0]
+      const active = (
+        await tx.query<Row>(
+          "SELECT c.*,h.definition_id FROM careers c JOIN owned_horses h ON h.id=c.horse_id WHERE c.owner_id=$1 AND c.status='active'",
+          [owner],
+        )
+      ).rows[0]
+      const action = active
+        ? (
+            await tx.query<{ id: string }>(
+              'SELECT id FROM monthly_actions WHERE career_id=$1 AND turn=$2',
+              [active.id, active.turn],
+            )
+          ).rows[0]
+        : undefined
+      const total = Number(
+        (
+          await tx.query(
+            'SELECT count(*) AS total FROM career_records r JOIN careers c ON c.id=r.career_id WHERE c.owner_id=$1',
+            [owner],
+          )
+        ).rows[0].total,
+      )
+      const records = (
+        await tx.query<RetirementRow>(
+          'SELECT r.* FROM career_records r JOIN careers c ON c.id=r.career_id WHERE c.owner_id=$1 ORDER BY r.created_at DESC,r.career_id DESC LIMIT $2 OFFSET $3',
+          [owner, pageSize, (page - 1) * pageSize],
+        )
+      ).rows
+      return {
+        stable: stable
+          ? {
+              id: stable.id,
+              funds: Number(stable.funds),
+              calendarDate: { year: stable.calendar_year, month: stable.calendar_month },
+            }
+          : null,
+        career: active ? await this.dto(tx, active) : null,
+        confirmedActionId: action?.id ?? null,
+        retirements: records.map(retirementDto),
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      }
+    })
+  }
   async get(owner: string, id: string) {
     return this.db.transaction(async (tx) => {
       await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')

@@ -7,6 +7,11 @@ import {
   EVENT_VALIDATOR_TYPES_PATH,
   generateEventValidation,
 } from './event-validation'
+import {
+  generateSaveValidation,
+  SAVE_VALIDATOR_PATH,
+  SAVE_VALIDATOR_TYPES_PATH,
+} from './save-validation'
 const contract = resolve('../../contracts/openapi.yaml')
 await SwaggerParser.validate(contract)
 const generated = COMMENT_HEADER + astToString(await openapiTS(new URL(`file://${contract}`)))
@@ -22,5 +27,12 @@ if (
   (await readFile(EVENT_VALIDATOR_TYPES_PATH, 'utf8')) !== validators.types
 ) {
   throw new Error('Generated event response validators are stale. Run npm run contract:generate.')
+}
+const saveValidators = await generateSaveValidation()
+if (
+  (await readFile(SAVE_VALIDATOR_PATH, 'utf8')) !== saveValidators.source ||
+  (await readFile(SAVE_VALIDATOR_TYPES_PATH, 'utf8')) !== saveValidators.types
+) {
+  throw new Error('Generated save validators are stale. Run npm run contract:generate.')
 }
 console.log('OpenAPI is valid and generated types/response validators match')

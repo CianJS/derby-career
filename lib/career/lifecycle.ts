@@ -1,7 +1,7 @@
 import { labels, statKeys, type Career } from './model'
 import { summarizeRecords } from './records'
 
-type LifecycleHorse = {
+export type LifecycleHorse = {
   id: string
   name: string
   age: string

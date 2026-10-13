@@ -51,6 +51,6 @@ npm test
 
 CI는 `format:check`와 `lint`를 실행하며 린트 경고도 실패로 처리한다. 코드 변경 후 검사 결과가 통과해야 한다.
 
-`packages/shared/src/generated`의 타입과 이벤트 응답 검증기는 `npm run contract:generate`로 함께 갱신하고 `contract:check`로 계약 일치를 검사한다. 이벤트 Seed는 변환기로 갱신하고, 적용된 SQL migration은 체크섬을 보존하여 새 migration으로 변경한다. 이 파일들은 일괄 포맷 대상에서 제외한다.
+`packages/shared/src/generated`의 타입과 이벤트 응답·서버 저장 검증기는 `npm run contract:generate`로 함께 갱신하고 `contract:check`로 계약 일치를 검사한다. 이벤트 Seed는 변환기로 갱신하고, 적용된 SQL migration은 체크섬을 보존하여 새 migration으로 변경한다. 이 파일들은 일괄 포맷 대상에서 제외한다.
 
 도구 참고: [Prettier CLI](https://prettier.io/docs/cli), [typescript-eslint 설정](https://typescript-eslint.io/getting-started/).

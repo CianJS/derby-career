@@ -3,12 +3,15 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { labels, statKeys, type Career } from '@/lib/career/model'
-import { contractedRoster, distanceAptitude, entryRestriction, grade, jockeyCatalog, raceEligibility, racesForTurn, ridingFit, tactics, type RaceEntryDraft } from '@/lib/career/race-entry'
+import { contractedRoster, distanceAptitude, entryRestriction, grade, raceEligibility, racesForTurn, ridingFit, tactics, type RaceEntryDraft } from '@/lib/career/race-entry'
 import { careerStore, useCareer } from '@/lib/career/store'
 import { cn } from '@/lib/utils'
 
 export function RaceAction({ onOpen }: { onOpen: () => void }) {
-  const { career, busy } = useCareer()
+  const { career, busy, mode } = useCareer()
+  if (mode === 'server') {
+    return <p className="text-xs text-muted-foreground">서버 저장의 경주 연결은 준비 중입니다.</p>
+  }
   if (!career) return null
   const restriction = entryRestriction(career)
   const open = racesForTurn(career.careerTurnIndex).filter(r => !raceEligibility(career, r)).length
@@ -16,7 +19,10 @@ export function RaceAction({ onOpen }: { onOpen: () => void }) {
 }
 
 export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }) {
-  const { ready, career, busy, error } = useCareer()
+  const { ready, career, busy, error, mode } = useCareer()
+  if (mode === 'server') {
+    return <p className="py-8 text-sm">서버 저장의 경주 연결은 준비 중입니다.</p>
+  }
   if (!ready) return <p role="status" className="py-8 text-sm">출전 정보를 불러오는 중…</p>
   if (!career) return <p role="alert" className="py-8 text-sm">{error ?? '먼저 육성마를 선택해 주세요.'}</p>
   return <EntryContent key={`${career.horse.id}:${career.month}`} career={career} busy={busy} error={error} onStartRace={onStartRace} />

@@ -21,6 +21,12 @@ export const FRONTEND_FILES = [
   'tests/race-feed.test.ts',
   'tests/race-golden.test.ts',
   'next.config.mjs',
+  'app/api/server-save/**/*.ts',
+  'lib/server-save/**/*.ts',
+  'lib/career/store.ts',
+  'components/career/server-month-event.tsx',
+  'scripts/dev-server-save.mjs',
+  'tests/server-save.test.ts',
 ]
 
 export default defineConfig([
