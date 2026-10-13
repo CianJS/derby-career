@@ -14,19 +14,22 @@ import {
   commitAction,
   completeRace,
   resolveAction,
-  startCareer,
   type Career,
   type Choice,
 } from './model'
 import { withMonthEvent } from './events/director'
 import type { EventChoiceId } from './events/types'
-import { clearCareer, readCareer, writeCareer } from './repository'
+import { readCareer, writeCareer } from './repository'
+import { writeLifecycleSave } from './lifecycle-repository'
+import { startLocalCareer, retireLocalCareer } from './local-career'
+import { BROWSER_SAVE_KEY, readBrowserSave, STORAGE_ACCESS_MESSAGE } from './browser-save'
 import { lockRaceEntryWithLog, type RaceEntryDraft } from './race-entry'
-import { hasRaceLog, removeRaceLog, writeRaceLog } from './race-log-repository'
+import { readRaceLog, removeRaceLog, writeRaceLog } from './race-log-repository'
 import {
   raceLogDigest,
   simulateRace,
   summarizeRaceLog,
+  validateRaceLog,
   type RaceSimulationResult,
 } from './race-simulation'
 
@@ -39,6 +42,7 @@ type Snapshot = {
   mode: 'local' | 'server' | null
   workspace: SaveWorkspace | null
   candidates: SaveSnapshot['candidates']
+  localCareerId: string | null
 }
 const initial: Snapshot = {
   ready: false,
@@ -49,16 +53,19 @@ const initial: Snapshot = {
   mode: null,
   workspace: null,
   candidates: [],
+  localCareerId: null,
 }
 let snapshot = initial
 const listeners = new Set<() => void>()
 let channel: BroadcastChannel | null = null
 let server: ServerSaveController | null = null
+let modeGeneration = 0
 const journalKey = 'derby-career-server-command-v1'
 function configure(mode: 'local' | 'server') {
   if (snapshot.mode === mode) {
     return
   }
+  const generation = ++modeGeneration
   if (mode === 'server') {
     server = new ServerSaveController(
       createApiClient({ baseUrl: '/api/server-save' }),
@@ -67,7 +74,11 @@ function configure(mode: 'local' | 'server') {
         write: (value) => sessionStorage.setItem(journalKey, value),
         clear: () => sessionStorage.removeItem(journalKey),
       },
-      (current) => publish({ ...current, career: current.workspace?.career?.state ?? null }),
+      (current) => {
+        if (modeGeneration === generation && snapshot.mode === 'server') {
+          publish({ ...current, career: current.workspace?.career?.state ?? null })
+        }
+      },
     )
   }
   publish({ ...initial, mode })
@@ -76,9 +87,16 @@ function configure(mode: 'local' | 'server') {
 async function serverCommand(command: SaveCommand) {
   const result = await server!.send(command)
   if (result) {
-    channel?.postMessage('saved')
+    notify()
   }
   return result
+}
+function notify() {
+  try {
+    channel?.postMessage('saved')
+  } catch {
+    /* Notification failure cannot undo a durable save. */
+  }
 }
 function activeServer() {
   const career = snapshot.workspace?.career
@@ -101,7 +119,14 @@ async function locked<T>(operation: () => T): Promise<T> {
   if (!navigator.locks) {
     throw new Error('안전한 저장을 위해 최신 브라우저의 HTTPS 환경에서 실행해 주세요.')
   }
-  return navigator.locks.request('derby-career-checkpoint-1', operation)
+  try {
+    return await navigator.locks.request('derby-career-checkpoint-1', operation)
+  } catch (error) {
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'SecurityError') {
+      throw new Error(STORAGE_ACCESS_MESSAGE, { cause: error })
+    }
+    throw error
+  }
 }
 // Saves written before the simulation engine, or a cleared browser log store, are repaired here so the
 // playback screen only ever reads a persisted log. Re-simulation is deterministic and checked by digest.
@@ -117,7 +142,15 @@ function ensureRaceLog(career: Career): Career {
     writeCareer(next)
     return next
   }
-  if (!hasRaceLog(run.raceRunId)) {
+  let valid = false
+  try {
+    const cached = readRaceLog(run.raceRunId)
+    validateRaceLog(cached, run)
+    valid = true
+  } catch {
+    /* The derived cache can be repaired from the locked seed and digest. */
+  }
+  if (!valid) {
     const log = simulateRace(run, run.simulation.engineVersion)
     if (raceLogDigest(log) !== run.simulation.digest) {
       throw new Error('저장된 경주 기록을 복원하지 못했습니다.')
@@ -147,32 +180,57 @@ async function refresh() {
   if (snapshot.busy) {
     return
   }
+  const generation = modeGeneration
   try {
-    const career = await locked(restored)
-    publish({ ready: true, career, error: null })
-  } catch (error) {
-    publish({
-      ready: true,
-      error: error instanceof Error ? error.message : '저장 데이터를 읽지 못했습니다.',
+    const loaded = await locked(() => {
+      if (modeGeneration !== generation || snapshot.mode !== 'local') {
+        throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
+      }
+      return { career: restored(), localCareerId: readBrowserSave().localCareerId ?? null }
     })
+    if (modeGeneration === generation) {
+      publish({ ready: true, ...loaded, error: null })
+    }
+  } catch (error) {
+    if (modeGeneration === generation) {
+      publish({
+        ready: true,
+        error: error instanceof Error ? error.message : '저장 데이터를 읽지 못했습니다.',
+      })
+    }
+  }
+}
+function storageChanged(event: StorageEvent) {
+  if (snapshot.mode === 'local' && (event.key === BROWSER_SAVE_KEY || event.key === null)) {
+    void refresh()
   }
 }
 function subscribe(listener: () => void) {
   listeners.add(listener)
   if (listeners.size === 1) {
     if (typeof BroadcastChannel !== 'undefined') {
-      channel = new BroadcastChannel('derby-career-checkpoint-1')
-      channel.onmessage = refresh
+      try {
+        channel = new BroadcastChannel('derby-career-checkpoint-1')
+        channel.onmessage = refresh
+      } catch {
+        channel = null
+      }
     }
     window.addEventListener('focus', refresh)
+    window.addEventListener('storage', storageChanged)
     void refresh()
   }
   return () => {
     listeners.delete(listener)
     if (!listeners.size) {
-      channel?.close()
+      try {
+        channel?.close()
+      } catch {
+        /* Optional transport cleanup. */
+      }
       channel = null
       window.removeEventListener('focus', refresh)
+      window.removeEventListener('storage', storageChanged)
     }
   }
 }
@@ -183,26 +241,39 @@ async function mutate(operation: (saved: Career | null) => Career | null) {
   if (snapshot.busy) {
     return
   }
+  const generation = modeGeneration
   publish({ busy: true, error: null })
   try {
-    const career = await locked(() => {
+    const loaded = await locked(() => {
+      if (modeGeneration !== generation || snapshot.mode !== 'local') {
+        throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
+      }
       const saved = restored()
+      if (saved && snapshot.localCareerId !== (readBrowserSave().localCareerId ?? null)) {
+        throw new Error('다른 탭에서 육성마가 변경되었습니다. 다시 불러와 주세요.')
+      }
       const next = operation(saved)
       if (next && next !== saved) {
         writeCareer(next)
       }
-      return next
+      return { career: next, localCareerId: readBrowserSave().localCareerId ?? null }
     })
-    publish({ career })
-    channel?.postMessage('saved')
+    if (modeGeneration === generation) {
+      publish(loaded)
+    }
+    notify()
     return true
   } catch (error) {
-    publish({
-      error: error instanceof Error ? error.message : '저장에 실패했습니다. 다시 시도해 주세요.',
-    })
+    if (modeGeneration === generation) {
+      publish({
+        error: error instanceof Error ? error.message : '저장에 실패했습니다. 다시 시도해 주세요.',
+      })
+    }
     return false
   } finally {
-    publish({ busy: false })
+    if (modeGeneration === generation) {
+      publish({ busy: false })
+    }
   }
 }
 export function useCareer() {
@@ -213,8 +284,19 @@ export function useCareer() {
   )
 }
 export const careerStore = {
+  getSnapshot: () => snapshot,
   configure,
   refresh,
+  saveLifecycle: (state: unknown) => {
+    const generation = modeGeneration
+    return snapshot.mode === 'local'
+      ? locked(() => {
+          if (snapshot.mode === 'local' && modeGeneration === generation) {
+            writeLifecycleSave(state)
+          }
+        })
+      : Promise.resolve()
+  },
   loadMoreRetirements: () => server?.loadMore(),
   chooseServerEvent: (choiceId: string) => {
     const career = activeServer()
@@ -256,19 +338,39 @@ export const careerStore = {
         body: { commandId: crypto.randomUUID(), expectedRevision: career.revision },
       })
     }
-    if (snapshot.busy) {
+    if (snapshot.mode !== 'local' || snapshot.busy) {
       return false
     }
+    const generation = modeGeneration
     publish({ busy: true, error: null })
     try {
-      await locked(clearCareer)
-      publish({ career: null })
+      await locked(() => {
+        if (modeGeneration !== generation || snapshot.mode !== 'local') {
+          throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
+        }
+        const career = restored()
+        if (!career) {
+          throw new Error('은퇴할 육성 기록이 없습니다.')
+        }
+        if (snapshot.localCareerId !== (readBrowserSave().localCareerId ?? null)) {
+          throw new Error('다른 탭에서 육성마가 변경되었습니다. 다시 불러와 주세요.')
+        }
+        retireLocalCareer(career)
+      })
+      if (modeGeneration === generation) {
+        publish({ career: null })
+      }
+      notify()
       return true
     } catch (error) {
-      publish({ error: error instanceof Error ? error.message : '저장에 실패했습니다.' })
+      if (modeGeneration === generation) {
+        publish({ error: error instanceof Error ? error.message : '저장에 실패했습니다.' })
+      }
       return false
     } finally {
-      publish({ busy: false })
+      if (modeGeneration === generation) {
+        publish({ busy: false })
+      }
     }
   },
   lockRace: (draft: RaceEntryDraft, horseId: string, month: number) =>
@@ -291,16 +393,7 @@ export const careerStore = {
           body: { careerId: crypto.randomUUID(), horseDefinitionId: horseId },
         })
       : mutate((saved) => {
-          const next = startCareer(horseId)
-          return withMonthEvent(
-            saved
-              ? {
-                  ...next,
-                  calendarDate: saved.calendarDate,
-                  contractedJockeyIds: saved.contractedJockeyIds,
-                }
-              : next,
-          )
+          return withMonthEvent(startLocalCareer(horseId, saved))
         }),
   chooseEvent: (eventId: string, choice: EventChoiceId, expectedMonth: number) =>
     mutate((saved) => {

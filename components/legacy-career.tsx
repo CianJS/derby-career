@@ -18,14 +18,13 @@ import {
 import { RacePlayback } from "@/components/career/race-playback";
 import { RaceReflection } from "@/components/career/race-reflection";
 import { careerStore, useCareer } from "@/lib/career/store";
-import { applyCareer, archiveActiveHorse } from '@/lib/career/lifecycle'
+import { applyCareer } from '@/lib/career/lifecycle'
 import { serverLifecycle } from '@/lib/server-save/lifecycle'
 import { INJURY_NOTICE, isHealthy, isStrained } from "@/lib/career/status";
 import { contractedJockeys, freeAgentJockeys, jockeyProfiles } from "@/lib/career/race-entry";
 import { summarizeRecords, type HorseRaceRecord } from "@/lib/career/records";
 import {
   readLifecycleSave,
-  writeLifecycleSave,
 } from "@/lib/career/lifecycle-repository";
 import {
   Activity,
@@ -242,9 +241,6 @@ const initialLifecycle: LifecycleState = {
 };
 function readLifecycle(): LifecycleState {
   return (readLifecycleSave() as LifecycleState | null) ?? initialLifecycle;
-}
-function writeLifecycle(state: LifecycleState) {
-  writeLifecycleSave(state);
 }
 function parseRecord(record: string) {
   const values = record.match(/\d+/g)?.map(Number) || [0, 0];
@@ -4436,23 +4432,22 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           : "home",
       );
       setHydrated(true);
-    } catch {
-      setSaveError("마방 기록을 읽지 못했습니다. 기존 저장은 유지됩니다.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "마방 기록을 읽지 못했습니다. 기존 저장은 유지됩니다.");
     }
   }, [saveMode]);
   useEffect(() => {
     if (saveMode === 'local' && hydrated && career) setState((current) => applyCareer(current, career));
   }, [career, hydrated, saveMode]);
   useEffect(() => {
-    if (saveMode === 'local' && hydrated)
-      try {
-        writeLifecycle(state);
-        setSaveError(null);
-      } catch {
-        setSaveError(
-          "마방 기록을 저장하지 못했습니다. 쿠키 설정을 확인해 주세요.",
-        );
-      }
+    if (saveMode !== 'local' || !hydrated) return
+    let current = true
+    void careerStore.saveLifecycle(state).then(() => {
+      if (current) setSaveError(null)
+    }).catch(error => {
+      if (current) setSaveError(error instanceof Error ? error.message : '마방 기록을 저장하지 못했습니다.')
+    })
+    return () => { current = false }
   }, [state, hydrated, saveMode]);
   const createStable = (name: string, country: string) => {
     setState((current) => ({
@@ -4487,8 +4482,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
     const horse = state.activeHorse;
     if (!horse || !(await careerStore.release())) return;
     if (saveMode === 'local') {
-      const archiveId = crypto.randomUUID()
-      setState((current) => archiveActiveHorse(current, horse.id, archiveId))
+      setState({ ...initialLifecycle, ...readLifecycle() })
     }
     setView("careerComplete");
   };
@@ -4607,6 +4601,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           {saveError && (
             <p role="alert" className="ui-error-state m-4">
               {saveError}
+              <a href="/" target="_blank" rel="noreferrer" className="ml-3 underline">새 탭에서 열기</a>
             </p>
           )}
           {view === "setup" && (

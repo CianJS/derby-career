@@ -3,6 +3,7 @@ import { BALANCE } from './balance'
 import { deriveCondition, isHealthy, rollsInjury } from './status'
 import { raceAftermath } from './post-race'
 import { canonicalHealth, canTrain, careerHealth, injure, recoverBy } from './health'
+import { assertRaceRecords } from './lifecycle-save'
 import { nextEventState, planActionEvent } from './events/director'
 import { applyActionEffects, immediateEffects, pendingEffects } from './events/effects'
 import { defaultEventCatalog, type EventCatalog } from './events/repository'
@@ -498,16 +499,18 @@ export function actionSummary(action: ActionRecord): string {
   )
 }
 const eventStatuses = ['offered', 'chosen', 'applied', 'expired']
-const validEntry = (entry: {
-  eventId?: unknown
-  month?: unknown
-  status?: unknown
-  choice?: unknown
-}) =>
-  typeof entry.eventId === 'string' &&
-  Number.isInteger(entry.month) &&
-  eventStatuses.includes(entry.status as string) &&
-  (entry.choice === undefined || entry.choice === 'A' || entry.choice === 'B')
+function validEntry(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+  const entry = value as Record<string, unknown>
+  return (
+    typeof entry.eventId === 'string' &&
+    Number.isInteger(entry.month) &&
+    eventStatuses.includes(entry.status as string) &&
+    (entry.choice === undefined || entry.choice === 'A' || entry.choice === 'B')
+  )
+}
 function assertEventState(state: Career) {
   const { event, eventLog, eventMisses } = state
   const broken =
@@ -527,12 +530,21 @@ export function assertCareer(value: unknown): asserts value is Career {
     state.version !== 1 ||
     !state.horse?.id ||
     !state.horse.name ||
+    typeof state.horse.id !== 'string' ||
+    typeof state.horse.name !== 'string' ||
+    typeof state.horse.growth !== 'string' ||
+    typeof state.horse.description !== 'string' ||
+    !Number.isInteger(state.age) ||
+    state.age < 1 ||
+    typeof state.health !== 'string' ||
+    typeof state.condition !== 'string' ||
     !Array.isArray(state.horse.aptitude) ||
     !Array.isArray(state.contractedJockeyIds) ||
     !Number.isInteger(state.month) ||
     state.month < 1 ||
     !state.calendarDate ||
     !Number.isInteger(state.calendarDate.year) ||
+    state.calendarDate.year < 1 ||
     !Number.isInteger(state.calendarDate.month) ||
     state.calendarDate.month < 1 ||
     state.calendarDate.month > 12 ||
@@ -541,9 +553,27 @@ export function assertCareer(value: unknown): asserts value is Career {
     !Array.isArray(state.raceRecords) ||
     !state.values ||
     !Array.isArray(state.recent) ||
-    state.recent.length > 3
+    state.recent.length > 3 ||
+    (state.action !== null &&
+      (!state.action || typeof state.action !== 'object' || Array.isArray(state.action)))
   ) {
     throw new Error('저장된 육성 데이터를 읽을 수 없습니다. 기존 저장은 유지됩니다.')
+  }
+  assertRaceRecords(state.raceRecords)
+  if (
+    !state.horse.stats ||
+    statKeys.some((key) => !Number.isFinite(state.horse.stats[key]) || state.horse.stats[key] < 0)
+  ) {
+    throw new Error('저장된 말의 능력치가 유효하지 않습니다.')
+  }
+  if (
+    state.horse.aptitude.some(
+      (row) =>
+        !Array.isArray(row) || row.length !== 2 || row.some((item) => typeof item !== 'string'),
+    ) ||
+    state.contractedJockeyIds.some((id) => typeof id !== 'string')
+  ) {
+    throw new Error('저장된 말 또는 기수 정보가 유효하지 않습니다.')
   }
   for (const key of [...statKeys, 'fatigue', 'bodyLoad'] as (keyof Values)[]) {
     if (!Number.isFinite(state.values[key]) || state.values[key] < 0) {
@@ -558,9 +588,15 @@ export function assertCareer(value: unknown): asserts value is Career {
   }
   assertEventState(state)
   if (state.raceRun !== undefined) {
+    if (!state.raceRun || typeof state.raceRun !== 'object' || Array.isArray(state.raceRun)) {
+      throw new Error('저장된 경주 정보가 유효하지 않습니다.')
+    }
     assertRaceRun(state.raceRun, state)
   }
   for (const action of [...state.recent, ...(state.action ? [state.action] : [])]) {
+    if (!action || typeof action !== 'object') {
+      throw new Error('저장된 행동 기록이 유효하지 않습니다.')
+    }
     if (
       !action.actionId ||
       action.horseId !== state.horse.id ||
@@ -572,6 +608,8 @@ export function assertCareer(value: unknown): asserts value is Career {
         (!Array.isArray(action.result) ||
           action.result.some(
             (c) =>
+              !c ||
+              typeof c !== 'object' ||
               !Object.hasOwn(labels, c.key) ||
               !Number.isFinite(c.before) ||
               !Number.isFinite(c.after),
@@ -580,12 +618,16 @@ export function assertCareer(value: unknown): asserts value is Career {
         (!Array.isArray(action.statusChanges) ||
           action.statusChanges.some(
             (c) =>
+              !c ||
+              typeof c !== 'object' ||
               !Object.hasOwn(statusLabels, c.key) ||
               typeof c.before !== 'string' ||
               typeof c.after !== 'string',
           ))) ||
       (action.event !== undefined &&
-        (typeof action.event.eventId !== 'string' ||
+        (!action.event ||
+          typeof action.event !== 'object' ||
+          typeof action.event.eventId !== 'string' ||
           ![action.event.growth, action.event.fatigue, action.event.bodyLoad].every(
             Number.isFinite,
           )))

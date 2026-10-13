@@ -12,13 +12,26 @@ export function readRaceLog(raceRunId: string): RaceSimulationLog | null {
 export function writeRaceLog(log: RaceSimulationLog): void {
   const key = `${prefix}${log.raceRunId}`
   const text = JSON.stringify(log)
+  // A quota/permission failure must not remove a previously verified race log.
+  localStorage.setItem(key, text)
+  if (localStorage.getItem(key) !== text) {
+    throw new Error('경주 기록을 저장하지 못했습니다. 브라우저 저장소 설정을 확인해 주세요.')
+  }
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const other = localStorage.key(i)
-    if (other && other.startsWith(prefix) && other !== key) localStorage.removeItem(other)
+    if (other && other.startsWith(prefix) && other !== key) {
+      try {
+        localStorage.removeItem(other)
+      } catch {
+        /* Cleanup must not fail an already durable save. */
+      }
+    }
   }
-  localStorage.setItem(key, text)
-  if (localStorage.getItem(key) !== text) throw new Error('경주 기록을 저장하지 못했습니다. 브라우저 저장소 설정을 확인해 주세요.')
 }
 export function removeRaceLog(raceRunId: string): void {
-  try { localStorage.removeItem(`${prefix}${raceRunId}`) } catch { /* the log is regenerable bookkeeping, not career data */ }
+  try {
+    localStorage.removeItem(`${prefix}${raceRunId}`)
+  } catch {
+    /* the log is regenerable bookkeeping, not career data */
+  }
 }

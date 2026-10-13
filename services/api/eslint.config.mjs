@@ -27,6 +27,18 @@ export const FRONTEND_FILES = [
   'components/career/server-month-event.tsx',
   'scripts/dev-server-save.mjs',
   'tests/server-save.test.ts',
+  'lib/career/browser-save.ts',
+  'lib/career/lifecycle-save.ts',
+  'lib/career/local-career.ts',
+  'lib/career/repository.ts',
+  'lib/career/lifecycle-repository.ts',
+  'lib/career/race-log-repository.ts',
+  'tests/browser-save.test.ts',
+  'tests/game-invariants.test.ts',
+  'tests/helpers/**/*.ts',
+  'tests/career.test.ts',
+  'tests/race-entry.test.ts',
+  'tests/race-aftermath.test.ts',
 ]
 
 export default defineConfig([
