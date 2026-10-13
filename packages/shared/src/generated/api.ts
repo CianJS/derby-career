@@ -907,6 +907,17 @@ export interface components {
         };
     };
     responses: {
+        /** @description 유효한 소유자 인증이 필요함 */
+        Unauthorized: {
+            headers: {
+                /** @description Bearer 인증을 요구하는 HTTP challenge */
+                "WWW-Authenticate"?: "Bearer";
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description 검증 실패, 권한 거부, 충돌 또는 외부 의존성 오류 */
         ApiError: {
             headers: {
@@ -943,7 +954,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -974,7 +985,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1013,7 +1024,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1046,7 +1057,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1077,7 +1088,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1108,7 +1119,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1139,7 +1150,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1173,7 +1184,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1208,7 +1219,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1241,7 +1252,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1274,7 +1285,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
@@ -1307,7 +1318,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1342,7 +1353,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1379,7 +1390,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1416,7 +1427,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1452,7 +1463,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1490,7 +1501,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1526,7 +1537,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1563,7 +1574,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1597,7 +1608,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1631,7 +1642,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];
@@ -1669,7 +1680,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ApiError"];
-            401: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
             409: components["responses"]["ApiError"];

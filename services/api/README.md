@@ -47,7 +47,28 @@ npm run session:create -- local-developer 8
 
 폐기 시 토큰을 셸 인수에 넣지 않고 `DEV_SESSION_TOKEN` 환경변수로 전달한 뒤 `npm run session:revoke`를 실행한다. `NODE_ENV=production`, 비루프백 listen 주소, 비루프백 요청에서는 개발 세션을 거부한다. proxy header는 신뢰하지 않는다. 브라우저 CORS 출처는 `CORS_ORIGINS`의 명시적 목록만 허용한다.
 
-**운영 인증 정책은 미정이다.** 운영 로그인 공급자와 principal 매핑, 세션 관리, 공유 인프라의 요청 제한 정책을 확정한 후 별도 구현·검토해야 한다. 개발 세션을 운영 인증으로 활성화하는 우회 옵션은 없다.
+운영 API는 외부 로그인 서비스가 발급한 API 전용 JWT를 검증하는 `oidc-jwt` 모드를 지원한다. 로그인 화면·OAuth callback·토큰 발급/갱신·서비스 계정 연결은 이 API에서 제공하지 않는다. 개발 세션을 운영 인증으로 활성화하는 우회 옵션은 없다.
+
+```dotenv
+AUTH_MODE=oidc-jwt
+OIDC_ISSUER=https://identity.example.invalid
+OIDC_AUDIENCE=derby-career-api
+OIDC_JWKS_URL=https://identity.example.invalid/.well-known/jwks.json
+OIDC_TOKEN_TYPE=at+jwt
+OIDC_MAX_TOKEN_AGE_SECONDS=3600
+```
+
+예시 주소 대신 선택한 로그인 공급자의 정확한 issuer, 신뢰하는 HTTPS JWKS 주소, **이 API를 위한** audience를 설정한다. issuer와 JWKS URL에 사용자 정보·fragment를 넣을 수 없고 issuer에는 query도 허용하지 않는다. 필수 설정이 빠지거나 잘못되면 시작을 거부한다. 운영에서 `HOST=0.0.0.0`으로 사용할 수 있으며 외부 서비스·TLS·비밀키·유료 계정은 이번 구현에서 생성하지 않았다.
+
+`Authorization: Bearer <token>`의 RS256 또는 ES256 서명과 `iss`, `aud`, `sub`, `iat`, `exp`를 검증한다. 미래의 `nbf`/`iat`, 만료, 최대 token age(60~3600초, 기본 3600초)를 확인하며 시각 오차 5초만 허용한다. 기본 `typ`은 `at+jwt`다. 공급자가 API 전용 session JWT를 발급하면 `OIDC_TOKEN_TYPE=JWT`를 명시한다. 로그인용 ID token의 client ID를 이 API의 audience로 사용하지 않는다. 공급자의 토큰 수명·클라이언트 갱신 주기는 최대 token age와 맞춘다.
+
+서버는 검증된 `issuer + sub`의 해시를 `external` principal에 매핑한다. 토큰 재발급·이메일 변경에도 같은 사용자의 저장을 유지하고, 다른 발급자의 같은 sub와 같은 이메일을 가진 다른 사용자, 기존 개발 세션의 저장은 합치지 않는다. 요청 body나 추가 JWT claim의 `ownerId`·역할·이메일로 저장 권한을 변경하지 않는다. 검증되지 않은 토큰은 principal·Career·receipt를 만들지 않는다. 운영 JWT를 앱의 `sessions` 테이블이나 브라우저 Local Save에 저장하지 않는다.
+
+토큰 문제는 `401 UNAUTHORIZED`와 `WWW-Authenticate: Bearer`, JWKS 연결 실패·timeout·redirect·잘못된 키 응답은 `503 AUTH_PROVIDER_UNAVAILABLE`다. 공급자의 원문 오류와 토큰은 응답에 넣지 않는다. JWKS는 고정된 설정 주소로만 요청하며 token의 `jku`·`jwk`를 신뢰하지 않는다. 키 cache는 5분, 알 수 없는 kid의 재조회 cooldown은 30초, 요청 timeout은 2초다. cache 안의 신뢰하는 키는 계속 검증에 사용할 수 있다. 공개 카탈로그는 인증 없이 조회할 수 있다.
+
+즉시 로그아웃/계정 차단/refresh token 폐기는 공급자 연동에서 처리해야 한다. 이미 발급한 JWT는 expiry 또는 서버의 최대 나이에 도달할 때까지 유효하며 실시간 introspection·폐기 목록은 아직 없다. 공급자별 로그인 연동과 여러 인스턴스가 공유하는 요청 제한은 후속 범위다. 기본 `AUTH_MODE=disabled`는 계속 Career API를 503으로 닫는다.
+
+검증 구현은 [`jose` 공식 API](https://github.com/panva/jose/blob/main/docs/jwt/verify/functions/jwtVerify.md)와 [JWT 검증 기준 RFC 8725](https://www.rfc-editor.org/rfc/rfc8725.html)를 따른다. 서명 검증·공개키 교체 처리를 서버용으로 직접 복제하지 않는다.
 
 ## 계약과 연동
 
@@ -70,7 +91,7 @@ const page = await events.list({ category: 'common', enabled: true, page: 1, pag
 const detail = await events.detail('COM-0001')
 ```
 
-`createApiClient`에는 권한이 있는 Career 메서드도 있다. 서버 Career를 선택한 화면은 반환된 `career.state`만 표시·사용해야 한다. Local Save와 서버 상태를 병행 계산·동시 authoritative 저장으로 사용하지 않는다. Adapter는 local storage, cookie, 기존 브라우저 저장을 읽거나 수정하지 않는다. 운영 인증이 완성되기 전에는 기존 브라우저 Career의 쓰기 경로를 전환하지 않는다.
+`createApiClient`에는 권한이 있는 Career 메서드도 있다. 서버 Career를 선택한 화면은 반환된 `career.state`만 표시·사용해야 한다. Local Save와 서버 상태를 병행 계산·동시 authoritative 저장으로 사용하지 않는다. Adapter는 local storage, cookie, 기존 브라우저 저장을 읽거나 수정하지 않는다. 운영 호출은 `getSessionToken`에서 공급자의 최신 API 전용 JWT를 반환한다. 로그인 공급자·토큰 갱신·저장 이관·v3 계약을 연결하고 검증하기 전에는 기존 브라우저 Career의 쓰기 경로를 전환하지 않는다.
 
 주요 요청 ID 규칙:
 

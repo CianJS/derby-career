@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { postgresDatabase } from '../src/db'
 import { fixture } from './helpers'
+import { createApp } from '../src/app'
+import { oidcConfig, testIssuer } from './oidc-helpers'
 
 test('real PostgreSQL row locks serialize concurrent monthly actions and race payouts', async () => {
   const url = process.env.TEST_DATABASE_URL
@@ -118,6 +120,73 @@ test('real PostgreSQL row locks serialize concurrent monthly actions and race pa
       1,
     )
   } finally {
+    await f.close()
+  }
+})
+
+test('real PostgreSQL maps simultaneous refreshed production JWTs to one owner and one command receipt', async () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
+  }
+  const f = await fixture({ db: postgresDatabase(url) })
+  const issuer = await testIssuer()
+  const app = await createApp({ ...f.db, close: async () => {} }, oidcConfig(), {
+    jwksFetch: issuer.fetcher,
+  })
+  try {
+    const subject = 'postgres-owner-' + randomUUID()
+    const tokens = await Promise.all(
+      Array.from({ length: 8 }, () => issuer.sign(subject, { jti: randomUUID() })),
+    )
+    const careerId = randomUUID()
+    const created = await Promise.all(
+      tokens.map((token) =>
+        app.inject({
+          method: 'POST',
+          url: '/v1/careers',
+          headers: { authorization: `Bearer ${token}` },
+          payload: { careerId, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+        }),
+      ),
+    )
+    for (const result of created) {
+      assert.equal(result.statusCode, 201, result.body)
+      assert.deepEqual(result.json(), created[0].json())
+    }
+    assert.equal(issuer.requests.length, 1)
+    const actionId = randomUUID()
+    const actions = await Promise.all(
+      tokens.map((token) =>
+        app.inject({
+          method: 'POST',
+          url: `/v1/careers/${careerId}/actions`,
+          headers: { authorization: `Bearer ${token}` },
+          payload: { actionId, choice: 'rest', expectedTurn: 1 },
+        }),
+      ),
+    )
+    for (const result of actions) {
+      assert.equal(result.statusCode, 200, result.body)
+      assert.deepEqual(result.json(), actions[0].json())
+    }
+    assert.equal(
+      (await f.db.query('SELECT * FROM monthly_actions WHERE career_id=$1', [careerId])).rows
+        .length,
+      1,
+    )
+    assert.equal(
+      (await f.db.query('SELECT * FROM commands WHERE career_id=$1', [careerId])).rows.length,
+      2,
+    )
+    const owner = (await f.db.query('SELECT owner_id FROM careers WHERE id=$1', [careerId])).rows[0]
+      .owner_id
+    assert.equal(
+      (await f.db.query('SELECT provider FROM principals WHERE id=$1', [owner])).rows[0].provider,
+      'external',
+    )
+  } finally {
+    await app.close()
     await f.close()
   }
 })

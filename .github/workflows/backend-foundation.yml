@@ -25,7 +25,7 @@ on:
       - 'CONTRIBUTING.md'
       - 'AGENTS.md'
   push:
-    branches: ['feature/backend-api-foundation']
+    branches: ['feature/backend-api-foundation', 'api/develop']
 jobs:
   verify:
     runs-on: ubuntu-latest

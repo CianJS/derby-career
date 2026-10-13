@@ -3,10 +3,11 @@ import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import type { Database } from './db'
 import type { Config } from './config'
+import type { FetchImplementation } from 'jose'
 import { readContract, routeSchema } from './contracts'
 import { EventRepository } from './repositories/events'
 import { CareerRepository } from './repositories/careers'
-import { SessionAuthorization } from './modules/auth/sessions'
+import { createCareerAuthorization } from './modules/auth/authorization'
 import { eventRoutes } from './routes/events'
 import { careerRoutes } from './routes/careers'
 import { ApiError } from './errors'
@@ -24,7 +25,11 @@ const CLIENT_ERROR_MESSAGES: Record<number, string> = {
   429: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
 }
 
-export async function createApp(db: Database, config: Config) {
+export async function createApp(
+  db: Database,
+  config: Config,
+  options: { jwksFetch?: FetchImplementation } = {},
+) {
   if (
     config.authMode === 'dev-session' &&
     (config.nodeEnv === 'production' || !['127.0.0.1', '::1', 'localhost'].includes(config.host))
@@ -58,6 +63,9 @@ export async function createApp(db: Database, config: Config) {
           : 500
     if (status >= 500 && (!known || status !== 503)) {
       request.log.error({ err: error }, 'API request failed')
+    }
+    if (status === 401) {
+      reply.header('WWW-Authenticate', 'Bearer')
     }
     reply.code(status).send({
       error: {
@@ -148,7 +156,7 @@ export async function createApp(db: Database, config: Config) {
     app,
     spec,
     new CareerRepository(db, config.director),
-    new SessionAuthorization(db, config),
+    createCareerAuthorization(db, config, options.jwksFetch),
   )
   app.addHook('onClose', () => db.close())
   return app
