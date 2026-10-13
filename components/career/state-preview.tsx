@@ -2,9 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { buildFixture, fixtureIds, fixtureLifecycle } from '@/lib/career/fixtures'
-import { writeLifecycleSave } from '@/lib/career/lifecycle-repository'
+import { writeBrowserSave } from '@/lib/career/browser-save'
 import { writeRaceLog } from '@/lib/career/race-log-repository'
-import { clearCareer, writeCareer } from '@/lib/career/repository'
 
 const labels = fixtureIds.map(id => ({ id, label: buildLabel(id) }))
 function buildLabel(id: (typeof fixtureIds)[number]) {
@@ -15,9 +14,7 @@ export function StatePreview() {
   const router = useRouter()
   const load = (id: string) => {
     const fixture = buildFixture(id)
-    writeLifecycleSave(fixtureLifecycle(fixture.archive))
-    if (fixture.career) writeCareer(fixture.career)
-    else clearCareer()
+    writeBrowserSave({ career: fixture.career, lifecycle: fixtureLifecycle(fixture.archive) })
     if (fixture.log) writeRaceLog(fixture.log)
     router.push(`/?view=${fixture.view}`)
   }

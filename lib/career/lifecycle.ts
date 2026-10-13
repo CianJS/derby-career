@@ -16,6 +16,7 @@ export type LifecycleHorse = {
   fatigue?: number
   bodyLoad?: number
   condition?: string
+  healthRecovery?: number
   health?: string
   raceRecords?: readonly {
     race: string
@@ -90,6 +91,7 @@ export function applyCareer<T extends { activeHorse: LifecycleHorse | null; mont
       bodyLoad: career.values.bodyLoad,
       condition: career.condition,
       health: career.health,
+      healthRecovery: career.healthRecovery,
       raceRecords: records,
     },
   }
