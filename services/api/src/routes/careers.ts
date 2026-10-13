@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { CareerRepository } from '../repositories/careers'
-import type { SessionAuthorization } from '../modules/auth/sessions'
+import type { CareerAuthorization } from '../modules/auth/authorization'
 import type { components } from '../../../../packages/shared/src/generated/api'
 import { routeSchema, type ApiContract } from '../contracts'
 type Models = components['schemas']
@@ -10,7 +10,7 @@ export function careerRoutes(
   app: FastifyInstance,
   spec: ApiContract,
   careers: CareerRepository,
-  auth: SessionAuthorization,
+  auth: CareerAuthorization,
 ) {
   const register = (
     method: 'GET' | 'POST',
