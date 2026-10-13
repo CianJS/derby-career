@@ -22,6 +22,17 @@ export const raceDefinitions: RaceDefinitionSnapshot[] = [
   { id: 'DEV_M6_ONE_WIN_1800', name: '1승 조건전', month: 6, surface: 'Turf', distance: 1800, raceClass: '1승', runners: 12, courseProfile: '표준 직선 / 중간 코너', prize: 12000000, entryFee: 0, minWins: 1 },
   { id: 'DEV_M6_ONE_WIN_LONG_2400', name: '1승 장거리 도전', month: 6, surface: 'Turf', distance: 2400, raceClass: '1승', runners: 10, courseProfile: '긴 직선 / 큰 코너', prize: 12000000, entryFee: 0, minWins: 1 },
   { id: 'DEV_M6_LISTED_2000', name: 'Listed 챌린지', month: 6, surface: 'Turf', distance: 2000, raceClass: 'Listed', runners: 14, courseProfile: '긴 직선 / 중간 코너', prize: 50000000, entryFee: 500000, minWins: 1 },
+  // Development fixtures for months 9 and 12, not real courses or official races. Each month keeps free entry paths for
+  // maiden and winning careers; the Listed races charge an entry fee and stay closed until the Economy stage.
+  { id: 'DEV_M9_MAIDEN_SPRINT_1400', name: '미승리 스프린트', month: 9, surface: 'Turf', distance: 1400, raceClass: '미승리', runners: 10, courseProfile: '짧은 직선 / 급한 코너', prize: 8000000, entryFee: 0, maxWins: 0 },
+  { id: 'DEV_M9_MAIDEN_MIDDLE_1800', name: '미승리 중거리', month: 9, surface: 'Turf', distance: 1800, raceClass: '미승리', runners: 12, courseProfile: '표준 직선 / 중간 코너', prize: 8000000, entryFee: 0, maxWins: 0 },
+  { id: 'DEV_M9_ONE_WIN_1600', name: '1승 마일 조건전', month: 9, surface: 'Turf', distance: 1600, raceClass: '1승', runners: 12, courseProfile: '표준 직선 / 표준 코너', prize: 12000000, entryFee: 0, minWins: 1 },
+  { id: 'DEV_M9_ONE_WIN_2000', name: '1승 중거리 조건전', month: 9, surface: 'Turf', distance: 2000, raceClass: '1승', runners: 12, courseProfile: '긴 직선 / 중간 코너', prize: 12000000, entryFee: 0, minWins: 1 },
+  { id: 'DEV_M9_LISTED_1800', name: 'Listed 가을 챌린지', month: 9, surface: 'Turf', distance: 1800, raceClass: 'Listed', runners: 14, courseProfile: '표준 직선 / 중간 코너', prize: 50000000, entryFee: 500000, minWins: 1 },
+  { id: 'DEV_M12_MAIDEN_MIDDLE_2000', name: '미승리 연말 중거리', month: 12, surface: 'Turf', distance: 2000, raceClass: '미승리', runners: 12, courseProfile: '긴 직선 / 완만한 코너', prize: 8000000, entryFee: 0, maxWins: 0 },
+  { id: 'DEV_M12_ONE_WIN_1600', name: '1승 연말 마일', month: 12, surface: 'Turf', distance: 1600, raceClass: '1승', runners: 12, courseProfile: '표준 직선 / 표준 코너', prize: 12000000, entryFee: 0, minWins: 1 },
+  { id: 'DEV_M12_ONE_WIN_LONG_2400', name: '1승 연말 장거리', month: 12, surface: 'Turf', distance: 2400, raceClass: '1승', runners: 10, courseProfile: '긴 직선 / 큰 코너', prize: 12000000, entryFee: 0, minWins: 1 },
+  { id: 'DEV_M12_LISTED_2200', name: 'Listed 연말 챌린지', month: 12, surface: 'Turf', distance: 2200, raceClass: 'Listed', runners: 14, courseProfile: '긴 직선 / 중간 코너', prize: 50000000, entryFee: 500000, minWins: 1 },
 ]
 export const raceMonths = [...new Set(raceDefinitions.map(r => r.month))].sort((a, b) => a - b)
 export const isRaceTurn = (turn: number) => raceMonths.includes(turn)
