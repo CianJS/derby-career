@@ -66,6 +66,14 @@ test('actual responses conform to OpenAPI and the public adapter works without t
       expectedTurn: 1,
     })
     validate('/v1/careers/{careerId}/months/advance', 'post', next)
+    const retired = await client.retireCareer(id, {
+      commandId: randomUUID(),
+      expectedRevision: next.career.revision,
+    })
+    validate('/v1/careers/{careerId}/retirement', 'post', retired)
+    const archive = await client.getRetirement(id)
+    validate('/v1/careers/{careerId}/retirement', 'get', archive)
+    assert.deepEqual(archive.retirement, retired.retirement)
   } finally {
     await f.close()
   }

@@ -6,7 +6,7 @@
 - `src/generated/event-validation.mjs`와 `.d.mts`: OpenAPI에서 생성한 의존성 없는 이벤트 응답 검증기와 타입 선언.
 - `src/event-catalog-validation.ts`: 외부 JSON 검증과 공개 source 정보 투영.
 - `src/generated/api.ts`: `contracts/openapi.yaml`에서 생성한 HTTP 타입.
-- `src/client.ts`: 공통 타입 기반 API 클라이언트. 재시도용 ID는 호출자가 유지한다.
+- `src/client.ts`: 공통 타입 기반 API 클라이언트. 재시도용 ID는 호출자가 유지한다. `retireCareer(id, { commandId, expectedRevision })`는 서버 은퇴를 확정하고 `getRetirement(id)`는 은퇴 당시의 불변 snapshot을 조회한다.
 - `src/event-catalog-adapter.ts`: 공개 이벤트 읽기만 제공하는 최소 Adapter.
 - `src/event-catalog-proxy.ts`: Next 서버가 사용하는 공개 목록·상세 조회. query 검증, 서버 주소 설정, timeout, 오류 응답을 처리하며 브라우저 자격증명은 전달하지 않는다.
 

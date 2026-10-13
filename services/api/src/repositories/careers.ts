@@ -39,6 +39,7 @@ import type {
   EventEffect,
 } from '../../../../packages/shared/src/events'
 import { publicEventDefinition } from '../../../../packages/shared/src/events'
+import type { components } from '../../../../packages/shared/src/generated/api'
 
 const REQUEST_ID_CONSTRAINTS = new Set(['careers_pkey', 'monthly_actions_pkey', 'race_runs_pkey'])
 
@@ -67,6 +68,19 @@ type History = {
   modifiers: EventEffect[]
   result: unknown
 }
+type RetirementRow = {
+  career_id: string
+  snapshot: components['schemas']['Career']
+  retirement_reason: components['schemas']['RetirementRecord']['reason']
+  created_at: Date
+}
+const retirementDto = (record: RetirementRow) => ({
+  careerId: record.career_id,
+  reason: record.retirement_reason,
+  retiredAt: new Date(record.created_at).toISOString(),
+  retiredOn: record.snapshot.state.calendarDate,
+  snapshot: record.snapshot,
+})
 const historyDto = (h?: History) =>
   h
     ? {
@@ -490,6 +504,43 @@ export class CareerRepository {
       await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
       return { career: await this.dto(tx, await this.row(tx, owner, id)) }
     })
+  }
+  async retire(owner: string, id: string, body: components['schemas']['RetireCareer']) {
+    return this.command(owner, body.commandId, 'career.retire', body, id, async (tx) => {
+      const row = await this.row(tx, owner, id, true)
+      this.active(row)
+      if (row.revision !== body.expectedRevision) {
+        throw conflict('Career가 변경되었습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.')
+      }
+      if (row.state.raceRun || (row.state.action && !row.state.action.result)) {
+        throw conflict('확정된 경주 또는 행동을 완료한 뒤 은퇴해 주세요.')
+      }
+      // Retirement seals the current state; it never selects events, advances time or recalculates rewards.
+      row.status = 'retired'
+      row.revision++
+      await tx.query(
+        "UPDATE careers SET status='retired',revision=$2,updated_at=now() WHERE id=$1",
+        [id, row.revision],
+      )
+      const snapshot = await this.dto(tx, row)
+      const record = (
+        await tx.query<RetirementRow>(
+          "INSERT INTO career_records(career_id,snapshot,retirement_reason) VALUES($1,$2,'manual') RETURNING *",
+          [id, JSON.stringify(snapshot)],
+        )
+      ).rows[0]
+      return { career: snapshot, retirement: retirementDto(record) }
+    })
+  }
+  async retirement(owner: string, id: string) {
+    await this.row(this.db, owner, id)
+    const record = (
+      await this.db.query<RetirementRow>('SELECT * FROM career_records WHERE career_id=$1', [id])
+    ).rows[0]
+    if (!record) {
+      throw notFound()
+    }
+    return { retirement: retirementDto(record) }
   }
   async list(owner: string, page: number, pageSize: number) {
     const result = await this.db.query(

@@ -434,6 +434,86 @@ paths:
         schema: &id003
           type: string
           format: uuid
+  /v1/careers/{careerId}/retirement:
+    get:
+      operationId: getCareerRetirement
+      summary: 소유자의 불변 은퇴 기록 조회
+      description: 은퇴 당시의 Career, 자금, 세계 날짜와 공개 이벤트 상태를 반환한다. 활성 Career나 다른 소유자의 Career는 404다.
+      security:
+      - DevelopmentSession: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetirementResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+    post:
+      operationId: retireCareer
+      summary: 서버 Career 수동 은퇴 확정
+      description: 현재 Career revision을 expectedRevision으로 전달한다. 미완료 경주나 행동, revision 불일치,
+        이미 은퇴한 Career는 409다. 동일 commandId와 본문 재시도는 최초 응답을 재생하고 다른 본문이나 명령에 ID를 재사용하면 409다.
+        서버 상태만 snapshot으로 저장하며 자금, 능력치, 월과 이벤트 기록은 변경하지 않는다. 은퇴 후 새 쓰기는 거부하고
+        기존 명령의 동일 요청 재시도만 원래 응답을 재생한다. 은퇴 이유는 서버가 manual로 고정하며 자동 은퇴 규칙은 없다.
+      security:
+      - DevelopmentSession: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetireCareer'
+      responses:
+        '200':
+          description: 성공 또는 동일 요청 재생
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetireCareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
   /v1/careers/{careerId}/actions:
     get:
       operationId: listCareerActions
@@ -1790,6 +1870,58 @@ components:
           $ref: '#/components/schemas/Career'
       required:
       - career
+      additionalProperties: false
+    RetireCareer:
+      type: object
+      properties:
+        commandId: *id003
+        expectedRevision:
+          type: integer
+          minimum: 1
+      required:
+      - commandId
+      - expectedRevision
+      additionalProperties: false
+    RetirementRecord:
+      type: object
+      properties:
+        careerId: *id003
+        reason:
+          type: string
+          enum:
+          - manual
+        retiredAt:
+          type: string
+          format: date-time
+        retiredOn:
+          $ref: '#/components/schemas/CalendarDate'
+        snapshot:
+          $ref: '#/components/schemas/Career'
+      required:
+      - careerId
+      - reason
+      - retiredAt
+      - retiredOn
+      - snapshot
+      additionalProperties: false
+    RetirementResponse:
+      type: object
+      properties:
+        retirement:
+          $ref: '#/components/schemas/RetirementRecord'
+      required:
+      - retirement
+      additionalProperties: false
+    RetireCareerResponse:
+      type: object
+      properties:
+        career:
+          $ref: '#/components/schemas/Career'
+        retirement:
+          $ref: '#/components/schemas/RetirementRecord'
+      required:
+      - career
+      - retirement
       additionalProperties: false
     CreateCareer:
       type: object

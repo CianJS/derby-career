@@ -121,3 +121,82 @@ test('real PostgreSQL row locks serialize concurrent monthly actions and race pa
     await f.close()
   }
 })
+
+test('real PostgreSQL retirement serializes retries, different commands and concurrent growth', async () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
+  }
+  const f = await fixture({ db: postgresDatabase(url) })
+  try {
+    const { id, response } = await f.create()
+    const body = { commandId: randomUUID(), expectedRevision: response.career.revision }
+    const same = await Promise.all(
+      Array.from({ length: 8 }, () => f.call('POST', `/v1/careers/${id}/retirement`, body)),
+    )
+    for (const result of same) {
+      assert.equal(result.statusCode, 200, result.body)
+      assert.deepEqual(result.json(), same[0].json())
+    }
+    assert.equal(
+      (await f.db.query('SELECT * FROM career_records WHERE career_id=$1', [id])).rows.length,
+      1,
+    )
+    assert.equal(
+      (await f.db.query('SELECT * FROM commands WHERE request_id=$1', [body.commandId])).rows
+        .length,
+      1,
+    )
+    assert.equal((await f.call('GET', `/v1/careers/${id}`)).json().career.revision, 2)
+
+    const next = await f.create()
+    const distinct = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        f.call('POST', `/v1/careers/${next.id}/retirement`, {
+          commandId: randomUUID(),
+          expectedRevision: next.response.career.revision,
+        }),
+      ),
+    )
+    assert.equal(distinct.filter((result) => result.statusCode === 200).length, 1)
+    assert.equal(distinct.filter((result) => result.statusCode === 409).length, 7)
+    assert.equal(
+      (await f.db.query('SELECT * FROM career_records WHERE career_id=$1', [next.id])).rows.length,
+      1,
+    )
+
+    const racing = await f.create()
+    const [action, retirement] = await Promise.all([
+      f.call('POST', `/v1/careers/${racing.id}/actions`, {
+        actionId: randomUUID(),
+        choice: 'rest',
+        expectedTurn: 1,
+      }),
+      f.call('POST', `/v1/careers/${racing.id}/retirement`, {
+        commandId: randomUUID(),
+        expectedRevision: racing.response.career.revision,
+      }),
+    ])
+    assert.deepEqual([action.statusCode, retirement.statusCode].sort(), [200, 409])
+    const current = (await f.call('GET', `/v1/careers/${racing.id}`)).json().career
+    if (retirement.statusCode === 200) {
+      assert.equal(current.status, 'retired')
+      assert.deepEqual(current.state, racing.response.career.state)
+      assert.equal(
+        (await f.db.query('SELECT * FROM monthly_actions WHERE career_id=$1', [racing.id])).rows
+          .length,
+        0,
+      )
+    } else {
+      assert.equal(current.status, 'active')
+      assert.deepEqual(current.state, action.json().career.state)
+      assert.equal(
+        (await f.db.query('SELECT * FROM career_records WHERE career_id=$1', [racing.id])).rows
+          .length,
+        0,
+      )
+    }
+  } finally {
+    await f.close()
+  }
+})
