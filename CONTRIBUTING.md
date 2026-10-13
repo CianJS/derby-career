@@ -26,7 +26,7 @@
 
 ## 자동 검사
 
-자동 검사 범위는 `services/api`의 직접 작성한 JS/TS와 `packages/shared/src`다. 기존 프론트엔드는 별도 담당 범위를 유지하며, 새 코드의 기본 포맷과 이름은 위 규칙을 따른다.
+자동 검사 범위는 `services/api`의 직접 작성한 JS/TS와 `packages/shared/src`, 공개 카탈로그 연동의 `app/api/event-catalog`, `app/dev/event-catalog`, `components/dev/event-catalog.tsx`, `components/dev/event-detail.tsx`, `lib/event-catalog`이다. 기존 프론트엔드는 별도 담당 범위를 유지하며, 새 코드의 기본 포맷과 이름은 위 규칙을 따른다.
 
 개발 도구는 Node.js 22 LTS의 최신 패치 또는 Node.js 24 이상에서 실행한다. API 디렉터리에서 실행한다.
 

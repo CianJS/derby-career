@@ -58,7 +58,7 @@ npm run contract:generate
 npm run contract:check
 ```
 
-계약을 변경할 때 YAML과 `packages/shared/src/generated/api.ts`를 함께 커밋한다. 기존 프론트엔드 페이지·store·Local Save는 연결하거나 이전하지 않았다. 루트 `tsconfig.json`의 서비스/패키지 제외는 API의 독립 타입 검사를 위한 설정이다. 기존 pnpm lockfile과 Next 실행 스크립트는 그대로다.
+계약을 변경할 때 YAML과 `packages/shared/src/generated/api.ts`를 함께 커밋한다. 공개 이벤트는 Next `/api/event-catalog`과 개발용 `/dev/event-catalog` 화면에서 조회할 수 있다. 루트의 `.env.local`에 서버 전용 `DERBY_API_URL`을 설정한다. 기존 육성 페이지·store·Local Save의 쓰기는 연결하거나 이전하지 않았다. 실행 방법과 오류 규칙은 루트 `README.md`를 따른다. 루트 `tsconfig.json`의 서비스/패키지 제외는 API의 독립 타입 검사를 위한 설정이다. 기존 pnpm lockfile과 Next 실행 스크립트는 그대로다.
 
 프론트엔드에서 안전하게 시작할 연동은 공개 카탈로그 Adapter다.
 

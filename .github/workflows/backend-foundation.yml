@@ -6,6 +6,14 @@ on:
       - 'packages/shared/**'
       - 'contracts/**'
       - 'lib/career/**'
+      - 'app/api/event-catalog/**'
+      - 'app/dev/event-catalog/**'
+      - 'components/dev/event-catalog.tsx'
+      - 'components/dev/event-detail.tsx'
+      - 'lib/event-catalog/**'
+      - 'tests/**'
+      - 'README.md'
+      - '.env.example'
       - '.github/workflows/backend-foundation.yml'
       - '.editorconfig'
       - '.prettierrc.json'
@@ -62,3 +70,21 @@ jobs:
           trap 'kill "$API_PROCESS_ID" 2>/dev/null || true' EXIT
           curl --silent --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:4000/health/ready > /dev/null
           node scripts/http-smoke.mjs
+  verify-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci --prefix services/api
+      - run: pnpm exec tsc --noEmit --incremental false
+      - run: node --import ./services/api/node_modules/tsx/dist/loader.mjs --test tests/*.test.ts
+      - run: pnpm build

@@ -3,6 +3,14 @@ import { defineConfig } from 'eslint/config'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
+const catalogFiles = [
+  'app/api/event-catalog/**/*.ts',
+  'app/dev/event-catalog/**/*.tsx',
+  'components/dev/event-catalog.tsx',
+  'components/dev/event-detail.tsx',
+  'lib/event-catalog/**/*.ts',
+]
+
 export default defineConfig([
   {
     ignores: [
@@ -13,7 +21,7 @@ export default defineConfig([
     ],
   },
   {
-    files: ['services/api/**/*.{js,mjs,ts}', 'packages/shared/src/**/*.ts'],
+    files: ['services/api/**/*.{js,mjs,ts}', 'packages/shared/src/**/*.ts', ...catalogFiles],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
     linterOptions: { reportUnusedDisableDirectives: 'error' },
@@ -25,7 +33,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['services/api/**/*.ts', 'packages/shared/src/**/*.ts'],
+    files: ['services/api/**/*.ts', 'packages/shared/src/**/*.ts', ...catalogFiles],
     extends: [tseslint.configs.recommended],
     rules: {
       '@typescript-eslint/consistent-type-imports': [
@@ -43,4 +51,5 @@ export default defineConfig([
       ],
     },
   },
+  { files: catalogFiles, languageOptions: { globals: globals.browser } },
 ])

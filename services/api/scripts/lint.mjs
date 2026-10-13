@@ -13,6 +13,11 @@ const results = await eslint.lintFiles([
   'services/api/tests/**/*.{js,mjs,ts}',
   'services/api/eslint.config.mjs',
   'packages/shared/src/**/*.ts',
+  'app/api/event-catalog/**/*.ts',
+  'app/dev/event-catalog/**/*.tsx',
+  'components/dev/event-catalog.tsx',
+  'components/dev/event-detail.tsx',
+  'lib/event-catalog/**/*.ts',
 ])
 if (fix) {
   await ESLint.outputFixes(results)
