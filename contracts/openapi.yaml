@@ -313,6 +313,44 @@ paths:
           $ref: '#/components/responses/ApiError'
         '503':
           $ref: '#/components/responses/ApiError'
+  /v1/careers/workspace:
+    get:
+      operationId: getCareerWorkspace
+      summary: Restore the current stable, active career and immutable retirement history
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerWorkspace'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - *id001
+      - *id002
   /v1/careers:
     get:
       operationId: listCareers
@@ -1879,6 +1917,89 @@ components:
       - state
       - event
       additionalProperties: false
+    CareerWorkspace:
+      type: object
+      additionalProperties: false
+      required: [stable, career, confirmedActionId, retirements, pagination]
+      properties:
+        stable:
+          type: object
+          nullable: true
+          additionalProperties: false
+          required: [id, funds, calendarDate]
+          properties:
+            id: *id003
+            funds: *id005
+            calendarDate:
+              $ref: '#/components/schemas/CalendarDate'
+        career:
+          allOf:
+          - $ref: '#/components/schemas/Career'
+          nullable: true
+        confirmedActionId:
+          type: string
+          format: uuid
+          nullable: true
+          description: API action UUID for advancing the active turn, distinct from the domain action ID.
+        retirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetirementRecord'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    ServerSaveCommand:
+      description: Browser retry journal contains command metadata only; never an authoritative game state or credential.
+      oneOf:
+      - type: object
+        additionalProperties: false
+        required: [kind, body]
+        properties:
+          kind:
+            type: string
+            enum: [create]
+          body:
+            $ref: '#/components/schemas/CreateCareer'
+      - type: object
+        additionalProperties: false
+        required: [kind, body, careerId]
+        properties:
+          kind:
+            type: string
+            enum: [action]
+          body:
+            $ref: '#/components/schemas/ConfirmAction'
+          careerId: *id003
+      - type: object
+        additionalProperties: false
+        required: [kind, body, careerId]
+        properties:
+          kind:
+            type: string
+            enum: [advance]
+          body:
+            $ref: '#/components/schemas/AdvanceMonth'
+          careerId: *id003
+      - type: object
+        additionalProperties: false
+        required: [kind, body, careerId, historyId]
+        properties:
+          kind:
+            type: string
+            enum: [event]
+          body:
+            $ref: '#/components/schemas/ChooseEvent'
+          careerId: *id003
+          historyId: *id003
+      - type: object
+        additionalProperties: false
+        required: [kind, body, careerId]
+        properties:
+          kind:
+            type: string
+            enum: [retire]
+          body:
+            $ref: '#/components/schemas/RetireCareer'
+          careerId: *id003
     CareerResponse:
       type: object
       properties:

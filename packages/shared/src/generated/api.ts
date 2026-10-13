@@ -126,6 +126,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/careers/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Restore the current stable, active career and immutable retirement history */
+        get: operations["getCareerWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/careers": {
         parameters: {
             query?: never;
@@ -676,6 +693,54 @@ export interface components {
             state: components["schemas"]["CareerState"];
             event: components["schemas"]["CareerEvent"] | null;
         };
+        CareerWorkspace: {
+            stable: {
+                /** Format: uuid */
+                id: string;
+                funds: number;
+                calendarDate: components["schemas"]["CalendarDate"];
+            } | null;
+            career: components["schemas"]["Career"] | null;
+            /**
+             * Format: uuid
+             * @description API action UUID for advancing the active turn, distinct from the domain action ID.
+             */
+            confirmedActionId: string | null;
+            retirements: components["schemas"]["RetirementRecord"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        /** @description Browser retry journal contains command metadata only; never an authoritative game state or credential. */
+        ServerSaveCommand: {
+            /** @enum {string} */
+            kind: "create";
+            body: components["schemas"]["CreateCareer"];
+        } | {
+            /** @enum {string} */
+            kind: "action";
+            body: components["schemas"]["ConfirmAction"];
+            /** Format: uuid */
+            careerId: string;
+        } | {
+            /** @enum {string} */
+            kind: "advance";
+            body: components["schemas"]["AdvanceMonth"];
+            /** Format: uuid */
+            careerId: string;
+        } | {
+            /** @enum {string} */
+            kind: "event";
+            body: components["schemas"]["ChooseEvent"];
+            /** Format: uuid */
+            careerId: string;
+            /** Format: uuid */
+            historyId: string;
+        } | {
+            /** @enum {string} */
+            kind: "retire";
+            body: components["schemas"]["RetireCareer"];
+            /** Format: uuid */
+            careerId: string;
+        };
         CareerResponse: {
             career: components["schemas"]["Career"];
         };
@@ -1147,6 +1212,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RaceCatalog"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            409: components["responses"]["ApiError"];
+            413: components["responses"]["ApiError"];
+            415: components["responses"]["ApiError"];
+            422: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    getCareerWorkspace: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerWorkspace"];
                 };
             };
             400: components["responses"]["ApiError"];

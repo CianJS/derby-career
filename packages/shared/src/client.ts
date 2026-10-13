@@ -96,6 +96,8 @@ export function createApiClient(options: {
     listRaces: () => request<Models['RaceCatalog']>('/v1/catalog/races'),
     listCareers: (query: PageQuery = {}) =>
       request<Models['CareerList']>('/v1/careers', undefined, true, query),
+    getCareerWorkspace: (query: PageQuery = {}) =>
+      request<Models['CareerWorkspace']>('/v1/careers/workspace', undefined, true, query),
     createCareer: (body: Models['CreateCareer']) =>
       request<Models['CareerResponse']>('/v1/careers', body, true),
     getCareer: (id: string) => request<Models['CareerResponse']>(careerPath(id), undefined, true),

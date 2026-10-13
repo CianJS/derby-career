@@ -46,6 +46,10 @@ export function careerRoutes(
     const p = r.query as Page
     return careers.list(o, p.page, p.pageSize)
   })
+  register('GET', '/v1/careers/workspace', (r, o) => {
+    const p = r.query as Page
+    return careers.workspace(o, p.page, p.pageSize)
+  })
   register(
     'POST',
     '/v1/careers',

@@ -4,9 +4,10 @@
 - `src/server-domain.ts`: 공유 계산을 사용하면서 Local fixture 이벤트를 등록하지 않는 서버 권한 모드. API 기본 엔진은 명시적 v2이며 최신 frontend의 v3 기본값과 구분한다.
 - `src/events.ts`: 직렬화 가능한 이벤트 조건·효과·Director 설정.
 - `src/generated/event-validation.mjs`와 `.d.mts`: OpenAPI에서 생성한 의존성 없는 이벤트 응답 검증기와 타입 선언.
+- `src/generated/save-validation.mjs`와 `.d.mts`: 같은 생성 절차로 만든 서버 저장 명령·workspace·응답 검증기. 브라우저와 Next bridge 양쪽에서 사용한다.
 - `src/event-catalog-validation.ts`: 외부 JSON 검증과 공개 source 정보 투영.
 - `src/generated/api.ts`: `contracts/openapi.yaml`에서 생성한 HTTP 타입.
-- `src/client.ts`: 공통 타입 기반 API 클라이언트. 재시도용 ID는 호출자가 유지한다. `retireCareer(id, { commandId, expectedRevision })`는 서버 은퇴를 확정하고 `getRetirement(id)`는 은퇴 당시의 불변 snapshot을 조회한다.
+- `src/client.ts`: 공통 타입 기반 API 클라이언트. 재시도용 ID는 호출자가 유지한다. `getCareerWorkspace()`는 현재 마방·활성 Career·행동 UUID·페이지 단위 은퇴 기록을 복원한다. `retireCareer(id, { commandId, expectedRevision })`는 서버 은퇴를 확정하고 `getRetirement(id)`는 은퇴 당시의 불변 snapshot을 조회한다.
 - `src/event-catalog-adapter.ts`: 공개 이벤트 읽기만 제공하는 최소 Adapter.
 - `src/event-catalog-proxy.ts`: Next 서버가 사용하는 공개 목록·상세 조회. query 검증, 서버 주소 설정, timeout, 오류 응답을 처리하며 브라우저 자격증명은 전달하지 않는다.
 

@@ -19,6 +19,7 @@ import { RacePlayback } from "@/components/career/race-playback";
 import { RaceReflection } from "@/components/career/race-reflection";
 import { careerStore, useCareer } from "@/lib/career/store";
 import { applyCareer, archiveActiveHorse } from '@/lib/career/lifecycle'
+import { serverLifecycle } from '@/lib/server-save/lifecycle'
 import { INJURY_NOTICE, isHealthy, isStrained } from "@/lib/career/status";
 import { contractedJockeys, freeAgentJockeys, jockeyProfiles } from "@/lib/career/race-entry";
 import { summarizeRecords, type HorseRaceRecord } from "@/lib/career/records";
@@ -775,6 +776,7 @@ function RetirementConfirm({
   horse: CareerHorse;
   onConfirm: () => void;
 }) {
+  const { busy, pending } = useCareer()
   return (
     <div className="lab-retirement flex min-h-[calc(100vh-57px)] items-center justify-center px-6 py-16">
       <div className="w-full max-w-md border border-border bg-card p-7">
@@ -792,6 +794,7 @@ function RetirementConfirm({
             취소
           </button>
           <button
+            disabled={busy || pending}
             onClick={onConfirm}
             className="rounded-lg border border-rose/50 bg-rose/10 px-4 py-2 text-xs text-foreground"
           >
@@ -4398,17 +4401,29 @@ function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
     </>
   );
 }
-export default function App() {
-  const [state, setState] = useState<LifecycleState>(initialLifecycle);
+export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'server' }) {
+  const [localState, setState] = useState<LifecycleState>(initialLifecycle);
   const [selectedJockeyId, setSelectedJockeyId] = useState(jockeys[0].id);
   const [view, setView] = useState<View>("home");
-  const { career } = useCareer();
+  const { career, workspace, ready, busy, pending, error } = useCareer();
+  const state: LifecycleState = saveMode === 'server' && workspace
+    ? { ...localState, stableName: '서버 마방', ...serverLifecycle(workspace) }
+    : localState
   const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(
     null,
   );
   const [hydrated, setHydrated] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   useEffect(() => {
+    careerStore.configure(saveMode)
+    if (saveMode === 'server') {
+      setHydrated(true)
+      const requested = new URLSearchParams(window.location.search).get('view')
+      if (requested && ['training', 'candidates', 'stable', 'horse'].includes(requested)) {
+        setView(requested as View)
+      }
+      return
+    }
     try {
       const saved = { ...initialLifecycle, ...readLifecycle() };
       setState(saved);
@@ -4424,12 +4439,12 @@ export default function App() {
     } catch {
       setSaveError("마방 기록을 읽지 못했습니다. 기존 저장은 유지됩니다.");
     }
-  }, []);
+  }, [saveMode]);
   useEffect(() => {
-    if (hydrated && career) setState((current) => applyCareer(current, career));
-  }, [career, hydrated]);
+    if (saveMode === 'local' && hydrated && career) setState((current) => applyCareer(current, career));
+  }, [career, hydrated, saveMode]);
   useEffect(() => {
-    if (hydrated)
+    if (saveMode === 'local' && hydrated)
       try {
         writeLifecycle(state);
         setSaveError(null);
@@ -4438,7 +4453,7 @@ export default function App() {
           "마방 기록을 저장하지 못했습니다. 쿠키 설정을 확인해 주세요.",
         );
       }
-  }, [state, hydrated]);
+  }, [state, hydrated, saveMode]);
   const createStable = (name: string, country: string) => {
     setState((current) => ({
       ...current,
@@ -4471,8 +4486,10 @@ export default function App() {
   const confirmRetire = async () => {
     const horse = state.activeHorse;
     if (!horse || !(await careerStore.release())) return;
-    const archiveId = crypto.randomUUID()
-    setState((current) => archiveActiveHorse(current, horse.id, archiveId))
+    if (saveMode === 'local') {
+      const archiveId = crypto.randomUUID()
+      setState((current) => archiveActiveHorse(current, horse.id, archiveId))
+    }
     setView("careerComplete");
   };
   const startCandidates = () => {
@@ -4578,6 +4595,15 @@ export default function App() {
       <div className="flex min-h-[calc(100vh-57px)]">
         {management && <Sidebar view={view} setView={setView} />}
         <main className="min-w-0 flex-1">
+          {saveMode === 'server' && (
+            <div className="m-4 rounded-lg border border-border p-3 text-sm" role={error ? 'alert' : 'status'}>
+              <p>로컬 서버 저장 · {busy ? '서버 확인 중…' : pending ? '저장 결과 확인 필요' : ready ? '서버 기록 연결됨' : '연결 중…'}</p>
+              <p className="mt-1 text-xs text-muted-foreground">훈련·휴식·치료·이벤트·은퇴를 서버에 저장합니다. 경주 연결은 준비 중입니다.</p>
+              {error && <p className="mt-2">{error}</p>}
+              <button disabled={busy} onClick={() => void careerStore.refresh()} className="mt-2 text-xs underline">{pending ? '같은 요청으로 다시 확인' : '서버 기록 새로고침'}</button>
+            </div>
+          )}
+          {(saveMode === 'local' || workspace) && <>
           {saveError && (
             <p role="alert" className="ui-error-state m-4">
               {saveError}
@@ -4632,8 +4658,8 @@ export default function App() {
               }
             />
           )}{" "}
-          {view === "entry" && <RaceEntry setView={setView} />}{" "}
-          {(view === "raceplay" || view === "raceexperimental") && (
+          {saveMode === 'local' && view === "entry" && <RaceEntry setView={setView} />}{" "}
+          {saveMode === 'local' && (view === "raceplay" || view === "raceexperimental") && (
             <FocusShell setView={setView} backLabel="육성으로 돌아가기">
               <RacePlayback
                 onFinish={() => setView("result")}
@@ -4641,7 +4667,7 @@ export default function App() {
               />
             </FocusShell>
           )}{" "}
-          {view === "result" && (
+          {saveMode === 'local' && view === "result" && (
             <FocusShell setView={setView} backLabel="육성으로 돌아가기">
               <RaceReflection
                 onNext={() => setView("training")}
@@ -4656,6 +4682,9 @@ export default function App() {
               onArchiveSelect={setSelectedArchiveId}
             />
           )}{" "}
+          {saveMode === 'server' && view === 'stable' && workspace && workspace.pagination.page < workspace.pagination.totalPages && (
+            <button disabled={busy || pending} onClick={() => void careerStore.loadMoreRetirements()} className="m-4 text-sm underline">이전 은퇴 기록 더 불러오기</button>
+          )}
           {view === "horse" && state.activeHorse && (
             <Horse
               setView={setView}
@@ -4677,6 +4706,7 @@ export default function App() {
           {view === "race" && <Race setView={setView} />}{" "}
           {view === "jockeys" && <Jockeys setView={setView} onSelect={setSelectedJockeyId} />}{" "}
           {view === "jockey" && <Jockey setView={setView} jockeyId={selectedJockeyId} horses={[...(state.activeHorse ? [state.activeHorse] : []), ...state.archive]} />}
+          </>}
         </main>
       </div>
     </div>
