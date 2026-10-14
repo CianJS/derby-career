@@ -119,8 +119,8 @@ test('restricted actions and transaction failures leave no partial action/receip
     await f.close()
   }
 })
-test('locked v1/v2 logs determine results; race completion cannot duplicate payout, history or month progression', async () => {
-  for (const engine of ['race-sim-v1', 'race-sim-v2'] as const) {
+test('locked v1/v2/v3 logs determine results; completion cannot duplicate payout, history or month progression', async () => {
+  for (const engine of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
     const f = await fixture()
     try {
       const { id } = await f.create()
@@ -232,6 +232,16 @@ test('locked v1/v2 logs determine results; race completion cannot duplicate payo
       assert.equal(again.statusCode, 200, again.body)
       assert.equal(again.json().career.funds, completed.json().career.funds)
       assert.equal(again.json().career.state.careerTurnIndex, 4)
+      assert.deepEqual(again.json().career, completed.json().career)
+      assert.deepEqual(
+        (
+          await f.db.query(
+            'SELECT chemistry,starts FROM jockey_chemistry WHERE horse_id=$1 AND jockey_id=$2',
+            [completed.json().career.ownedHorseId, entry.jockeyId],
+          )
+        ).rows,
+        [{ chemistry: 0, starts: 1 }],
+      )
       assert.equal((await f.call('GET', `/v1/careers/${id}/records`)).json().data.length, 1)
       assert.equal(
         (await f.db.query('SELECT * FROM stable_ledger WHERE race_run_id=$1', [entry.raceRunId]))

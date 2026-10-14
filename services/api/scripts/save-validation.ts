@@ -43,6 +43,13 @@ export async function generateSaveValidation() {
     'CareerResponse',
     'ActionResponse',
     'RetireCareerResponse',
+    'EnterRace',
+    'CompleteRace',
+    'RaceEntryOptions',
+    'RaceEntryResponse',
+    'RaceRunResponse',
+    'RaceLogResponse',
+    'RaceCompleteResponse',
   ]
   const ajv = new Ajv({
     strict: false,

@@ -9,11 +9,16 @@ import { readConfig } from '../src/config'
 import { embeddedDatabase } from './database'
 import type { Database } from '../src/db'
 export async function fixture(
-  options: { probability?: number; share?: number; db?: Database } = {},
+  options: {
+    probability?: number
+    share?: number
+    db?: Database
+    migrationsDirectory?: string
+  } = {},
 ) {
   const db = options.db ?? (await embeddedDatabase())
   try {
-    await migrate(db)
+    await migrate(db, options.migrationsDirectory)
     await seedDevelopmentCatalog(db)
   } catch (error) {
     await db.close()
@@ -52,7 +57,7 @@ export async function fixture(
     assert.equal(result.statusCode, 201, result.body)
     return { id, response: result.json() }
   }
-  return { db, app, call, create, user, other, close: () => app.close() }
+  return { db, app, config, call, create, user, other, close: () => app.close() }
 }
 export async function catalogSource(): Promise<{ rows: Record<string, string>[] }> {
   return JSON.parse(await readFile('seeds/events.import.json', 'utf8'))
