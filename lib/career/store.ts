@@ -23,6 +23,7 @@ import type { EventChoiceId } from './events/types'
 import { readCareer, writeCareer } from './repository'
 import { writeLifecycleSave } from './lifecycle-repository'
 import { startLocalCareer, retireLocalCareer } from './local-career'
+import type { LifecycleSave } from './lifecycle-save'
 import { BROWSER_SAVE_KEY, readBrowserSave, STORAGE_ACCESS_MESSAGE } from './browser-save'
 import { lockRaceEntryWithLog, type RaceEntryDraft } from './race-entry'
 import { readRaceLog, removeRaceLog, writeRaceLog } from './race-log-repository'
@@ -45,6 +46,7 @@ type Snapshot = {
   candidates: SaveSnapshot['candidates']
   localCareerId: string | null
 }
+type RetirementReceipt = { mode: 'local'; lifecycle: LifecycleSave } | { mode: 'server' }
 const initial: Snapshot = {
   ready: false,
   busy: false,
@@ -330,14 +332,22 @@ export const careerStore = {
     }
     return done
   },
-  release: async () => {
+  release: async (): Promise<RetirementReceipt | false> => {
     if (snapshot.mode === 'server') {
-      const career = activeServer()
-      return serverCommand({
-        kind: 'retire',
-        careerId: career.id,
-        body: { commandId: crypto.randomUUID(), expectedRevision: career.revision },
-      })
+      try {
+        const career = activeServer()
+        const saved = await serverCommand({
+          kind: 'retire',
+          careerId: career.id,
+          body: { commandId: crypto.randomUUID(), expectedRevision: career.revision },
+        })
+        return saved ? { mode: 'server' } : false
+      } catch (error) {
+        publish({
+          error: error instanceof Error ? error.message : '은퇴 기록을 저장하지 못했습니다.',
+        })
+        return false
+      }
     }
     if (snapshot.mode !== 'local' || snapshot.busy) {
       return false
@@ -345,7 +355,7 @@ export const careerStore = {
     const generation = modeGeneration
     publish({ busy: true, error: null })
     try {
-      await locked(() => {
+      const lifecycle = await locked(() => {
         if (modeGeneration !== generation || snapshot.mode !== 'local') {
           throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
         }
@@ -356,13 +366,13 @@ export const careerStore = {
         if (snapshot.localCareerId !== (readBrowserSave().localCareerId ?? null)) {
           throw new Error('다른 탭에서 육성마가 변경되었습니다. 다시 불러와 주세요.')
         }
-        retireLocalCareer(career)
+        return retireLocalCareer(career)
       })
       if (modeGeneration === generation) {
         publish({ career: null })
       }
       notify()
-      return true
+      return { mode: 'local', lifecycle }
     } catch (error) {
       if (modeGeneration === generation) {
         publish({ error: error instanceof Error ? error.message : '저장에 실패했습니다.' })

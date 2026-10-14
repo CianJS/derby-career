@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useTheme } from "next-themes";
 import { CareerCheckpoint } from "@/components/career/checkpoint";
+import { RetirementConfirm } from '@/components/career/retirement-confirm'
 import {
   RaceAction,
   RaceEntryWorkspace,
@@ -759,44 +760,6 @@ function CareerComplete({
         >
           Career Archive 보기
         </button>
-      </div>
-    </div>
-  );
-}
-function RetirementConfirm({
-  setView,
-  horse,
-  onConfirm,
-}: {
-  setView: (v: View) => void;
-  horse: CareerHorse;
-  onConfirm: () => void;
-}) {
-  const { busy, pending } = useCareer()
-  return (
-    <div className="lab-retirement flex min-h-[calc(100vh-57px)] items-center justify-center px-6 py-16">
-      <div className="w-full max-w-md border border-border bg-card p-7">
-        <p className="ui-label text-primary">RETIREMENT</p>
-        <h1 className="mt-3 font-serif text-3xl">은퇴하시겠습니까?</h1>
-        <p className="mt-5 text-sm leading-7 text-muted-foreground">
-          {horse.name}의 현재 커리어가 종료되고 기록은 마방 Career Archive에
-          저장됩니다. 은퇴 후에는 이 말을 다시 육성할 수 없습니다.
-        </p>
-        <div className="mt-8 flex gap-2">
-          <button
-            onClick={() => setView("horse")}
-            className="ui-secondary-control rounded-lg border border-border px-4 py-2 text-xs"
-          >
-            취소
-          </button>
-          <button
-            disabled={busy || pending}
-            onClick={onConfirm}
-            className="rounded-lg border border-rose/50 bg-rose/10 px-4 py-2 text-xs text-foreground"
-          >
-            은퇴 확정
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -4479,13 +4442,42 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
     setView("retirementConfirm");
   };
   const confirmRetire = async () => {
-    const horse = state.activeHorse;
-    if (!horse || !(await careerStore.release())) return;
-    if (saveMode === 'local') {
-      setState({ ...initialLifecycle, ...readLifecycle() })
+    if (!state.activeHorse) {
+      return
     }
-    setView("careerComplete");
-  };
+    const receipt = await careerStore.release()
+    if (!receipt) {
+      return
+    }
+    if (receipt.mode === 'local') {
+      setState({ ...initialLifecycle, ...receipt.lifecycle } as LifecycleState)
+    }
+    setView('careerComplete')
+  }
+  const refreshRetirement = async () => {
+    const retiringId = careerStore.getSnapshot().workspace?.career?.id
+    await careerStore.refresh()
+    const current = careerStore.getSnapshot()
+    if (saveMode === 'local' && current.ready && !current.busy && !current.error) {
+      try {
+        const saved = { ...initialLifecycle, ...readLifecycle() }
+        setState(saved)
+        if (!current.career && !saved.activeHorse) {
+          setView(saved.lastRetiredId ? 'careerComplete' : 'home')
+        }
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : '마방 기록을 읽지 못했습니다.')
+      }
+    }
+    if (
+      saveMode === 'server' &&
+      retiringId &&
+      !current.pending &&
+      current.workspace?.retirements.some((record) => record.careerId === retiringId)
+    ) {
+      setView('careerComplete')
+    }
+  }
   const startCandidates = () => {
     setState((current) => ({ ...current, lifecycleView: "candidates" }));
     setView("candidates");
@@ -4620,9 +4612,23 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           )}{" "}
           {view === "retirementConfirm" && state.activeHorse && (
             <RetirementConfirm
-              setView={setView}
-              horse={state.activeHorse}
+              horseName={state.activeHorse.name}
+              ready={ready}
+              busy={busy}
+              pending={pending}
+              error={error ?? saveError}
+              blockedReason={
+                career?.raceRun
+                  ? '확정한 경주를 완료한 뒤 은퇴해 주세요.'
+                  : career?.action && career.action.result === null
+                    ? '확정한 행동을 완료한 뒤 은퇴해 주세요.'
+                    : null
+              }
+              local={saveMode === 'local'}
+              onCancel={() => setView('horse')}
               onConfirm={confirmRetire}
+              onRefresh={() => void refreshRetirement()}
+              onContinue={() => setView(career?.raceRun ? 'raceplay' : 'training')}
             />
           )}{" "}
           {view === "home" && (

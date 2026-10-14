@@ -16,7 +16,7 @@ export function startLocalCareer(horseId: string, current: Career | null): Caree
   assertLifecycleSave(lifecycle)
   return { ...next, calendarDate: { year: lifecycle.year ?? 2028, month: lifecycle.month ?? 4 } }
 }
-export function retireLocalCareer(career: Career): void {
+export function retireLocalCareer(career: Career) {
   if (career.raceRun) {
     throw new Error('확정한 경주를 완료한 뒤 은퇴해 주세요.')
   }
@@ -38,4 +38,5 @@ export function retireLocalCareer(career: Career): void {
   const retired = archiveActiveHorse(projected, career.horse.id, crypto.randomUUID())
   // The archive and retirement tombstone are durable together or neither is changed.
   writeBrowserSave({ career: null, lifecycle: retired })
+  return retired
 }

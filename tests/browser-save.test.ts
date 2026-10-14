@@ -218,6 +218,103 @@ test('retirement is one atomic write; failed archive save retains active career'
   assert.deepEqual(january.calendarDate, { year: 2031, month: 1 })
 })
 
+test('store retirement returns the committed archive and survives reload and repeated confirmation', async () => {
+  const career = resolveAction(commitAction(startCareer('DEV_HORSE_RED_COMET'), 'speed'))
+  await storeFixture(career)
+  const receipt = await careerStore.release()
+  assert.ok(receipt && receipt.mode === 'local')
+  const retired = receipt.lifecycle
+  assert.equal(retired.activeHorse, null)
+  assert.equal(retired.lifecycleView, 'careerComplete')
+  assert.equal(retired.archive!.length, 3)
+  assert.equal(retired.archive![0].id, retired.lastRetiredId)
+  assert.equal(retired.archive![0].name, career.horse.name)
+  assert.equal(
+    retired.archive![0].stats.find(([label]) => label === '속도')![1],
+    career.values.speed,
+  )
+  assert.deepEqual(readBrowserSave().lifecycle, JSON.parse(JSON.stringify(retired)))
+  assert.equal(careerStore.getSnapshot().career, null)
+  assert.equal(careerStore.getSnapshot().busy, false)
+  assert.equal(careerStore.getSnapshot().error, null)
+  const committed = readBrowserSave()
+  assert.equal(await careerStore.release(), false)
+  assert.deepEqual(readBrowserSave(), committed)
+  await careerStore.refresh()
+  assert.equal(careerStore.getSnapshot().career, null)
+  assert.equal(await careerStore.select(career.horse.id), true)
+  assert.deepEqual(readCareer()!.calendarDate, career.calendarDate)
+  assert.deepEqual(readBrowserSave().lifecycle!.archive, committed.lifecycle!.archive)
+})
+
+test('failed store retirement is visible and retry archives exactly once', async () => {
+  const storage = await storeFixture()
+  const previous = storage.data.get(BROWSER_SAVE_KEY)
+  storage.rejectWrites(true)
+  assert.equal(await careerStore.release(), false)
+  assert.match(careerStore.getSnapshot().error!, /저장 공간/)
+  assert.equal(careerStore.getSnapshot().busy, false)
+  assert.ok(careerStore.getSnapshot().career)
+  assert.equal(storage.data.get(BROWSER_SAVE_KEY), previous)
+  storage.rejectWrites(false)
+  const receipt = await careerStore.release()
+  assert.ok(receipt && receipt.mode === 'local')
+  assert.equal(receipt.lifecycle.archive!.length, 3)
+  assert.equal(careerStore.getSnapshot().error, null)
+})
+
+test('durable retirement supplies completion data even when subsequent storage reads are denied', async () => {
+  const storage = await storeFixture(startCareer('DEV_HORSE_RED_COMET'))
+  const getItem = storage.target.getItem
+  let denyReads = false
+  storage.target.getItem = (key) => {
+    if (denyReads) {
+      throw new DOMException('Blocked', 'SecurityError')
+    }
+    const value = getItem(key)
+    if (key === BROWSER_SAVE_KEY && value && JSON.parse(value).career === null) {
+      // The atomic write's verification succeeds; a new UI read would now fail.
+      denyReads = true
+    }
+    return value
+  }
+  const receipt = await careerStore.release()
+  assert.ok(receipt && receipt.mode === 'local')
+  assert.equal(receipt.lifecycle.activeHorse, null)
+  assert.equal(receipt.lifecycle.archive![0].name, '레드 코멧')
+  assert.equal(careerStore.getSnapshot().error, null)
+  assert.throws(() => readLifecycleSave(), /저장소/)
+  const persisted = JSON.parse(storage.data.get(BROWSER_SAVE_KEY)!)
+  assert.equal(persisted.lifecycle.lastRetiredId, receipt.lifecycle.lastRetiredId)
+})
+
+test('simultaneous retirement confirmations commit only one archive snapshot', async () => {
+  await storeFixture()
+  let unlock!: () => void
+  const gate = new Promise<void>((resolve) => {
+    unlock = resolve
+  })
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: {
+      locks: {
+        request: async (_name: string, callback: () => unknown) => {
+          await gate
+          return callback()
+        },
+      },
+    },
+  })
+  const first = careerStore.release()
+  assert.equal(careerStore.getSnapshot().busy, true)
+  assert.equal(await careerStore.release(), false)
+  unlock()
+  const receipt = await first
+  assert.ok(receipt && receipt.mode === 'local')
+  assert.equal(readBrowserSave().lifecycle!.archive!.length, 3)
+  assert.equal(careerStore.getSnapshot().busy, false)
+})
+
 test('career-only saves can retire, and large archives reload beyond legacy cookie limits', () => {
   const storage = browserStorage()
   writeCareer(base())
@@ -326,6 +423,8 @@ test('queued local retirement cannot execute or overwrite state after switching 
     assert.equal(await pending, false)
     await careerStore.refresh()
     assert.equal(careerStore.getSnapshot().mode, 'server')
+    assert.equal(await careerStore.release(), false)
+    assert.match(careerStore.getSnapshot().error!, /서버 육성 기록/)
     assert.equal(storage.data.get(BROWSER_SAVE_KEY), previous)
   } finally {
     globalThis.fetch = previousFetch
@@ -344,6 +443,22 @@ test('locked race and unresolved action cannot retire; active career cannot be r
   assert.throws(() => retireLocalCareer(commitAction(base(), 'speed')), /행동/)
   assert.throws(() => startLocalCareer('DEV_HORSE_RED_COMET', racing), /은퇴/)
   assert.equal(storage.data.get(BROWSER_SAVE_KEY), previous)
+})
+
+test('store retirement waits for locked race completion and archives its exact result', async () => {
+  const fixture = buildFixture('playback-12')
+  const storage = await storeFixture(fixture.career!)
+  const previous = storage.data.get(BROWSER_SAVE_KEY)
+  assert.equal(await careerStore.release(), false)
+  assert.match(careerStore.getSnapshot().error!, /확정한 경주를 완료/)
+  assert.equal(storage.data.get(BROWSER_SAVE_KEY), previous)
+  assert.equal(await careerStore.completeRace(fixture.log!.raceRunId, fixture.log!.result), true)
+  const completed = readCareer()!
+  const receipt = await careerStore.release()
+  assert.ok(receipt && receipt.mode === 'local')
+  assert.deepEqual(receipt.lifecycle.archive![0].raceRecords, completed.raceRecords)
+  assert.equal(receipt.lifecycle.archive![0].prize, completed.prize)
+  assert.equal(readCareer(), null)
 })
 
 test('stale lifecycle metadata cannot erase retirement or overwrite authoritative horse growth', () => {
