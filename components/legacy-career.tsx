@@ -4416,10 +4416,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [restoredServerView, setRestoredServerView] = useState(false)
   useEffect(() => {
     if (saveMode !== 'server') { setRestoredServerView(false); return }
-    if (!ready || busy || pending || restoredServerView) return
+    if (!ready || busy || pending || error || !workspace || restoredServerView) return
     setRestoredServerView(true)
     if (career?.raceRun) setView('raceplay')
-  }, [saveMode, ready, busy, pending, restoredServerView, career])
+  }, [saveMode, ready, busy, pending, error, workspace, restoredServerView, career])
   useEffect(() => {
     if (saveMode === 'local' && hydrated && career) setState((current) => applyCareer(current, career));
   }, [career, hydrated, saveMode]);
