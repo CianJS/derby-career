@@ -34,6 +34,8 @@ export const FRONTEND_FILES = [
   'lib/career/lifecycle-repository.ts',
   'lib/career/race-log-repository.ts',
   'tests/browser-save.test.ts',
+  'components/career/retirement-confirm.tsx',
+  'tests/retirement-confirm.test.ts',
   'tests/game-invariants.test.ts',
   'tests/helpers/**/*.ts',
   'tests/career.test.ts',
