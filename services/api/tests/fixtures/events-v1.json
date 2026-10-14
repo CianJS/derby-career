@@ -1,0 +1,14 @@
+{
+  "baselineCommit": "07acf54ba440654ab37240f9f58d8c40572271da",
+  "catalogSha256": "51e205b4d5da98e340cf0a879b824218143c6ecba33720b35b191a2f133835f8",
+  "sourceSha256": "0e36db16ed26458a0f1cd016ed71bf4a107aebec77a8b854e49a1cf307e52222",
+  "total": 350,
+  "enabled": 315,
+  "directorConfig": {
+    "version": "event-director-v1",
+    "monthlyProbability": 0.3,
+    "pityAfterMisses": 3,
+    "monthStartShare": 0.5
+  },
+  "regressionDigest": "8397d7e9d0bf33c8a5c116f91f704b8a64785ada6f7a8b6cc3d0ff00c6fad873"
+}

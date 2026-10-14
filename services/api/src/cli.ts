@@ -3,7 +3,7 @@ import { readConfig } from './config'
 import { postgresDatabase } from './db'
 import { migrate } from './services/migrations'
 import { seedDevelopmentCatalog } from './services/seed'
-import { importEvents, readEventSource } from './modules/events/import'
+import { importEvents, importEventDrafts, readEventSource } from './modules/events/import'
 import { createDevelopmentSession, revokeSession } from './modules/auth/sessions'
 const config = readConfig()
 const db = postgresDatabase(config.databaseUrl)
@@ -33,6 +33,15 @@ try {
       )
       break
     }
+    case 'import-event-drafts': {
+      if (!args[0]) {
+        throw new Error('A preflight draft packet file is required')
+      }
+      console.log(
+        JSON.stringify(await importEventDrafts(db, JSON.parse(await readFile(args[0], 'utf8')))),
+      )
+      break
+    }
     case 'session-create':
       if (config.authMode !== 'dev-session' || config.nodeEnv === 'production') {
         throw new Error('Set AUTH_MODE=dev-session for a local development session')
@@ -55,7 +64,7 @@ try {
       break
     default:
       throw new Error(
-        'Commands: migrate, seed, import-events [file], session-create [subject] [ttlHours], session-revoke',
+        'Commands: migrate, seed, import-events [file], import-event-drafts <file>, session-create [subject] [ttlHours], session-revoke',
       )
   }
 } finally {

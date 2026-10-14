@@ -24,7 +24,9 @@
     "session:create": "node --env-file-if-exists=.env --import tsx src/cli.ts session-create",
     "session:revoke": "node --env-file-if-exists=.env --import tsx src/cli.ts session-revoke",
     "contract:generate": "node --import tsx scripts/generate-api-types.ts && node --import tsx scripts/generate-event-validation.ts && node --import tsx scripts/generate-save-validation.ts",
-    "contract:check": "node --import tsx scripts/check-contract.ts"
+    "contract:check": "node --import tsx scripts/check-contract.ts",
+    "events:check": "node --import tsx scripts/preflight-events.ts",
+    "events:import-drafts": "node --env-file-if-exists=.env --import tsx src/cli.ts import-event-drafts"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",

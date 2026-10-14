@@ -33,6 +33,12 @@ docker build -f services/api/Dockerfile -t derby-career-api .
 
 실행 컨테이너에 `DATABASE_URL`을 전달하고, 실행 전 별도 작업으로 `node dist/cli.js migrate`를 적용한다. 서버는 자동 마이그레이션·자동 seed를 하지 않는다. `AUTH_MODE=disabled`인 운영 이미지에서는 공개 카탈로그만 제공한다.
 
+## 이벤트 확장 사전 검증
+
+신규 Notion 650개는 `seeds/events.drafts.import.json`의 공개 게임 속성으로만 보존한다. `npm run events:check -- <input> <report.json> <drafts.json>`은 조건·효과를 독립 검사하고 실행 내용이 없는 비활성 packet을 만든다. 기존 공통 350개는 기본 Seed에 그대로 남으며 신규 packet은 일반 `events:import`와 `db:seed`로 적용되지 않는다.
+
+격리 packet의 명시적 DB 적용은 `npm run events:import-drafts -- <drafts.json>`이다. 활성화·기존 검토 완료 이벤트 덮어쓰기·잘못된 체크섬을 거부하며 같은 원본을 여러 번 적용해도 중복 생성하지 않는다. HTTP/OpenAPI·게임 계산·발생 확률은 변경하지 않는다. [검사/가져오기 절차](seeds/README.md)와 [실제 검토 결과 및 미검증 범위](reports/event-catalog-expansion.md)를 따른다.
+
 ## 인증과 저장 권한
 
 기본 `.env`의 `AUTH_MODE=disabled`에서는 모든 Career API가 `503 AUTH_NOT_CONFIGURED`를 반환한다. Career 조회도 소유자 인증이 필요하며 공개되지 않는다.
