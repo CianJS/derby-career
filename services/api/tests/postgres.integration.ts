@@ -82,6 +82,7 @@ test('real PostgreSQL row locks serialize concurrent monthly actions and race pa
       assert.deepEqual(r.json(), entered[0].json())
     }
     const run = await f.call('GET', `/v1/careers/${id}/race-runs/${entry.raceRunId}`)
+    assert.equal(run.json().metadata.engineVersion, 'race-sim-v3')
     const completed = await Promise.all(
       Array.from({ length: 8 }, () =>
         f.call('POST', `/v1/careers/${id}/race-runs/${entry.raceRunId}/complete`, {
@@ -99,6 +100,16 @@ test('real PostgreSQL row locks serialize concurrent monthly actions and race pa
       ),
     )
     assert.ok(completed.every((r) => r.json().career.state.careerTurnIndex === 4))
+    for (const response of completed) {
+      assert.deepEqual(response.json().career, completed[0].json().career)
+    }
+    const relation = (
+      await f.db.query('SELECT starts FROM jockey_chemistry WHERE horse_id=$1 AND jockey_id=$2', [
+        completed[0].json().career.ownedHorseId,
+        entry.jockeyId,
+      ])
+    ).rows[0]
+    assert.equal(relation.starts, 1)
     assert.equal(
       Number(
         (

@@ -57,7 +57,8 @@ for (const version of ['race-sim-v1', 'race-sim-v2'] as const) {
       throw new Error('must not read local')
     })
     const data = await adapter.load(career, 'server-career')
-    assert.deepEqual(data.log, log)
+    // The server returns persisted JSON, where a rounded -0 is represented as 0.
+    assert.equal(JSON.stringify(data.log), JSON.stringify(log))
     assert.equal(calls.length, 2)
     await assert.rejects(adapter.load(career), /서버 육성/)
   })

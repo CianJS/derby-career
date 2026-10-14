@@ -91,7 +91,7 @@ const page = await events.list({ category: 'common', enabled: true, page: 1, pag
 const detail = await events.detail('COM-0001')
 ```
 
-`createApiClient`에는 권한이 있는 Career 메서드도 있다. 서버 Career를 선택한 화면은 반환된 `career.state`만 표시·사용해야 한다. Local Save와 서버 상태를 병행 계산·동시 authoritative 저장으로 사용하지 않는다. Adapter는 local storage, cookie, 기존 브라우저 저장을 읽거나 수정하지 않는다. 운영 호출은 `getSessionToken`에서 공급자의 최신 API 전용 JWT를 반환한다. 로컬 서버 저장 모드는 Next 서버의 기존 dev-session으로 연결한다. 운영 로그인 공급자·토큰 갱신·저장 이관·v3 계약은 별도 범위이며, 운영 bridge로 개발 세션을 노출하지 않는다.
+`createApiClient`에는 권한이 있는 Career 메서드도 있다. 서버 Career를 선택한 화면은 반환된 `career.state`만 표시·사용해야 한다. Local Save와 서버 상태를 병행 계산·동시 authoritative 저장으로 사용하지 않는다. Adapter는 local storage, cookie, 기존 브라우저 저장을 읽거나 수정하지 않는다. 운영 호출은 `getSessionToken`에서 공급자의 최신 API 전용 JWT를 반환한다. 로컬 서버 저장 모드는 Next 서버의 기존 dev-session으로 연결한다. 운영 로그인 공급자·토큰 갱신·저장 이관·Frontend 경주 bridge와 화면 연동은 별도 범위이며, 운영 bridge로 개발 세션을 노출하지 않는다.
 
 `GET /v1/careers/workspace?page=1&pageSize=20`은 인증된 소유자의 현재 마방 자금/세계 날짜, 활성 Career 또는 null, 현재 월의 `confirmedActionId` UUID, 페이지 단위 은퇴 snapshot과 pagination을 일관된 읽기 transaction으로 반환한다. 활성 말이 없어도 마방과 은퇴 기록을 복원할 수 있다. 은퇴 snapshot의 자금/날짜는 당시 값을 유지하고 마방 자금은 현재 값이다. 조회는 캐시하지 않는다.
 
@@ -107,6 +107,26 @@ const detail = await events.detail('COM-0001')
 | 수동 은퇴           | `commandId`                      | 같은 ID·본문만 최초 응답 재생, 다른 요청은 409 |
 
 API `actionId`는 UUID이며 `career.state.action.actionId`의 기존 도메인 문자열과 다르다. 다음 월 요청에는 행동 API가 반환한 UUID를 사용한다. 생성형 AI 호출, 클라이언트 state/result/seed 업로드, 결과 재추첨 API는 없다. 재시도에는 최초 요청 ID와 본문을 그대로 유지하고 현재 상태는 GET으로 다시 조회한다.
+
+## 서버 레이스
+
+신규 출전은 기존 공유 `simulateRace`를 통해 `lib/career/race-sim-v3.ts`를 사용한다. 엔진을 생략하면 **v3**이며, `engineVersion: 'race-sim-v1'` 또는 `'race-sim-v2'`도 계속 지원한다. 적용 전 `npm run db:migrate`로 **004 migration**을 실행한다. `/health/ready`는 이 migration까지 요구하며, 기존 001~003의 체크섬과 저장 기록은 변경하지 않는다.
+
+| 메서드와 경로                                                | 공유 클라이언트       | 반환 데이터                                                                                             |
+| ------------------------------------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------- |
+| `GET /v1/careers/{careerId}/race-entries`                    | `getRaceEntryOptions` | 현재 Career, 기본 엔진, 현재 월 DB 경주별 `eligible`/`restrictionReason`, 계약 기수의 현재 호흡도, 전술 |
+| `POST /v1/careers/{careerId}/race-entries`                   | `enterRace`           | 잠긴 `raceRunId`와 Career                                                                               |
+| `GET /v1/careers/{careerId}/race-runs/{raceRunId}`           | `getRaceRun`          | RaceRun, 출전 당시 건강, 엔진·digest·로그 크기 metadata                                                 |
+| `GET /v1/careers/{careerId}/race-runs/{raceRunId}/log`       | `getRaceLog`          | 원본 Simulation Log와 최종 결과                                                                         |
+| `POST /v1/careers/{careerId}/race-runs/{raceRunId}/complete` | `completeRace`        | 저장된 최종 결과와 경주 후 Career                                                                       |
+
+출전 조회는 상태·Seed를 만들지 않는다. 전체 `restrictionReason`과 각 경주의 `eligible`을 확인하고, 조회된 계약 기수와 전술 중에서 선택한다. 출전 본문은 `{ raceRunId, raceDefinitionId, jockeyId, tactic, expectedTurn, engineVersion? }`이며 `expectedTurn`은 조회된 `career.state.careerTurnIndex`다. 서버는 확정 시 다시 검증한다. 확정 후 다른 Race/Jockey/Tactic/Engine Version이나 새로운 RaceRun ID로 같은 달 출전을 요청하면 409다. 클라이언트 Seed/Snapshot/결과 업로드는 400이다.
+
+Run의 `engineVersion: 'entry-contract-v1'`은 **입력 계약 버전**이다. 실제 시뮬레이션 버전은 `raceRun.simulation.engineVersion`, metadata 및 Log의 `engineVersion`에 있다. 재생에 사용하는 `RaceRunInput`/`RaceSimulationLog` 구조는 유지한다. 생성 타입은 기존 OpenAPI의 길이 제약을 반영해 적성 쌍을 `[string, string]`으로 생성하므로 게임 타입에 직접 전달할 수 있다. `save-validation.mjs`의 `validateEnterRace`, `validateCompleteRace`, `validateRaceEntryOptions`, `validateRaceEntryResponse`, `validateRaceRunResponse`, `validateRaceLogResponse`, `validateRaceCompleteResponse`로 외부 JSON을 검사한다.
+
+완료 본문은 `{ commandId }`다. 완료는 저장된 결과로 전적·상금·건강 변화·기승 횟수를 한 번 반영하고 **다음 월까지 진행**한다. 이후 `months/advance`를 추가 호출하지 않는다. 같은 완료 ID는 최초 receipt를 반환하고, 새 완료 ID로 이미 끝난 경주를 요청하면 저장 결과와 현재 Career를 반환한다. 예전 출전·완료 receipt의 Career는 당시 상태이므로 화면 복원에는 최신 `getCareerWorkspace`를 사용한다. 재시도는 ID와 본문을 그대로 유지하며, 과거에 엔진을 생략한 요청에는 새 엔진 필드를 추가하지 않는다.
+
+Frontend의 서버 저장 controller/journal, Next bridge의 경주 경로 및 Playback의 서버 Log 로딩은 Frontend Work에서 연결해야 한다. 이 PR은 기존 `ServerSaveCommand`의 종류나 브라우저 저장을 바꾸지 않는다. 유료 출전, 호흡도 성장 및 정식 경주/후보 데이터는 기존 제한을 유지한다.
 
 ## 서버 은퇴
 
@@ -128,7 +148,7 @@ Career의 `state`는 기존 순수 도메인이 사용하는 authoritative aggre
 
 `packages/shared/src/domain.ts`는 `lib/career`의 기존 순수 함수만 재내보낸다. `server-domain.ts`는 이 함수들을 사용하면서 브라우저 fixture 이벤트를 등록하지 않는다. 서버 이벤트의 행동 보정도 이 순수 함수의 0/1000 제한 전에 적용하며, 제한된 결과에서 기본 성장·회복량을 역산하지 않는다. 서버 이벤트는 별도 envelope/DB로만 관리하고, 성장·치료·회복·기본 이벤트 성장/비용 계산은 최신 공유 함수로 처리한다. 서버용 계산 사본이나 새로운 v3 엔진을 작성하지 않았다.
 
-기준 브랜치 최신 `8430c1a`에는 v0가 추가한 v3 기본 엔진·건강 회복·Local 이벤트가 있다. 이번 API의 기본 엔진은 요청 범위에 맞춰 **`race-sim-v2`로 명시 고정**하며 v1도 지원한다. 기존 frontend 기본 v3를 변경하지 않고, API에서 v3 요청은 거부한다. 이 차이는 전체 서버 전환 전에 조율해야 한다. 로그는 v1/v2 해시 호환성을 위해 **원본 JSON 문자열과 JSONB**를 함께 저장하고 원본 필드 순서로 반환한다. 저장 결과는 재시뮬레이션하지 않는다.
+API와 Frontend의 신규 경주는 기존 공유 **`race-sim-v3`**를 사용한다. v1/v2 계산 및 로그도 유지하며, 엔진의 밸런스 수치와 계산식은 변경하지 않는다. 로그는 모든 버전에서 **원본 JSON 문자열과 JSONB**를 함께 저장하고 원본 필드 순서로 반환한다. 새로고침·재요청·완료와 DB 카탈로그 변경에서 저장 결과를 재시뮬레이션하지 않는다.
 
 건강은 공유 `health.ts`의 정상·경상·중등도 부상 및 기존 별칭을 지원하고 중상·중증을 차단한다. 실제 건강과 `healthRecovery`를 Snapshot 및 응답에 보존한다. 최신 v0의 회복·경주 후 건강 규칙은 공유 `BALANCE.health`와 순수 함수를 사용하며 서버가 별도 부상 배율·악화 확률을 추가하지 않는다. v1.4 문서와 현재 playable의 세부 수치 차이는 별도 밸런스 조율이 필요하다. 유료 등록비 출전 제한, 후보 fixture, age 갱신 방식, 운영 후보 생성은 후속 공유 도메인 작업이다. 경주 상금은 저장된 Log 그대로 마방/말 기록에 한 번만 반영하며 호흡도 성장 규칙을 임의로 추가하지 않는다.
 

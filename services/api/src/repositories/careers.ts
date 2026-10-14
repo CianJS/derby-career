@@ -19,6 +19,7 @@ import {
   simulateRace,
   summarizeRaceLog,
   raceLogDigest,
+  tactics,
   type Career,
   type Choice,
   type RaceDefinitionSnapshot,
@@ -728,30 +729,79 @@ export class CareerRepository {
       return { career: await this.dto(tx, row) }
     })
   }
-  async enterRace(
-    owner: string,
-    id: string,
-    body: {
-      raceRunId: string
-      raceDefinitionId: string
-      jockeyId: string
-      tactic: '도주' | '선행' | '선입' | '추입'
-      expectedTurn: number
-      engineVersion?: 'race-sim-v1' | 'race-sim-v2'
-    },
-  ) {
+  private raceEntryRestriction(row: Row, history?: History) {
+    if (row.status !== 'active') {
+      return conflict('종료된 Career는 수정할 수 없습니다.')
+    }
+    if (row.state.action || row.state.raceRun) {
+      return conflict('이번 월 행동이 이미 확정되었습니다.')
+    }
+    if (history?.state === 'pending') {
+      return conflict('월간 이벤트 선택을 먼저 확정해 주세요.')
+    }
+    if (!raceHealthAllowed(row.state.health)) {
+      return new ApiError(
+        422,
+        'RACE_RESTRICTED',
+        '중상 또는 확인되지 않은 건강 상태에서는 출전할 수 없습니다.',
+      )
+    }
+    return null
+  }
+  async raceEntryOptions(owner: string, id: string) {
+    return this.db.transaction(async (tx) => {
+      await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+      const row = await this.row(tx, owner, id)
+      const history = await this.history(tx, row)
+      const definitions = (
+        await tx.query<{
+          payload: RaceDefinitionSnapshot
+          source_kind: components['schemas']['RaceCatalog']['data'][number]['sourceKind']
+        }>(
+          "SELECT payload,source_kind FROM race_definitions WHERE (payload->>'month')::integer=$1 ORDER BY id",
+          [row.turn],
+        )
+      ).rows
+      const jockeys = (
+        await tx.query<{ payload: JockeySnapshot; chemistry: number }>(
+          'SELECT j.payload,COALESCE(c.chemistry,0) AS chemistry FROM jockey_definitions j LEFT JOIN jockey_chemistry c ON c.jockey_id=j.id AND c.horse_id=$1 WHERE j.id=ANY($2::text[]) ORDER BY j.id',
+          [row.horse_id, row.state.contractedJockeyIds],
+        )
+      ).rows.map(({ payload, chemistry }) => ({ ...payload, chemistry }))
+      const restrictionReason =
+        this.raceEntryRestriction(row, history)?.message ??
+        (!definitions.length
+          ? '현재 월에 출전할 수 있는 경주가 없습니다.'
+          : !jockeys.length
+            ? '계약 기수 중에서 선택해 주세요.'
+            : null)
+      return {
+        career: await this.dto(tx, row),
+        defaultEngineVersion: API_RACE_ENGINE_VERSION,
+        restrictionReason,
+        races: definitions.map(({ payload, source_kind }) => {
+          const reason = restrictionReason ?? raceEligibility(row.state, payload)
+          return {
+            definition: payload,
+            sourceKind: source_kind,
+            eligible: reason === null,
+            restrictionReason: reason,
+          }
+        }),
+        jockeys,
+        tactics,
+      }
+    })
+  }
+  async enterRace(owner: string, id: string, body: components['schemas']['EnterRace']) {
     return this.command(owner, body.raceRunId, 'race.enter', body, id, async (tx) => {
       const row = await this.row(tx, owner, id, true)
-      this.active(row)
-      if (row.turn !== body.expectedTurn || row.state.action || row.state.raceRun) {
+      if (row.turn !== body.expectedTurn) {
         throw conflict('이번 월 행동이 이미 확정되었거나 월이 변경되었습니다.')
       }
-      if (!raceHealthAllowed(row.state.health)) {
-        throw new ApiError(
-          422,
-          'RACE_RESTRICTED',
-          '중상 또는 확인되지 않은 건강 상태에서는 출전할 수 없습니다.',
-        )
+      const restriction = this.raceEntryRestriction(row, await this.history(tx, row))
+      if (restriction) {
+        throw restriction
       }
       if (!row.state.contractedJockeyIds.includes(body.jockeyId)) {
         throw new ApiError(422, 'RACE_RESTRICTED', '계약 기수 중에서 선택해 주세요.')

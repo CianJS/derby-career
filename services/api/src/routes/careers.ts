@@ -31,7 +31,7 @@ export function careerRoutes(
           request,
           (request as FastifyRequest & { principalId: string }).principalId,
         )
-        // Preserve the existing v1/v2 JSON.stringify digest byte order on log responses.
+        // Preserve the stored JSON.stringify digest byte order for every engine version.
         if (path.endsWith('/log')) {
           reply.serializer(JSON.stringify)
         }
@@ -85,6 +85,9 @@ export function careerRoutes(
     const p = r.query as Page
     return careers.records(o, (r.params as Params).careerId, p.page, p.pageSize)
   })
+  register('GET', '/v1/careers/{careerId}/race-entries', (r, o) =>
+    careers.raceEntryOptions(o, (r.params as Params).careerId),
+  )
   register('POST', '/v1/careers/{careerId}/race-entries', (r, o) =>
     careers.enterRace(o, (r.params as Params).careerId, r.body as Models['EnterRace']),
   )

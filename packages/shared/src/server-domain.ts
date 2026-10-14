@@ -13,7 +13,7 @@ import { createEventCatalog } from '../../../lib/career/events/repository'
 // The API persists full Notion event snapshots in DB. Keep the browser fixture Director unenrolled.
 // This only selects the persistence/event authority; growth, treatment and aftermath use shared functions.
 const noBrowserEvents = createEventCatalog([])
-export const API_RACE_ENGINE_VERSION = 'race-sim-v2' as const
+export const API_RACE_ENGINE_VERSION = 'race-sim-v3' as const
 export function withoutBrowserEvents(state: Career): Career {
   const next = { ...state }
   delete next.event

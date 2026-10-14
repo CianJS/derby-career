@@ -304,11 +304,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * 현재 Career의 출전 조건과 계약 기수 조회
+         * @description 소유자 범위의 일관된 읽기. 현재 육성 월의 DB 경주와 제한 사유, 실제 계약 기수의 현재 호흡도, 전술 목록을 반환한다. 조회는 Seed나 Snapshot을 만들거나 행동을 확정하지 않는다. restrictionReason이 null이어도 개별 경주의 eligible을 확인해야 한다.
+         */
+        get: operations["getRaceEntryOptions"];
         put?: never;
         /**
          * confirmRaceEntry
-         * @description 계약 기수, 현재 월 및 전적 검증. 공유 health 규칙의 정상/경상/중등도 부상은 허용하고 중상은 차단. 현재 건강 및 healthRecovery를 Snapshot과 healthAtEntry로 보존. v1/v2만 허용하며 frontend 기본 v3로 자동 전환하지 않음. 유료 등록비 제한은 현재 공유 playable 코드를 유지.
+         * @description 계약 기수, 현재 월 및 전적 검증. 공유 health 규칙의 정상/경상/중등도 부상은 허용하고 중상은 차단. 현재 건강 및 healthRecovery를 Snapshot과 healthAtEntry로 보존. 엔진 생략 시 공유 v3를 사용하며 v1/v2 지정 요청도 지원. 동일 ID와 최초 본문 재시도는 당시 저장된 응답만 반환하고 Seed와 로그를 재생성하지 않는다. 유료 등록비 제한은 현재 공유 playable 코드를 유지.
          */
         post: operations["confirmRaceEntry"];
         delete?: never;
@@ -398,7 +402,10 @@ export interface components {
             guts: number;
             intelligence: number;
         };
-        Aptitudes: string[][];
+        Aptitudes: [
+            string,
+            string
+        ][];
         HorseDefinition: {
             id: string;
             name: string;
@@ -608,7 +615,7 @@ export interface components {
         };
         RaceSimulationSummary: {
             /** @enum {string} */
-            engineVersion: "race-sim-v1" | "race-sim-v2";
+            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
             digest: string;
             durationMs: number;
             result: components["schemas"]["RaceSimulationResult"];
@@ -804,8 +811,26 @@ export interface components {
             /** @enum {string} */
             tactic: "도주" | "선행" | "선입" | "추입";
             expectedTurn: number;
+            /**
+             * @description 생략 시 race-sim-v3. 과거 요청 재시도에서는 생략 여부도 최초 본문과 같게 유지한다.
+             * @enum {string}
+             */
+            engineVersion?: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
+        };
+        RaceEntryOptions: {
+            career: components["schemas"]["Career"];
             /** @enum {string} */
-            engineVersion?: "race-sim-v1" | "race-sim-v2";
+            defaultEngineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
+            restrictionReason: string | null;
+            races: {
+                /** @enum {string} */
+                sourceKind: "development_fixture" | "catalog";
+                definition: components["schemas"]["RaceDefinition"];
+                eligible: boolean;
+                restrictionReason: string | null;
+            }[];
+            jockeys: components["schemas"]["JockeyDefinition"][];
+            tactics: ("도주" | "선행" | "선입" | "추입")[];
         };
         RaceEntryResponse: {
             /** Format: uuid */
@@ -824,7 +849,7 @@ export interface components {
         };
         RaceLogMetadata: {
             /** @enum {string} */
-            engineVersion: "race-sim-v1" | "race-sim-v2";
+            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
             digest: string;
             durationMs: number;
             byteLength: number;
@@ -875,7 +900,7 @@ export interface components {
         RaceSimulationLog: {
             raceRunId: string;
             /** @enum {string} */
-            engineVersion: "race-sim-v1" | "race-sim-v2";
+            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
             seed: string;
             raceDistance: number;
             durationMs: number;
@@ -1643,6 +1668,35 @@ export interface operations {
             413: components["responses"]["ApiError"];
             415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    getRaceEntryOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                careerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RaceEntryOptions"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
             503: components["responses"]["ApiError"];
