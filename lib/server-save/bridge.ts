@@ -1,7 +1,10 @@
-import { validateRaceReadResponse } from './race-read-validation'
-import type { components } from '../../packages/shared/src/generated/api'
+import { validateSaveCommand, type SaveCommand } from './commands'
 import {
-  validateServerSaveCommand,
+  validateRaceEntryOptions,
+  validateRaceEntryResponse,
+  validateRaceCompleteResponse,
+  validateRaceRunResponse,
+  validateRaceLogResponse,
   validateCareerWorkspace,
   validateHorseCatalog,
   validateActionResponse,
@@ -38,13 +41,20 @@ const reply = (status: number, message: string) =>
     { status, headers: { 'Cache-Control': 'no-store' } },
   )
 const uuid = '[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}'
-function commandFor(
-  path: string,
-  body: unknown,
-): components['schemas']['ServerSaveCommand'] | null {
+function commandFor(path: string, body: unknown): SaveCommand | null {
   if (path === '/v1/careers') {
     const value = { kind: 'create', body }
-    return validateServerSaveCommand(value) ? value : null
+    return validateSaveCommand(value) ? value : null
+  }
+  const raceMatch = new RegExp(
+    `^/v1/careers/(${uuid})/(race-entries|race-runs/(${uuid})/complete)$`,
+  ).exec(path)
+  if (raceMatch) {
+    const value =
+      raceMatch[2] === 'race-entries'
+        ? { kind: 'race-entry', careerId: raceMatch[1], body }
+        : { kind: 'race-complete', careerId: raceMatch[1], raceRunId: raceMatch[3], body }
+    return validateSaveCommand(value) ? value : null
   }
   const match = new RegExp(
     `^/v1/careers/(${uuid})/(actions|months/advance|retirement|events/(${uuid})/choice)$`,
@@ -66,7 +76,7 @@ function commandFor(
     body,
     ...(kind === 'event' ? { historyId: match[3] } : {}),
   }
-  return validateServerSaveCommand(value) ? value : null
+  return validateSaveCommand(value) ? value : null
 }
 
 /** Development-only bridge; the credential stays on the loopback-bound Next process. */
@@ -106,7 +116,7 @@ export async function handleServerSave(
     return reply(403, '같은 로컬 화면에서 요청해 주세요.')
   }
   let payload: unknown
-  let command: components['schemas']['ServerSaveCommand'] | null = null
+  let command: SaveCommand | null = null
   if (request.method === 'POST') {
     if (request.headers.get('origin') !== origin) {
       return reply(403, '같은 로컬 화면에서 요청해 주세요.')
@@ -131,7 +141,7 @@ export async function handleServerSave(
     if (
       path !== '/v1/careers/workspace' &&
       path !== '/v1/catalog/horses' &&
-      !new RegExp(`^/v1/careers/(${uuid})/race-runs/(${uuid})(/log)?$`).test(path)
+      !new RegExp(`^/v1/careers/(${uuid})/(race-entries|race-runs/(${uuid})(/log)?)$`).test(path)
     ) {
       return reply(404, '지원하지 않는 저장 경로입니다.')
     }
@@ -191,12 +201,20 @@ export async function handleServerSave(
           ? validateCareerWorkspace(result)
           : path === '/v1/catalog/horses'
             ? validateHorseCatalog(result)
-            : validateRaceReadResponse(result, path.endsWith('/log'))
-        : command?.kind === 'action'
-          ? validateActionResponse(result)
-          : command?.kind === 'retire'
-            ? validateRetireCareerResponse(result)
-            : validateCareerResponse(result)
+            : path.endsWith('/race-entries')
+              ? validateRaceEntryOptions(result)
+              : path.endsWith('/log')
+                ? validateRaceLogResponse(result)
+                : validateRaceRunResponse(result)
+        : command?.kind === 'race-entry'
+          ? validateRaceEntryResponse(result)
+          : command?.kind === 'race-complete'
+            ? validateRaceCompleteResponse(result)
+            : command?.kind === 'action'
+              ? validateActionResponse(result)
+              : command?.kind === 'retire'
+                ? validateRetireCareerResponse(result)
+                : validateCareerResponse(result)
     if (!valid) {
       return reply(502, '서버 저장 응답이 계약과 다릅니다. 같은 요청으로 다시 확인해 주세요.')
     }

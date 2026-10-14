@@ -369,7 +369,11 @@ export function readEventSource(text: string, format: 'json' | 'csv') {
 export async function importEvents(
   db: Database,
   value: unknown,
-  options: { draftsOnly?: boolean } = {},
+  options: {
+    draftsOnly?: boolean
+    expansionOnly?: boolean
+    expectedRevisions?: Record<string, string>
+  } = {},
 ) {
   const catalog = catalogSchema.parse(value)
   if (new Set(catalog.events.map((x) => x.id)).size !== catalog.events.length) {
@@ -398,6 +402,44 @@ export async function importEvents(
       }
     }
     for (const event of catalog.events) {
+      if (options.expansionOnly || options.expectedRevisions) {
+        const existing = (
+          await tx.query(
+            'SELECT r.definition FROM event_definitions e JOIN event_revisions r ON r.event_id=e.id AND r.revision=e.current_revision WHERE e.id=$1',
+            [event.id],
+          )
+        ).rows[0]?.definition
+        if (
+          options.expectedRevisions &&
+          existing?.revision !== options.expectedRevisions[event.id]
+        ) {
+          throw new Error(`Stale activation revision: ${event.id}`)
+        }
+        if (options.expansionOnly) {
+          if (
+            event.category === 'common' ||
+            event.enabled ||
+            !event.review ||
+            event.review.contentReviewed ||
+            event.review.balanceReviewed
+          ) {
+            throw new Error(`Not an inactive expansion: ${event.id}`)
+          }
+          if (
+            existing?.review?.contentReviewed ||
+            existing?.review?.balanceReviewed ||
+            existing?.enabled
+          ) {
+            if (existing?.review?.sourceDigest === event.review.sourceDigest) {
+              continue
+            }
+            throw new Error(`Source changed after review: ${event.id}`)
+          }
+          if (existing && !existing.review && !isQuarantinedEvent(existing)) {
+            throw new Error(`Expansion cannot overwrite existing content: ${event.id}`)
+          }
+        }
+      }
       await tx.query(
         'INSERT INTO event_definitions(id,name,category,status,enabled,current_revision) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,category=EXCLUDED.category,status=EXCLUDED.status,enabled=EXCLUDED.enabled,current_revision=EXCLUDED.current_revision',
         [event.id, event.name, event.category, event.status, event.enabled, event.revision],

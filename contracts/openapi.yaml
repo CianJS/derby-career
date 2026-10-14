@@ -1290,8 +1290,93 @@ components:
       required:
       - type
       additionalProperties: false
+    ConditionAptitudeAny:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [aptitude_any]
+        names:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        grades:
+          type: array
+          minItems: 1
+          items:
+            type: string
+      required: [type, names, grades]
+      additionalProperties: false
+    ConditionGrowthIs:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [growth_is]
+        growth:
+          type: string
+          enum: [조숙, 표준, 만성]
+      required: [type, growth]
+      additionalProperties: false
+    ConditionHealthIs:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [health_is]
+        health:
+          type: array
+          minItems: 1
+          items:
+            type: string
+      required: [type, health]
+      additionalProperties: false
+    ConditionRecordRange:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [record_range]
+        metric:
+          type: string
+          enum: [starts, wins]
+        min:
+          type: integer
+          minimum: 0
+        max:
+          type: integer
+          minimum: 0
+      required: [type, metric]
+      additionalProperties: false
+    ConditionStatSummary:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [stat_summary]
+        metric:
+          type: string
+          enum: [spread, count]
+        threshold:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        min:
+          type: integer
+          minimum: 0
+        max:
+          type: integer
+          minimum: 0
+      required: [type, metric]
+      additionalProperties: false
     EventCondition:
       oneOf:
+      - $ref: '#/components/schemas/ConditionAptitudeAny'
+      - $ref: '#/components/schemas/ConditionGrowthIs'
+      - $ref: '#/components/schemas/ConditionHealthIs'
+      - $ref: '#/components/schemas/ConditionRecordRange'
+      - $ref: '#/components/schemas/ConditionStatSummary'
       - $ref: '#/components/schemas/ConditionAlways'
       - $ref: '#/components/schemas/ConditionHealthy'
       - $ref: '#/components/schemas/ConditionTrainingAvailable'
@@ -1374,9 +1459,62 @@ components:
       - $ref: '#/components/schemas/EffectValueDelta'
       - $ref: '#/components/schemas/EffectActionModifier'
       - $ref: '#/components/schemas/EffectResolvedGrowthBonus'
+    EventRisk:
+      type: object
+      properties:
+        version:
+          type: string
+          enum: [event-risk-v1]
+        outcomes:
+          type: object
+          properties:
+            great_success:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            success:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            failure:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            disaster:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+          required: [great_success, success, failure, disaster]
+          additionalProperties: false
+      required: [version, outcomes]
+      additionalProperties: false
+    EventReview:
+      type: object
+      properties:
+        sourceDigest:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+        converted:
+          type: boolean
+        executable:
+          type: boolean
+        contentReviewed:
+          type: boolean
+        balanceReviewed:
+          type: boolean
+        groupId:
+          type: string
+          nullable: true
+        representativeId:
+          type: string
+          nullable: true
+      required: [sourceDigest, converted, executable, contentReviewed, balanceReviewed, groupId, representativeId]
+      additionalProperties: false
     EventChoice:
       type: object
       properties:
+        risk:
+          $ref: '#/components/schemas/EventRisk'
         id: *id004
         label: *id004
         conditions:
@@ -1396,6 +1534,8 @@ components:
     EventDefinition:
       type: object
       properties:
+        review:
+          $ref: '#/components/schemas/EventReview'
         id:
           type: string
           minLength: 1
@@ -1870,6 +2010,17 @@ components:
     EventApplicationResult:
       type: object
       properties:
+        risk:
+          type: object
+          properties:
+            version:
+              type: string
+              enum: [event-risk-v1]
+            outcome:
+              type: string
+              enum: [great_success, success, failure, disaster]
+          required: [version, outcome]
+          additionalProperties: false
         changes:
           type: array
           items:

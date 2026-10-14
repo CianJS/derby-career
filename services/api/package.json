@@ -26,7 +26,10 @@
     "contract:generate": "node --import tsx scripts/generate-api-types.ts && node --import tsx scripts/generate-event-validation.ts && node --import tsx scripts/generate-save-validation.ts",
     "contract:check": "node --import tsx scripts/check-contract.ts",
     "events:check": "node --import tsx scripts/preflight-events.ts",
-    "events:import-drafts": "node --env-file-if-exists=.env --import tsx src/cli.ts import-event-drafts"
+    "events:import-drafts": "node --env-file-if-exists=.env --import tsx src/cli.ts import-event-drafts",
+    "events:expand": "node --import tsx scripts/expand-events.ts",
+    "events:import-expansion": "node --env-file-if-exists=.env --import tsx src/cli.ts import-event-expansion",
+    "events:activate": "node --env-file-if-exists=.env --import tsx src/cli.ts activate-event-expansion"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",

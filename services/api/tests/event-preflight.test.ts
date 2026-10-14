@@ -418,6 +418,15 @@ test('draft-only transaction protects existing reviewed events and rolls back al
       enabled: true,
       status: 'ready',
       balanceVersion: 'explicit-test-review',
+      review: {
+        sourceDigest: '0'.repeat(64),
+        converted: true,
+        executable: true,
+        contentReviewed: true,
+        balanceReviewed: true,
+        groupId: null,
+        representativeId: null,
+      },
       conditions: [{ type: 'always' }],
       choices: [{ id: 'A', label: 'reviewed', conditions: [], effects: [] }],
     })
@@ -466,12 +475,15 @@ test('draft-only transaction protects existing reviewed events and rolls back al
     )
     await f.db.query('ALTER TABLE event_definitions DROP CONSTRAINT test_reject_draft')
     await importEventDrafts(f.db, packet([first, second]))
-    await f.db.query("UPDATE event_definitions SET enabled=true,status='ready' WHERE id='GEN-9995'")
-    await assert.rejects(importEventDrafts(f.db, packet([first])), /cannot overwrite/)
+    await assert.rejects(
+      f.db.query("UPDATE event_definitions SET enabled=true,status='ready' WHERE id='GEN-9995'"),
+      /Unreviewed/,
+    )
+    await importEventDrafts(f.db, packet([first]))
     assert.equal(
       (await f.db.query("SELECT enabled FROM event_definitions WHERE id='GEN-9995'")).rows[0]
         .enabled,
-      true,
+      false,
     )
   } finally {
     await f.close()

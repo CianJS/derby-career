@@ -219,6 +219,11 @@ export function inspectEventCatalog(value: unknown) {
       })
     }
     const conditionTypes = [
+      'aptitude_any',
+      'growth_is',
+      'health_is',
+      'record_range',
+      'stat_summary',
       'always',
       'healthy',
       'training_available',

@@ -447,7 +447,41 @@ export interface components {
             min?: number;
             max?: number;
         };
-        EventCondition: components["schemas"]["ConditionAlways"] | components["schemas"]["ConditionHealthy"] | components["schemas"]["ConditionTrainingAvailable"] | components["schemas"]["ConditionActionIs"] | components["schemas"]["ConditionValueRange"] | components["schemas"]["ConditionTurnRange"];
+        ConditionAptitudeAny: {
+            /** @enum {string} */
+            type: "aptitude_any";
+            names: string[];
+            grades: string[];
+        };
+        ConditionGrowthIs: {
+            /** @enum {string} */
+            type: "growth_is";
+            /** @enum {string} */
+            growth: "조숙" | "표준" | "만성";
+        };
+        ConditionHealthIs: {
+            /** @enum {string} */
+            type: "health_is";
+            health: string[];
+        };
+        ConditionRecordRange: {
+            /** @enum {string} */
+            type: "record_range";
+            /** @enum {string} */
+            metric: "starts" | "wins";
+            min?: number;
+            max?: number;
+        };
+        ConditionStatSummary: {
+            /** @enum {string} */
+            type: "stat_summary";
+            /** @enum {string} */
+            metric: "spread" | "count";
+            threshold?: number;
+            min?: number;
+            max?: number;
+        };
+        EventCondition: components["schemas"]["ConditionAptitudeAny"] | components["schemas"]["ConditionGrowthIs"] | components["schemas"]["ConditionHealthIs"] | components["schemas"]["ConditionRecordRange"] | components["schemas"]["ConditionStatSummary"] | components["schemas"]["ConditionAlways"] | components["schemas"]["ConditionHealthy"] | components["schemas"]["ConditionTrainingAvailable"] | components["schemas"]["ConditionActionIs"] | components["schemas"]["ConditionValueRange"] | components["schemas"]["ConditionTurnRange"];
         EffectValueDelta: {
             /** @enum {string} */
             type: "value_delta";
@@ -476,13 +510,34 @@ export interface components {
             ratio: number;
         };
         EventEffect: components["schemas"]["EffectValueDelta"] | components["schemas"]["EffectActionModifier"] | components["schemas"]["EffectResolvedGrowthBonus"];
+        EventRisk: {
+            /** @enum {string} */
+            version: "event-risk-v1";
+            outcomes: {
+                great_success: components["schemas"]["EventEffect"][];
+                success: components["schemas"]["EventEffect"][];
+                failure: components["schemas"]["EventEffect"][];
+                disaster: components["schemas"]["EventEffect"][];
+            };
+        };
+        EventReview: {
+            sourceDigest: string;
+            converted: boolean;
+            executable: boolean;
+            contentReviewed: boolean;
+            balanceReviewed: boolean;
+            groupId: string | null;
+            representativeId: string | null;
+        };
         EventChoice: {
+            risk?: components["schemas"]["EventRisk"];
             id: string;
             label: string;
             conditions: components["schemas"]["EventCondition"][];
             effects: components["schemas"]["EventEffect"][];
         };
         EventDefinition: {
+            review?: components["schemas"]["EventReview"];
             id: string;
             name: string;
             /** @enum {string} */
@@ -668,6 +723,12 @@ export interface components {
             healthRecovery?: number;
         };
         EventApplicationResult: {
+            risk?: {
+                /** @enum {string} */
+                version: "event-risk-v1";
+                /** @enum {string} */
+                outcome: "great_success" | "success" | "failure" | "disaster";
+            };
             changes: components["schemas"]["Change"][];
             actionChanges?: components["schemas"]["Change"][];
         };

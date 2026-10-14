@@ -12,6 +12,17 @@ export const eventTimings = [
 ] as const
 export type EventTiming = (typeof eventTimings)[number]
 export type EventCondition =
+  | { type: 'aptitude_any'; names: string[]; grades: string[] }
+  | { type: 'growth_is'; growth: '조숙' | '표준' | '만성' }
+  | { type: 'health_is'; health: string[] }
+  | { type: 'record_range'; metric: 'starts' | 'wins'; min?: number; max?: number }
+  | {
+      type: 'stat_summary'
+      metric: 'spread' | 'count'
+      threshold?: number
+      min?: number
+      max?: number
+    }
   | { type: 'always' }
   | { type: 'healthy' }
   | { type: 'training_available'; stat: Stat }
@@ -29,7 +40,10 @@ export type EventEffect =
       value: number
     }
   | { type: 'resolved_growth_bonus'; stat: Stat; ratio: number }
+export const riskOutcomes = ['great_success', 'success', 'failure', 'disaster'] as const
+export type RiskOutcome = (typeof riskOutcomes)[number]
 export type EventChoice = {
+  risk?: { version: 'event-risk-v1'; outcomes: Record<RiskOutcome, EventEffect[]> }
   id: string
   label: string
   conditions: EventCondition[]
@@ -52,10 +66,19 @@ export type EventDefinition = {
   choices: EventChoice[]
   automatic: boolean
   source: { url: string | null; conditionText: string; effectText: string; body?: string }
+  review?: {
+    sourceDigest: string
+    converted: boolean
+    executable: boolean
+    contentReviewed: boolean
+    balanceReviewed: boolean
+    groupId: string | null
+    representativeId: string | null
+  }
   mappingNotes: string[]
 }
 export type DirectorConfig = {
-  version: 'event-director-v1'
+  version: 'event-director-v1' | 'event-director-v2'
   monthlyProbability: number
   pityAfterMisses: number
   monthStartShare: number
@@ -76,4 +99,26 @@ export const DEFAULT_DIRECTOR_CONFIG: DirectorConfig = {
   monthlyProbability: 0.3,
   pityAfterMisses: 3,
   monthStartShare: 0.5,
+}
+
+/** Frozen v1 remains available for old draw snapshots and regression fixtures. */
+export const CURRENT_DIRECTOR_CONFIG: DirectorConfig = {
+  ...DEFAULT_DIRECTOR_CONFIG,
+  version: 'event-director-v2',
+}
+export const CATEGORY_WEIGHTS = {
+  common: 45,
+  normal: 35,
+  special: 12,
+  accident: 6,
+  hidden: 2,
+} as const
+export const RISK_WEIGHTS = { great_success: 15, success: 55, failure: 25, disaster: 5 } as const
+export function isEventReviewed(event: EventDefinition): boolean {
+  return !event.review
+    ? event.category === 'common' && !/^(GEN|SPC|ACC|HID)-/.test(event.id)
+    : event.review.converted &&
+        event.review.executable &&
+        event.review.contentReviewed &&
+        event.review.balanceReviewed
 }

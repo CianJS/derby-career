@@ -1,5 +1,6 @@
 "use client";
 
+import { NoticeCenter } from "@/components/notices/notice-center";
 import { FilterMenu } from "@/components/career/filter-menu";
 import {
   useEffect,
@@ -33,7 +34,6 @@ import {
   ArrowUp,
   ArrowUpRight,
   BatteryLow,
-  Bell,
   Brain,
   CalendarDays,
   Check,
@@ -407,13 +407,12 @@ function Section({
 function Header({ setView }: { setView: (v: View) => void }) {
   const { theme = "dark", setTheme } = useTheme();
   const [menu, setMenu] = useState(false);
-  const [note, setNote] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const activeTheme = mounted ? theme : "dark";
   return (
     <header className="lab-topbar sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-[1540px] items-center justify-between px-4 md:px-8">
+      <div className="lab-topbar-inner mx-auto flex h-14 max-w-[1540px] items-center justify-between px-4 md:px-8">
         <button
           className="lab-brand flex items-center"
           onClick={() => setView("home")}
@@ -422,14 +421,7 @@ function Header({ setView }: { setView: (v: View) => void }) {
         </button>
         <div className="ml-auto flex items-center gap-2 text-muted-foreground">
           <span className="hidden text-xs sm:block">₩42,800,000</span>
-          <button
-            aria-label="운영 공지"
-            onClick={() => setNote(!note)}
-            className="relative rounded-lg p-2 hover:bg-accent"
-          >
-            <Bell size={17} />
-            <i className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />
-          </button>
+          <NoticeCenter />
           <div className="relative">
             <button
               aria-label="테마 선택"
@@ -469,24 +461,6 @@ function Header({ setView }: { setView: (v: View) => void }) {
           </button>
         </div>
       </div>
-      {note && (
-        <div className="absolute right-4 top-16 z-40 w-80 rounded-2xl border border-border bg-card p-5 shadow-2xl">
-          <div className="flex justify-between">
-            <div>
-              <p className="font-mono text-[10px] text-primary">
-                STABLE NOTICE
-              </p>
-              <h3 className="mt-1 font-serif text-lg">공지 & 업데이트</h3>
-            </div>
-            <button onClick={() => setNote(false)}>
-              <X size={16} />
-            </button>
-          </div>
-          <p className="mt-5 text-sm leading-6">
-            다음 세대 등록 준비가 완료되었습니다.
-          </p>
-        </div>
-      )}
     </header>
   );
 }
@@ -556,7 +530,7 @@ function StableSetup({
           마방을 시작합니다.
         </h1>
         <p className="mt-5 max-w-md text-sm leading-7 text-muted-foreground">
-          앞으로 ��성한 경주마들의 기록은 이 마방의 역사로 남습니다.
+          앞으로 육성한 경주마들의 기록은 이 마방의 역사로 남습니다.
         </p>
         <div className="mt-10 border-y border-border py-6">
           <label className="block text-xs text-muted-foreground">
@@ -1696,7 +1670,7 @@ function HorseArchive({ setView }: { setView: (v: View) => void }) {
             ["나이", "6세"],
             ["성별", "암말"],
             ["출생지", "대한민국"],
-            ["��래스", "OPEN"],
+            ["클래스", "OPEN"],
             ["활동 상태", "은퇴"],
             ["성장형", "보통"],
             ["통산 전적", "31전 9승"],
@@ -2042,7 +2016,7 @@ function Jockeys({ setView, onSelect }: { setView: (v: View) => void; onSelect: 
                 "페이스 판단",
                 "진로 판단",
                 "승부 타이밍",
-                "기승 안���",
+                "기승 안정",
               ].map((a, i) => (
                 <span
                   key={a}
@@ -2351,7 +2325,7 @@ function RaceEntryArchive({ setView }: { setView: (v: View) => void }) {
           ))}
         </div>
         <p className="mt-3 border-l-2 border-red-900/70 px-3 py-2 text-xs text-red-200">
-          WARNING · 현재 신체 부하��� 높은 편입니다. 경주 후 피로와 부하가 증가할
+          WARNING · 현재 신체 부하가 높은 편입니다. 경주 후 피로와 부하가 증가할
           수 있습니다.
         </p>
         <button
@@ -2431,7 +2405,7 @@ function RaceEntryLegacy({ setView }: { setView: (v: View) => void }) {
           <h1 className="ui-page-title mt-2 font-serif text-3xl">경주 출전</h1>
         </div>
         <span className="text-xs text-muted-foreground">
-          천��의 전설 · 3세 수말
+          천둥의 전설 · 3세 수말
         </span>
       </div>
       <div className="mt-6 flex items-center gap-2 text-xs">
@@ -3818,7 +3792,7 @@ function RaceExperimental({ setView }: { setView: (v: View) => void }) {
           onClick={() => setPaused((v) => !v)}
           className="rounded-lg bg-primary px-5 py-2 text-xs text-primary-foreground"
         >
-          {started && !paused ? "일��정지" : "레이스 시작"}
+          {started && !paused ? "일시정지" : "레이스 시작"}
         </button>
         <button
           onClick={() => setView("raceplay")}
@@ -4399,6 +4373,27 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
       setSaveError(error instanceof Error ? error.message : "마방 기록을 읽지 못했습니다. 기존 저장은 유지됩니다.");
     }
   }, [saveMode]);
+  const observedServerRace = useRef<{ careerId: string; runId: string } | null>(null)
+  useEffect(() => {
+    if (saveMode !== 'server' || !workspace?.career) { observedServerRace.current = null; return }
+    const current = workspace.career
+    if (current.state.raceRun) {
+      observedServerRace.current = { careerId: current.id, runId: current.state.raceRun.raceRunId }
+      return
+    }
+    const previous = observedServerRace.current
+    if (ready && !busy && !pending && previous?.careerId === current.id && current.state.raceRecords.some(record => record.raceRunId === previous.runId)) {
+      observedServerRace.current = null
+      if (['entry', 'raceplay', 'raceexperimental', 'result'].includes(view)) setView('training')
+    }
+  }, [saveMode, workspace, ready, busy, pending, view])
+  const [restoredServerView, setRestoredServerView] = useState(false)
+  useEffect(() => {
+    if (saveMode !== 'server') { setRestoredServerView(false); return }
+    if (!ready || busy || pending || error || !workspace || restoredServerView) return
+    setRestoredServerView(true)
+    if (career?.raceRun) setView('raceplay')
+  }, [saveMode, ready, busy, pending, error, workspace, restoredServerView, career])
   useEffect(() => {
     if (saveMode === 'local' && hydrated && career) setState((current) => applyCareer(current, career));
   }, [career, hydrated, saveMode]);

@@ -174,3 +174,46 @@ npm run build
 SQL 통합 검증은 PGlite의 실제 PostgreSQL 엔진으로 migrations/FK/trigger/rollback/멱등성/계약을 확인한다. PGlite는 테스트 의존성이며 앱 저장소의 대체 구현이 아니다. 별도 PostgreSQL 다중 연결 검증에는 `TEST_DATABASE_URL`로 전용 `*_test` DB를 지정한 뒤 `npm run test:postgres`를 실행한다. `.github/workflows/backend-foundation.yml`은 PostgreSQL 17, 동시 요청, 빌드된 HTTP 서버까지 검증한다. 테스트는 운영 DB에 연결하지 않는다.
 
 기존 프론트엔드 검증은 저장소 루트의 `pnpm build`와 기존 `tests/*.test.ts`다. 이번 변경에는 UI 전환이나 화면 검증이 포함되지 않는다.
+
+## 전체 1,000개 카탈로그와 검토 후 활성화
+
+최신 내보내기 CSV와 `derby_event_revision_audit.csv`의 게임 필드 8개가 동일함을 확인했다. 감사 CSV의 사건그룹 ID는 검토용이며 대표 ID를 자동 확정하지 않는다. 기존 공통 350개 Seed·revision은 보존한다. 신규 650개는 `events.expansion.source.json`에 수록하고 엄격한 오프라인 변환기로 구조화한다. HTTP 경로는 조건/효과 문자열을 해석하지 않는다.
+
+```bash
+npm run events:expand -- /absolute/path/derby_event_revision_audit.csv
+npm run db:migrate
+npm run events:import-expansion
+```
+
+첫 명령은 원본을 정규화하고 `events.expansion.catalog.json`과 `reports/event-expansion.json`을 재생성한다. 인자를 생략하면 저장된 정규화 원본으로 재생성한다. `db:seed`도 기존 350개와 신규 650개를 함께 등록한다. 등록은 명시적으로 설정한 DB에 수행하며 서버 시작 시 자동 실행하지 않는다. 운영 데이터 가져오기는 이번 검증에서 실행하지 않았다.
+
+신규 정의의 `review`에는 `converted`, `executable`, `contentReviewed`, `balanceReviewed`, 원본 해시와 `groupId`/`representativeId`가 있다. 변환 완료와 활성화는 별개다. 기본 신규 활성 수는 0개이며 기존 활성 수는 315개다. 현재 신규 280개가 변환/실행 가능하고 370개가 미지원 또는 검토 필요 상태다. `status=ready`만으로 추첨하지 않는다. 활성화에는 아래처럼 검토한 **현재 revision**을 지정한 manifest가 필요하다.
+
+```json
+{
+  "events": [
+    {
+      "id": "GEN-0001",
+      "revision": "검토한 현재 revision의 SHA-256",
+      "contentReviewed": true,
+      "balanceReviewed": true,
+      "groupReviewed": true,
+      "representativeId": null
+    }
+  ]
+}
+```
+
+```bash
+npm run events:activate -- /absolute/path/reviewed-events.json
+```
+
+예시 ID는 실행 가능 여부를 보장하지 않는다. 미지원/미변환 항목과 오래된 revision은 거부한다. 검토 완료 항목은 동일 원본 재가져오기로 비활성 초안에 되돌리지 않는다. 원본이 변경되면 재검토가 필요하다. Advisory lock과 transaction으로 가져오기/활성화를 직렬화하며 005 migration은 DB의 단순 enabled 변경으로 검토를 우회하는 것도 거부한다. 새로운 대표 이벤트로 병합하려면 별도 대응 관계를 검토해야 한다. 이번 변경은 기존 ID를 삭제하거나 통합하지 않는다.
+
+새 월은 `event-director-v2`가 기본이며 기존 발생률 0.3, 보정 기준 3회, 시작/결과 시점 정책은 유지한다. 발생 게이트 후 해당 실행 시점의 조건과 선택지를 만족하는 카테고리 사이에서 45:35:12:6:2를 재분배하고, 선택된 카테고리 내 이벤트 weight로 추첨한다. 기존 월의 v1 config/pool/seed와 선택/결과 Snapshot은 그대로 재사용한다. 미지원 경주 전/후 시점과 히든 복합 조건이 불완전한 정의는 활성화할 수 없다.
+
+선택지의 선택적 `risk`는 `event-risk-v1`과 네 결과(`great_success`, `success`, `failure`, `disaster`)별 구조화 효과를 요구한다. 명시적 플레이어 선택만 15:55:25:5로 판정하고, draw seed/불변 revision/choice ID로 결과를 고정한다. 안전 선택은 원래 effects를 그대로 적용한다. CSV에 고위험 표시 및 네 결과 효과가 없으므로 기존 A/B 선택을 위험 선택으로 바꾸지 않았다. 확정 결과는 `career.event.result.risk`에 저장된다.
+
+Frontend 계약은 기존 `GET /v1/events`, 상세 조회, `GET /v1/careers/{id}`, 이벤트 이력 및 `POST /v1/careers/{id}/events/{historyId}/choice`를 유지한다. 새로운 조건 타입 5개와 optional review/risk/result.risk는 생성 타입·검증기에 포함한다. choice 요청은 기존 `{commandId, choiceId, expectedTurn}`이며 결과/Seed는 받지 않는다. 이벤트는 월간 핵심 행동을 추가 소모하지 않는다. 재시도는 같은 UUID/본문을 유지하고 과거 receipt 대신 최신 workspace를 조회한다. Frontend는 활성 여부와 검토 상태를 구분하고 위험 선택의 네 결과 표시를 별도로 구현해야 한다.
+
+미지원 원문과 ID, 111개 사건그룹, 97개 동일 조건·효과·시점 묶음은 `reports/event-expansion.json`에 있다. 그룹은 의미상 중복 확정이 아닌 검토 후보이며 원본 서술 없는 CSV로 서사/밸런스 QA 완료를 주장하지 않는다. 다음 훈련/휴식 이월, 호흡도·육성/회복 이력·연령·Archive·다음 경주 후보 관련 조건과 모호한 성장 대상은 임의 대체하지 않는다. 기존 P1 보고서는 사전 검증 당시의 기록이며 최신 확장 수치는 새 보고서를 따른다.

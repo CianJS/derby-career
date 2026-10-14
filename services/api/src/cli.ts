@@ -4,6 +4,7 @@ import { postgresDatabase } from './db'
 import { migrate } from './services/migrations'
 import { seedDevelopmentCatalog } from './services/seed'
 import { importEvents, importEventDrafts, readEventSource } from './modules/events/import'
+import { importExpansion, activateExpansion } from './modules/events/expansion'
 import { createDevelopmentSession, revokeSession } from './modules/auth/sessions'
 const config = readConfig()
 const db = postgresDatabase(config.databaseUrl)
@@ -20,6 +21,24 @@ try {
         )
       }
       console.log(JSON.stringify(await seedDevelopmentCatalog(db)))
+      break
+    case 'import-event-expansion':
+      console.log(
+        JSON.stringify(
+          await importExpansion(
+            db,
+            JSON.parse(await readFile(args[0] ?? 'seeds/events.expansion.source.json', 'utf8')),
+          ),
+        ),
+      )
+      break
+    case 'activate-event-expansion':
+      if (!args[0]) {
+        throw new Error('A reviewed, revision-pinned approval manifest is required')
+      }
+      console.log(
+        JSON.stringify(await activateExpansion(db, JSON.parse(await readFile(args[0], 'utf8')))),
+      )
       break
     case 'import-events': {
       const file = args[0] ?? 'seeds/events.catalog.json'

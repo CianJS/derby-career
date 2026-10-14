@@ -1,6 +1,5 @@
 'use client'
 
-import { SERVER_RACE_UNAVAILABLE } from './race-data-adapter'
 import { useSyncExternalStore } from 'react'
 import { createApiClient } from '../../packages/shared/src/client'
 import {
@@ -43,6 +42,7 @@ type Snapshot = {
   error: string | null
   mode: 'local' | 'server' | null
   workspace: SaveWorkspace | null
+  raceOptions: SaveSnapshot['raceOptions']
   candidates: SaveSnapshot['candidates']
   localCareerId: string | null
 }
@@ -56,6 +56,7 @@ const initial: Snapshot = {
   mode: null,
   workspace: null,
   candidates: [],
+  raceOptions: null,
   localCareerId: null,
 }
 let snapshot = initial
@@ -68,6 +69,8 @@ function configure(mode: 'local' | 'server') {
   if (snapshot.mode === mode) {
     return
   }
+  server?.dispose()
+  server = null
   const generation = ++modeGeneration
   if (mode === 'server') {
     server = new ServerSaveController(
@@ -88,7 +91,19 @@ function configure(mode: 'local' | 'server') {
   void refresh()
 }
 async function serverCommand(command: SaveCommand) {
-  const result = await server!.send(command)
+  const generation = modeGeneration
+  const controller = server!
+  const result = await controller.send(command)
+  if (generation !== modeGeneration || snapshot.mode !== 'server') {
+    return false
+  }
+  if (
+    result &&
+    (command.kind === 'race-entry' || command.kind === 'race-complete') &&
+    snapshot.workspace?.career?.id !== command.careerId
+  ) {
+    return false
+  }
   if (result) {
     notify()
   }
@@ -107,12 +122,6 @@ function activeServer() {
     throw new Error('서버 육성 기록을 불러와 주세요.')
   }
   return career
-}
-function unsupportedRace() {
-  publish({
-    error: SERVER_RACE_UNAVAILABLE,
-  })
-  return Promise.resolve(false)
 }
 function publish(patch: Partial<Snapshot>) {
   snapshot = { ...snapshot, ...patch }
@@ -319,7 +328,16 @@ export const careerStore = {
   },
   completeRace: async (raceRunId: string, result: RaceSimulationResult) => {
     if (snapshot.mode === 'server') {
-      return unsupportedRace()
+      const career = activeServer()
+      if (career.state.raceRun?.raceRunId !== raceRunId) {
+        return false
+      }
+      return serverCommand({
+        kind: 'race-complete',
+        careerId: career.id,
+        raceRunId,
+        body: { commandId: crypto.randomUUID() },
+      })
     }
     const done = await mutate((saved) => {
       if (!saved) {
@@ -386,7 +404,30 @@ export const careerStore = {
   },
   lockRace: (draft: RaceEntryDraft, horseId: string, month: number) =>
     snapshot.mode === 'server'
-      ? unsupportedRace()
+      ? (() => {
+          const career = activeServer()
+          if (
+            career.state.horse.id !== horseId ||
+            career.state.month !== month ||
+            !draft.raceId ||
+            !draft.jockeyId ||
+            !draft.tactic
+          ) {
+            return Promise.resolve(false)
+          }
+          return serverCommand({
+            kind: 'race-entry',
+            careerId: career.id,
+            body: {
+              raceRunId: crypto.randomUUID(),
+              raceDefinitionId: draft.raceId,
+              jockeyId: draft.jockeyId,
+              tactic: draft.tactic,
+              expectedTurn: career.state.careerTurnIndex,
+              engineVersion: 'race-sim-v3',
+            },
+          })
+        })()
       : mutate((saved) => {
           if (!saved || saved.horse.id !== horseId || saved.month !== month) {
             throw new Error('육성 상태가 변경되었습니다. 다시 불러와 주세요.')

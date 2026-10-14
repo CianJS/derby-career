@@ -1,6 +1,6 @@
 import type { Database, Query } from '../db'
 import type { EventCategory, EventDefinition } from '../../../../packages/shared/src/events'
-import { publicEventDefinition } from '../../../../packages/shared/src/events'
+import { publicEventDefinition, isEventReviewed } from '../../../../packages/shared/src/events'
 export type EventQuery = {
   page: number
   pageSize: number
@@ -63,6 +63,8 @@ export class EventRepository {
       await tx.query(
         "SELECT r.definition FROM event_definitions e JOIN event_revisions r ON r.event_id=e.id AND r.revision=e.current_revision WHERE e.enabled AND e.status='ready' ORDER BY e.id",
       )
-    ).rows.map((x) => x.definition)
+    ).rows
+      .map((x) => x.definition as EventDefinition)
+      .filter((event) => event.enabled && isEventReviewed(event))
   }
 }
