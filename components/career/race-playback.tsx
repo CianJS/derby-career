@@ -6,12 +6,8 @@ import { Button } from '@/components/ui/button'
 import { PositionHistory } from '@/components/career/race-position-history'
 import type { RaceRunInput } from '@/lib/career/race-entry'
 import { buildFeedTimeline, feedAt, liveCommentary } from '@/lib/career/race-feed'
-import { readRaceLog } from '@/lib/career/race-log-repository'
-import {
-  validateRaceLog,
-  type RaceFrame,
-  type RaceSimulationLog,
-} from '@/lib/career/race-simulation'
+import { useRaceData } from '@/lib/career/use-race-data'
+import { type RaceFrame, type RaceSimulationLog } from '@/lib/career/race-simulation'
 import {
   AUTO_SPEEDS,
   STRIP_MARKER_DX,
@@ -34,22 +30,6 @@ const phases = ['START', 'MID', 'FINAL_CORNER', 'STRETCH', 'FINISH'] as const
 const GAP_SCALES = [10, 20, 40, 80]
 type SpeedMode = 'AUTO' | AutoSpeed
 
-function loadLog(run: RaceRunInput): { log: RaceSimulationLog | null; error: string | null } {
-  try {
-    const log = readRaceLog(run.raceRunId)
-    if (!log) {
-      return { log: null, error: '저장된 경주 기록을 찾을 수 없습니다.' }
-    }
-    validateRaceLog(log, run)
-    return { log, error: null }
-  } catch (cause) {
-    return {
-      log: null,
-      error: cause instanceof Error ? cause.message : '경주 기록을 불러오지 못했습니다.',
-    }
-  }
-}
-
 export function RacePlayback({ onFinish, onBack }: { onFinish: () => void; onBack: () => void }) {
   const { ready, career } = useCareer()
   const run = career?.raceRun
@@ -70,32 +50,32 @@ export function RacePlayback({ onFinish, onBack }: { onFinish: () => void; onBac
       </div>
     )
   }
-  return <Playback key={run.raceRunId} run={run} onFinish={onFinish} onBack={onBack} />
+  return <Playback key={run.raceRunId} onFinish={onFinish} onBack={onBack} />
 }
 
-function Playback({
-  run,
-  onFinish,
-  onBack,
-}: {
-  run: RaceRunInput
-  onFinish: () => void
-  onBack: () => void
-}) {
-  const loaded = useMemo(() => loadLog(run), [run])
-  if (!loaded.log) {
+function Playback({ onFinish, onBack }: { onFinish: () => void; onBack: () => void }) {
+  const loaded = useRaceData()
+  if (!loaded.data) {
     return (
       <div className="py-8 text-sm">
-        <p role="alert" className="ui-error-state">
-          {loaded.error}
+        <p
+          role={loaded.error ? 'alert' : 'status'}
+          className={loaded.error ? 'ui-error-state' : undefined}
+        >
+          {loaded.error ?? '경주 기록을 불러오는 중…'}
         </p>
+        {loaded.error && (
+          <Button className="mt-4" variant="outline" onClick={loaded.retry}>
+            기록 다시 불러오기
+          </Button>
+        )}
         <Button className="mt-4" variant="outline" onClick={onBack}>
           육성으로 돌아가기
         </Button>
       </div>
     )
   }
-  return <Stage run={run} log={loaded.log} onFinish={onFinish} />
+  return <Stage run={loaded.data.run} log={loaded.data.log} onFinish={onFinish} />
 }
 
 export function PhaseMarker({ phaseIndex }: { phaseIndex: number }) {
