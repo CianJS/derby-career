@@ -8,6 +8,10 @@ import { clearCareer, readCareer, writeCareer } from './repository'
 import { lockRaceEntryWithLog, type RaceEntryDraft } from './race-entry'
 import { hasRaceLog, removeRaceLog, writeRaceLog } from './race-log-repository'
 import { raceLogDigest, simulateRace, summarizeRaceLog, type RaceSimulationResult } from './race-simulation'
+import { isServerCareerMode, serverCareer } from './server-mode'
+
+const serverMode = isServerCareerMode()
+const staleMessage = '육성 상태가 변경되었습니다. 다시 불러와 주세요.'
 
 type Snapshot = { ready: boolean; busy: boolean; career: Career | null; error: string | null }
 const initial: Snapshot = { ready: false, busy: false, career: null, error: null }
@@ -47,8 +51,24 @@ function restored(): Career | null {
 }
 async function refresh() {
   if (snapshot.busy) return
-  try { const career = await locked(restored); publish({ ready: true, career, error: null }) }
+  try { const career = serverMode ? await serverCareer.load() : await locked(restored); publish({ ready: true, career, error: null }) }
   catch (error) { publish({ ready: true, error: error instanceof Error ? error.message : '저장 데이터를 읽지 못했습니다.' }) }
+}
+// Server mode: the API owns the state, so every command is one request and the response replaces the snapshot.
+async function remote(operation: (saved: Career | null) => Promise<Career | null>) {
+  if (snapshot.busy) return false
+  publish({ busy: true, error: null })
+  try {
+    const career = await operation(snapshot.career)
+    publish({ career })
+    channel?.postMessage('saved')
+    return true
+  } catch (error) { publish({ error: error instanceof Error ? error.message : '요청을 처리하지 못했습니다. 다시 시도해 주세요.' }); return false }
+  finally { publish({ busy: false }) }
+}
+function current(saved: Career | null, expectedMonth: number): Career {
+  if (!saved || saved.month !== expectedMonth) throw new Error(staleMessage)
+  return saved
 }
 function subscribe(listener: () => void) {
   listeners.add(listener)
@@ -79,6 +99,14 @@ export function useCareer() { return useSyncExternalStore(subscribe, () => snaps
 export const careerStore = {
   refresh,
   completeRace: async (raceRunId: string, result: RaceSimulationResult) => {
+    if (serverMode) {
+      const done = await remote(async saved => {
+        if (!saved) throw new Error('육성 기록이 없습니다.')
+        return (await serverCareer.completeRace(raceRunId)).career
+      })
+      if (done) removeRaceLog(raceRunId)
+      return done
+    }
     const done = await mutate(saved => {
       if (!saved) throw new Error('육성 기록이 없습니다.')
       return completeRace(saved, raceRunId, result.placing, result.prizeMoney)
@@ -90,7 +118,8 @@ export const careerStore = {
     if (snapshot.busy) return false
     publish({ busy: true, error: null })
     try {
-      await locked(clearCareer)
+      if (serverMode) serverCareer.release()
+      else await locked(clearCareer)
       publish({ career: null })
       return true
     } catch (error) {
@@ -98,18 +127,25 @@ export const careerStore = {
       return false
     } finally { publish({ busy: false }) }
   },
-  lockRace: (draft: RaceEntryDraft, horseId: string, month: number) => mutate(saved => {
-    if (!saved || saved.horse.id !== horseId || saved.month !== month) throw new Error('육성 상태가 변경되었습니다. 다시 불러와 주세요.')
+  lockRace: (draft: RaceEntryDraft, horseId: string, month: number) => serverMode ? remote(async saved => {
+    const career = current(saved, month)
+    if (career.horse.id !== horseId) throw new Error(staleMessage)
+    return serverCareer.lockRace(career, draft)
+  }) : mutate(saved => {
+    if (!saved || saved.horse.id !== horseId || saved.month !== month) throw new Error(staleMessage)
     const { career, log } = lockRaceEntryWithLog(saved, draft)
     if (log) writeRaceLog(log)
     return career
   }),
-  select: (horseId: string) => mutate(saved => { const next = startCareer(horseId); return withMonthEvent(saved ? { ...next, calendarDate: saved.calendarDate, contractedJockeyIds: saved.contractedJockeyIds } : next) }),
-  chooseEvent: (eventId: string, choice: EventChoiceId, expectedMonth: number) => mutate(saved => {
-    if (!saved || saved.month !== expectedMonth) throw new Error('육성 상태가 변경되었습니다. 다시 불러와 주세요.')
+  select: (horseId: string) => serverMode ? remote(() => serverCareer.create(horseId)) : mutate(saved => { const next = startCareer(horseId); return withMonthEvent(saved ? { ...next, calendarDate: saved.calendarDate, contractedJockeyIds: saved.contractedJockeyIds } : next) }),
+  chooseEvent: (eventId: string, choice: EventChoiceId, expectedMonth: number) => serverMode ? remote(async saved => serverCareer.chooseEvent(current(saved, expectedMonth), choice)) : mutate(saved => {
+    if (!saved || saved.month !== expectedMonth) throw new Error(staleMessage)
     return chooseEvent(saved, eventId, choice)
   }),
-  commit: (choice: Choice, expectedMonth: number) => mutate(saved => {
+  commit: (choice: Choice, expectedMonth: number) => serverMode ? remote(async saved => {
+    const career = current(saved, expectedMonth)
+    return career.action || career.raceRun ? career : serverCareer.commit(career, choice)
+  }) : mutate(saved => {
     if (!saved || saved.month !== expectedMonth || saved.action || saved.raceRun) return saved
     const committed = commitAction(saved, choice)
     // Persist the commitment before calculating growth. Recovery uses this exact seed.
@@ -117,5 +153,8 @@ export const careerStore = {
     publish({ career: committed })
     return resolveAction(committed)
   }),
-  next: (actionId: string) => mutate(saved => saved ? advanceMonth(saved, actionId) : null),
+  next: (actionId: string) => serverMode ? remote(async saved => {
+    if (!saved) throw new Error('육성 기록이 없습니다.')
+    return serverCareer.next(saved, actionId)
+  }) : mutate(saved => saved ? advanceMonth(saved, actionId) : null),
 }
