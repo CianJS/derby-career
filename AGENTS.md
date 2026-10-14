@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # DERBY CAREER 코드 규칙
 
-- 통합 브랜치는 `develop`, Backend 개발 브랜치는 `api/develop`, Frontend 개발 브랜치는 `frontend/develop`이다. 담당 범위와 병합 절차는 `CONTRIBUTING.md`를 따른다.
+- 통합 브랜치는 `develop`, Backend 개발 브랜치는 `api/develop`이다. Frontend는 해당 Work가 지정한 별도 개발 브랜치를 사용한다. 담당 범위와 병합 절차는 `CONTRIBUTING.md`를 따른다.
 - 코드 작성 전에 `CONTRIBUTING.md`의 최소 코딩 규칙을 읽고 따른다.
 - 포맷 기준은 루트 `.prettierrc.json`과 `.editorconfig`다.
 - API와 공유 코드를 변경하면 `services/api`에서 `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run contract:check`를 확인하고 변경에 필요한 기존 테스트를 실행한다.

@@ -4,7 +4,7 @@
 
 ## 협업 브랜치와 담당 범위
 
-- 통합 브랜치는 `develop`, Backend 개발 브랜치는 `api/develop`, Frontend 개발 브랜치는 `frontend/develop`이다. 기능별 작은 PR을 `develop`에 병합한다.
+- 통합 브랜치는 `develop`, Backend 개발 브랜치는 `api/develop`이다. Frontend 개발 브랜치 이름은 해당 Work의 지정을 따르며 `api/develop`에서 작업하지 않는다. 기능별 작은 PR을 `develop`에 병합한다.
 - 작업 시작 전과 PR 병합 전에 최신 `develop`을 확인하고 반영한다. 다른 담당의 변경으로 코드나 검증 기준이 바뀌면 필요한 검사를 다시 실행한다.
 - Backend는 `services/api`, `contracts`, `packages/shared`와 서버가 사용하는 공유 게임 계산을 담당한다. Frontend는 Next 화면·스타일·브라우저 저장·클라이언트 연동과 Sites 미리보기를 담당한다. `lib/career`는 파일별로 공유 여부를 확인하며 서버용 계산 사본을 만들지 않는다.
 - 공유 계약·계산 변경은 PR에 호환성, 연동 예시와 상대 담당이 해야 할 일을 남긴다. 다른 담당의 진행 상태는 최신 원격 코드와 PR에서 확인한다.
