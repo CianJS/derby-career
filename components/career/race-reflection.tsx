@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useRaceData } from '@/lib/career/use-race-data'
-import { SERVER_RACE_UNAVAILABLE } from '@/lib/career/race-data-adapter'
 import { PositionHistory } from '@/components/career/race-position-history'
 import { keyMoments } from '@/lib/career/race-feed'
 import { postRaceChanges } from '@/lib/career/post-race'
@@ -174,7 +173,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
         </ul>
         <p className="mt-2 text-sm text-muted-foreground">
           {mode === 'server'
-            ? SERVER_RACE_UNAVAILABLE
+            ? '결과를 확정하면 서버에 저장된 상금·전적·건강과 다음 달 상태를 불러옵니다.'
             : `결과를 확정하면 ${nextMonth}월로 넘어가며 출전 기록이 경주 기록에 추가됩니다.`}
         </p>
       </section>
@@ -208,10 +207,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
         </p>
       )}
       <div>
-        <Button
-          disabled={busy || pending || submitting || mode === 'server'}
-          onClick={() => void advance()}
-        >
+        <Button disabled={busy || pending || submitting} onClick={() => void advance()}>
           {submitting ? '저장 중…' : '결과 확정 · 다음 달 시작'}
         </Button>
       </div>

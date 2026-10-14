@@ -33,7 +33,7 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
     assert.equal(data.run, career.raceRun)
   })
 }
-for (const version of ['race-sim-v1', 'race-sim-v2'] as const) {
+for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
   test(`server adapter reads ${version} with GET only and never touches local storage`, async () => {
     const { career, log } = fixture(version)
     const calls: string[] = []
@@ -48,7 +48,13 @@ for (const version of ['race-sim-v1', 'race-sim-v2'] as const) {
             : {
                 raceRun: Object.fromEntries(Object.entries(career.raceRun!).reverse()),
                 healthAtEntry: '정상',
-                metadata: { engineVersion: version, digest: career.raceRun!.simulation!.digest },
+                metadata: {
+                  engineVersion: version,
+                  digest: career.raceRun!.simulation!.digest,
+                  durationMs: log.durationMs,
+                  byteLength: JSON.stringify(log).length,
+                  storageVersion: 1,
+                },
               },
         )
       },
@@ -83,7 +89,13 @@ test('server failure retries the same read paths; corrupt logs and changed locke
       return Response.json({
         raceRun: { ...career.raceRun, raceSeed: changed ? 'different' : career.raceRun!.raceSeed },
         healthAtEntry: '정상',
-        metadata: { engineVersion: 'race-sim-v2', digest: career.raceRun!.simulation!.digest },
+        metadata: {
+          engineVersion: 'race-sim-v2',
+          digest: career.raceRun!.simulation!.digest,
+          durationMs: log.durationMs,
+          byteLength: JSON.stringify(log).length,
+          storageVersion: 1,
+        },
       })
     },
   })
@@ -112,10 +124,10 @@ test('server entry form shows locked selections while new entry cannot be confir
   const draft = renderToStaticMarkup(
     createElement(RaceEntryForm, { career: unlocked, busy: false, error: null, canConfirm: false }),
   )
-  assert.match(draft, /v3 계약 연동 후/)
+  assert.match(draft, /disabled=""/)
 })
 
-test('race bridge permits scoped reads only and keeps entry and complete POST blocked', async () => {
+test('race bridge rejects malformed completion commands and read query parameters', async () => {
   const env = {
     NODE_ENV: 'development',
     DERBY_SAVE_MODE: 'server',

@@ -1,11 +1,12 @@
-import { validateRaceReadResponse } from '../server-save/race-read-validation'
+import {
+  validateRaceRunResponse,
+  validateRaceLogResponse,
+} from '../../packages/shared/src/generated/save-validation.mjs'
 import type { DerbyApiClient } from '../../packages/shared/src/client'
 import type { Career } from './model'
-import { assertRaceRun, type RaceRunInput } from './race-entry'
+import type { RaceRunInput } from './race-entry'
 import { readRaceLog } from './race-log-repository'
 import { validateRaceLog, type RaceSimulationLog } from './race-simulation'
-
-export const SERVER_RACE_UNAVAILABLE = '서버 경주의 출전·결과 확정은 v3 계약 연동 후 지원됩니다.'
 
 export type RaceData = { run: RaceRunInput; log: RaceSimulationLog }
 export type RaceDataAdapter = {
@@ -33,11 +34,10 @@ export function createRaceDataAdapter(
         throw new Error('서버 육성 기록을 불러와 주세요.')
       }
       const response = await api.getRaceRun(careerId, run.raceRunId)
-      if (!validateRaceReadResponse(response, false)) {
+      if (!validateRaceRunResponse(response)) {
         throw new Error('서버 출전 응답을 읽지 못했습니다.')
       }
       const saved = response.raceRun as RaceRunInput
-      assertRaceRun(saved, career)
       if (
         saved.raceRunId !== run.raceRunId ||
         canonical(saved) !== canonical(run) ||
@@ -47,7 +47,7 @@ export function createRaceDataAdapter(
         throw new Error('서버 출전 정보가 변경되었습니다. 최신 육성 기록을 불러와 주세요.')
       }
       const responseLog = await api.getRaceLog(careerId, run.raceRunId)
-      if (!validateRaceReadResponse(responseLog, true)) {
+      if (!validateRaceLogResponse(responseLog)) {
         throw new Error('서버 경주 로그 응답을 읽지 못했습니다.')
       }
       validateRaceLog(responseLog.log, saved)

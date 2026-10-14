@@ -1,7 +1,11 @@
+import { validateSaveCommand, type SaveCommand } from './commands'
+export type { SaveCommand } from './commands'
 import type { DerbyApiClient } from '../../packages/shared/src/client'
 import type { components } from '../../packages/shared/src/generated/api'
 import {
-  validateServerSaveCommand,
+  validateRaceEntryResponse,
+  validateRaceCompleteResponse,
+  validateRaceEntryOptions,
   validateCareerWorkspace,
   validateHorseCatalog,
   validateCareerResponse,
@@ -11,7 +15,6 @@ import {
 import { assertCareer, type Career } from '../career/model'
 
 type Models = components['schemas']
-export type SaveCommand = Models['ServerSaveCommand']
 type ServerCareer = Models['Career'] & { state: Career }
 export type SaveWorkspace = Omit<Models['CareerWorkspace'], 'career' | 'retirements'> & {
   career: ServerCareer | null
@@ -24,6 +27,7 @@ export type SaveSnapshot = {
   workspace: SaveWorkspace | null
   candidates: Models['HorseCatalog']['data']
   error: string | null
+  raceOptions: Models['RaceEntryOptions'] | null
 }
 export type CommandJournal = {
   read: () => string | null
@@ -60,13 +64,21 @@ export class ServerSaveController {
     workspace: null,
     candidates: [],
     error: null,
+    raceOptions: null,
   }
   constructor(
     private api: DerbyApiClient,
     private journal: CommandJournal,
     private changed: (snapshot: SaveSnapshot) => void,
   ) {}
+  private disposed = false
+  dispose() {
+    this.disposed = true
+  }
   private publish(patch: Partial<SaveSnapshot>) {
+    if (this.disposed) {
+      return
+    }
     this.state = { ...this.state, ...patch }
     this.changed(this.state)
   }
@@ -76,7 +88,7 @@ export class ServerSaveController {
       return null
     }
     const value: unknown = JSON.parse(saved)
-    if (!validateServerSaveCommand(value)) {
+    if (!validateSaveCommand(value)) {
       throw new Error('서버 저장 재시도 정보를 읽지 못했습니다. 이 탭의 세션 저장을 확인해 주세요.')
     }
     return value
@@ -84,6 +96,12 @@ export class ServerSaveController {
   private async execute(command: SaveCommand) {
     let result: unknown
     switch (command.kind) {
+      case 'race-entry':
+        result = await this.api.enterRace(command.careerId, command.body)
+        break
+      case 'race-complete':
+        result = await this.api.completeRace(command.careerId, command.raceRunId, command.body)
+        break
       case 'create':
         result = await this.api.createCareer(command.body)
         break
@@ -101,11 +119,15 @@ export class ServerSaveController {
         break
     }
     const valid =
-      command.kind === 'action'
-        ? validateActionResponse(result)
-        : command.kind === 'retire'
-          ? validateRetireCareerResponse(result)
-          : validateCareerResponse(result)
+      command.kind === 'race-entry'
+        ? validateRaceEntryResponse(result)
+        : command.kind === 'race-complete'
+          ? validateRaceCompleteResponse(result)
+          : command.kind === 'action'
+            ? validateActionResponse(result)
+            : command.kind === 'retire'
+              ? validateRetireCareerResponse(result)
+              : validateCareerResponse(result)
     if (!valid) {
       throw new Error('저장 응답을 확인하지 못했습니다. 같은 요청으로 다시 확인해 주세요.')
     }
@@ -120,6 +142,21 @@ export class ServerSaveController {
     if (!validateHorseCatalog(catalog)) {
       throw new Error('서버 육성마 후보를 읽지 못했습니다.')
     }
+    let raceOptions: Models['RaceEntryOptions'] | null = null
+    if (current.career) {
+      const options = await this.api.getRaceEntryOptions(current.career.id)
+      if (
+        !validateRaceEntryOptions(options) ||
+        options.career.id !== current.career.id ||
+        options.career.revision !== current.career.revision
+      ) {
+        throw new Error('출전 조건이 변경되었습니다. 최신 서버 기록을 다시 불러와 주세요.')
+      }
+      raceOptions = options
+    }
+    if (this.disposed) {
+      return
+    }
     const previous = this.state.workspace
     if (previous?.stable?.id && previous.stable.id === current.stable?.id) {
       // Retirement snapshots are immutable. Keep already loaded archive pages on focus refresh;
@@ -132,11 +169,12 @@ export class ServerSaveController {
     }
     this.publish({
       workspace: current,
+      raceOptions,
       candidates: catalog.data.filter((h) => h.sourceKind === 'development_fixture'),
     })
   }
   private async run(command?: SaveCommand): Promise<boolean> {
-    if (this.state.busy) {
+    if (this.disposed || this.state.busy) {
       return false
     }
     this.publish({ busy: true, error: null })
@@ -146,7 +184,7 @@ export class ServerSaveController {
         if (pending) {
           throw new Error('이전 저장을 먼저 다시 확인해 주세요.')
         }
-        if (!validateServerSaveCommand(command)) {
+        if (!validateSaveCommand(command)) {
           throw new Error('실행할 수 없는 저장 요청입니다.')
         }
         this.journal.write(JSON.stringify(command))
@@ -175,7 +213,13 @@ export class ServerSaveController {
           rejected = new Error(error.message)
         }
       }
+      if (this.disposed) {
+        return false
+      }
       await this.readWorkspace()
+      if (this.disposed) {
+        return false
+      }
       this.journal.clear()
       this.publish({ pending: false, error: rejected?.message ?? null })
       return rejected === null

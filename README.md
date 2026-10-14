@@ -34,7 +34,7 @@ pnpm dev
 2. `services/api`에서 `npm run session:create -- local-developer 8`로 발급한 token을 루트 `.env.local`의 `DERBY_API_DEV_SESSION_TOKEN`에 넣는다. `DERBY_API_URL`은 `http://127.0.0.1:4000` 등 루프백 HTTP 주소를 사용한다.
 3. 루트에서 `pnpm dev:server-save`를 실행하고 `http://127.0.0.1:3000`에서 접속한다. 별도 포트는 `PORT` 환경변수로 설정한다.
 
-말 생성·육성 상태 복원·훈련/휴식/치료·월 진행·서버 이벤트 선택·은퇴와 Archive 조회를 서버 기록으로 처리한다. 서버 모드는 기존 Career와 마방 쿠키를 읽거나 수정하지 않고, 브라우저 저장을 가져오지 않는다. 경주 출전·재생·완료의 v3 계약 연결은 후속 PR이며 이 모드에서는 경주 실행을 제공하지 않는다. 기존에 서버에서 출전을 확정한 Career도 로컬 경주로 우회하지 않는다.
+말 생성·육성 상태 복원·훈련/휴식/치료·월 진행·서버 이벤트 선택·은퇴와 Archive 조회를 서버 기록으로 처리한다. 서버 모드는 기존 Career와 마방 쿠키를 읽거나 수정하지 않고, 브라우저 저장을 가져오지 않는다. 경주 후보와 제한·계약 기수는 서버에서 조회하고, 출전·관전·완료는 저장된 v3 RaceRun/Log로 처리한다. 경주 완료가 다음 월까지 진행하므로 별도 월 진행 요청을 보내지 않는다. 서버 경주를 Local Save나 로컬 시뮬레이션으로 우회하지 않는다.
 
 Next `/api/server-save`는 명시적으로 켠 로컬 개발 모드에서만 열리고, 실행 명령은 Next를 `127.0.0.1`에 바인딩한다. token은 Next 서버 환경변수에만 있고 브라우저에는 전달하지 않는다. 운영 빌드에서는 저장 bridge가 항상 404다. 운영 로그인/세션 연동과 기존 저장 이관은 별도 범위다.
 
@@ -85,15 +85,21 @@ pnpm build
 
 Next 운영 빌드는 타입 오류를 건너뛰지 않는다. 기존 v1 경주 로그는 432개 고정 digest로 확인하며, DB migration과 Seed는 리뷰 수정에서도 원본을 보존한다.
 
-## 서버 레이스 화면 연동 준비
+## 서버 레이스 전체 연동
 
-`lib/career/race-data-adapter.ts`는 저장 모드별 읽기 경계다. Local은 기존 저장 로그를 읽고, Server는 기존 공유 클라이언트의 `getRaceRun` → `getRaceLog`를 사용한다. 조회한 출전 입력을 최신 workspace와 비교하고 기존 로그 검증기 및 저장 digest를 확인한 뒤 동일 Playback/Position Board/History/Feed/Result에 전달한다. JSON 필드 순서는 비교 결과에 영향을 주지 않는다. 조회 실패 재시도는 GET만 수행하며 Local Save 복구나 재시뮬레이션으로 우회하지 않는다.
+기존 단일 Race Entry Workspace에서 서버 `getRaceEntryOptions`의 경주별 eligible/제한 사유·계약 기수/호흡도·전술만 표시한다. 추천은 조회된 후보 안에서 기존 거리 적성/기승 적합도 계산으로 결정하며, 같은 Career/월의 재조회에서 수동 선택을 초기화하지 않는다. 서버 제한은 확정 요청에서 다시 검증된다.
 
-현재 서버의 v1/v2 저장 출전만 확인·재생할 수 있다. 새 서버 출전·완료는 차단한 상태이며 서버 결과 화면은 로컬 경주 후 성장/건강/누적 전적을 계산하지 않는다. v3 지원 완료로 표시하지 않는다. `use-race-data.ts`는 Career/모드 변경 후 늦게 도착한 응답을 버린다.
+출전과 완료는 Frontend `lib/server-save/commands.ts`의 Journal 명령으로 처리하고 생성된 `validateEnterRace`/`validateCompleteRace`로 본문을 검증한다. 공통 ServerSaveCommand에는 레이스 envelope가 아직 없으므로 Frontend에서만 확장한다. 최초 UUID와 본문을 sessionStorage에 보관하고 불확실한 응답에는 같은 요청을 재전송한다. 저장 모드를 떠난 controller는 늦은 응답으로 화면이나 Journal을 변경하지 않는다.
 
-Backend 후속 연동 기준:
+Adapter와 Next bridge는 생성 RaceRun/Log 응답 검증기 및 기존 digest 검증을 사용한다. 서버 로그를 Local Save에 쓰거나 재시뮬레이션하지 않는다. v1/v2/v3 저장 로그를 같은 Playback/Position Board/History/Feed/Result에 재생한다. 서버 새로고침 시 미완료 출전이 있으면 관전으로 돌아오고, 저장된 로그를 처음부터 다시 재생한다. 관전 시각은 게임 상태로 저장하지 않는다.
 
-- 기존 `EnterRace`, `RaceRun`, `RaceLogMetadata`, `RaceSimulationLog`의 v3 허용값과 생성된 요청/응답 검증기 제공. 기존 v1/v2도 유지한다.
-- 현재 `ServerSaveCommand`에 출전·완료 명령이 없으므로 생성 검증기와 명령 envelope 확장이 필요하다. Frontend는 이후 bridge/controller에 해당 명령을 연결하고 기존 journal에 최초 UUID/본문을 유지한다.
-- 완료 receipt의 과거 Career를 그대로 표시하지 않고 최신 workspace를 조회한다. 서버 완료 상태가 확인된 뒤 월간 Cockpit으로 전환한다.
-- 이번 GET bridge의 `race-read-validation.ts`는 전송 envelope 확인용이며 전체 OpenAPI 검증기가 아니다. 생성 race 검증기가 제공되면 교체한다. 화면 Adapter는 검증된 workspace의 잠긴 입력과 로그 digest를 추가 확인한다.
+Result의 완료는 서버에 commandId만 전송하고 최신 workspace를 다시 읽는다. 서버가 이미 상금·전적·건강과 다음 월 진행을 처리하므로 클라이언트 보상을 적용하거나 months/advance를 추가 호출하지 않는다. 로컬 브라우저 저장 경로는 기존 방식을 유지한다.
+
+추가 검증 명령:
+
+```bash
+cd services/api
+node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/server-race-flow.integration.ts
+```
+
+이 테스트는 기존 Fastify 서비스·migration·Seed와 PGlite PostgreSQL 엔진을 실제로 사용한다. Frontend bridge/공유 클라이언트/controller/journal/adapter를 통해 Month 1→7, Month 3·6 레이스, 출전/관전 중 재조회, 완료 직후 응답 유실, 동일 명령 재시도, controller 교체 중 응답, 상금/전적 1회 반영을 검사한다. 실제 브라우저 클릭·새로고침과 PostgreSQL 다중 연결 검증을 대체하지 않는다.
