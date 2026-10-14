@@ -81,14 +81,14 @@ export function entryRestriction(career: Career): string | null {
 export const distanceAptitude = (distance: number) => distance <= 1400 ? '단거리' : distance <= 1600 ? '마일' : '중거리'
 export function grade(aptitude: Horse['aptitude'], name: string) { return aptitude.find(([label]) => label === name)?.[1] ?? 'D' }
 export function ridingFit(career: Career, race: RaceDefinitionSnapshot | undefined, jockey: JockeySnapshot, tactic: RunningTactic | null) {
-  if (!race || !tactic) return { label: '보통', explanation: '경주와 전술을 선택하면 조합을 확인할 수 있습니다.' }
+  if (!race || !tactic) return { score: null, label: '보통', explanation: '경주와 전술을 선택하면 조합을 확인할 수 있습니다.' }
   const early = tactic === '도주' || tactic === '선행'
   const ability = early ? (jockey.start + jockey.pace) / 2 : (jockey.path + jockey.timing) / 2
   const horseGrade = grade(career.horse.aptitude, tactic)
   const distanceGrade = grade(career.horse.aptitude, distanceAptitude(race.distance))
   const long = race.distance >= 2000
   const score = ability + (horseGrade === 'A' ? 5 : horseGrade === 'B' ? 0 : -8) + (distanceGrade === 'A' ? 3 : distanceGrade === 'B' ? 0 : -6) + (long ? (jockey.stability - 75) / 3 : (jockey.start - 75) / 3)
-  return { label: score >= 85 ? '매우 좋음' : score >= 78 ? '좋음' : score >= 70 ? '보통' : '주의', explanation: `${tactic} 전술에서는 ${early ? '스타트·페이스' : '진로·승부 타이밍'} 능력을 중시합니다. 말의 전술 ${horseGrade}·거리 ${distanceGrade} 적성과 ${long ? '장거리 전개 안정성' : '초반 전개'}을 함께 반영했습니다.` }
+  return { score, label: score >= 85 ? '매우 좋음' : score >= 78 ? '좋음' : score >= 70 ? '보통' : '주의', explanation: `${tactic} 전술에서는 ${early ? '스타트·페이스' : '진로·승부 타이밍'} 능력을 중시합니다. 말의 전술 ${horseGrade}·거리 ${distanceGrade} 적성과 ${long ? '장거리 전개 안정성' : '초반 전개'}을 함께 반영했습니다.` }
 }
 const opponentNames = ['새벽빛', '은빛 바람', '푸른 물결', '해오름', '별빛 길', '가을 하늘', '솔바람', '붉은 노을', '초록 언덕', '달빛 강', '첫눈']
 // Opponent count follows the race definition; names beyond the list are numbered so every runner id stays unique.

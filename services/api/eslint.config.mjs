@@ -39,6 +39,9 @@ export const FRONTEND_FILES = [
   'tests/career.test.ts',
   'tests/race-entry.test.ts',
   'tests/race-aftermath.test.ts',
+  'lib/career/race-entry-recommendation.ts',
+  'components/career/race-entry-workspace.tsx',
+  'tests/race-entry-recommendation.test.ts',
 ]
 
 export default defineConfig([
