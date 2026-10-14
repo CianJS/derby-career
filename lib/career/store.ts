@@ -1,5 +1,6 @@
 'use client'
 
+import { SERVER_RACE_UNAVAILABLE } from './race-data-adapter'
 import { useSyncExternalStore } from 'react'
 import { createApiClient } from '../../packages/shared/src/client'
 import {
@@ -107,7 +108,7 @@ function activeServer() {
 }
 function unsupportedRace() {
   publish({
-    error: '서버 저장의 경주 연결은 준비 중입니다. 지금은 훈련·휴식·치료를 이용해 주세요.',
+    error: SERVER_RACE_UNAVAILABLE,
   })
   return Promise.resolve(false)
 }

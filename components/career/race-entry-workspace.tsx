@@ -17,10 +17,11 @@ import {
 import { careerStore, useCareer } from '@/lib/career/store'
 import { recommendRaceEntry, updateRaceEntryDraft } from '@/lib/career/race-entry-recommendation'
 import { cn } from '@/lib/utils'
+import { SERVER_RACE_UNAVAILABLE } from '@/lib/career/race-data-adapter'
 
 export function RaceAction({ onOpen }: { onOpen: () => void }) {
   const { career, busy, mode } = useCareer()
-  if (mode === 'server') {
+  if (mode === 'server' && !career?.raceRun) {
     return <p className="text-xs text-muted-foreground">서버 저장의 경주 연결은 준비 중입니다.</p>
   }
   if (!career) {
@@ -45,8 +46,8 @@ export function RaceAction({ onOpen }: { onOpen: () => void }) {
 }
 
 export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }) {
-  const { ready, career, busy, error, mode, localCareerId } = useCareer()
-  if (mode === 'server') {
+  const { ready, career, busy, pending, error, mode, localCareerId, workspace } = useCareer()
+  if (mode === 'server' && !career?.raceRun) {
     return <p className="py-8 text-sm">서버 저장의 경주 연결은 준비 중입니다.</p>
   }
   if (!ready) {
@@ -65,11 +66,12 @@ export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }
   }
   return (
     <RaceEntryForm
-      key={`${localCareerId ?? career.horse.id}:${career.month}`}
+      key={`${mode}:${workspace?.career?.id ?? localCareerId ?? career.horse.id}:${career.month}`}
       career={career}
-      busy={busy}
+      busy={busy || pending}
       error={error}
       onStartRace={onStartRace}
+      canConfirm={mode === 'local'}
     />
   )
 }
@@ -79,11 +81,13 @@ export function RaceEntryForm({
   busy,
   error,
   onStartRace,
+  canConfirm = true,
 }: {
   career: Career
   busy: boolean
   error: string | null
   onStartRace?: () => void
+  canConfirm?: boolean
 }) {
   const [draft, setDraft] = useState<RaceEntryDraft>(() => recommendRaceEntry(career))
   const availableJockeys = contractedRoster(career)
@@ -295,10 +299,10 @@ export function RaceEntryForm({
             </div>
           ) : (
             <Button
-              disabled={busy || !!restriction || !race || !jockey || !tactic}
+              disabled={!canConfirm || busy || !!restriction || !race || !jockey || !tactic}
               onClick={() => void careerStore.lockRace(draft, career.horse.id, career.month)}
             >
-              {busy ? '저장 중…' : '출전 확정'}
+              {!canConfirm ? SERVER_RACE_UNAVAILABLE : busy ? '저장 중…' : '출전 확정'}
             </Button>
           )}
         </div>
