@@ -4373,6 +4373,27 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
       setSaveError(error instanceof Error ? error.message : "마방 기록을 읽지 못했습니다. 기존 저장은 유지됩니다.");
     }
   }, [saveMode]);
+  const observedServerRace = useRef<{ careerId: string; runId: string } | null>(null)
+  useEffect(() => {
+    if (saveMode !== 'server' || !workspace?.career) { observedServerRace.current = null; return }
+    const current = workspace.career
+    if (current.state.raceRun) {
+      observedServerRace.current = { careerId: current.id, runId: current.state.raceRun.raceRunId }
+      return
+    }
+    const previous = observedServerRace.current
+    if (ready && !busy && !pending && previous?.careerId === current.id && current.state.raceRecords.some(record => record.raceRunId === previous.runId)) {
+      observedServerRace.current = null
+      if (['entry', 'raceplay', 'raceexperimental', 'result'].includes(view)) setView('training')
+    }
+  }, [saveMode, workspace, ready, busy, pending, view])
+  const [restoredServerView, setRestoredServerView] = useState(false)
+  useEffect(() => {
+    if (saveMode !== 'server') { setRestoredServerView(false); return }
+    if (!ready || busy || pending || error || !workspace || restoredServerView) return
+    setRestoredServerView(true)
+    if (career?.raceRun) setView('raceplay')
+  }, [saveMode, ready, busy, pending, error, workspace, restoredServerView, career])
   useEffect(() => {
     if (saveMode === 'local' && hydrated && career) setState((current) => applyCareer(current, career));
   }, [career, hydrated, saveMode]);

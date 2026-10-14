@@ -13,6 +13,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'tsconfig.json'
+      - 'tsconfig.frontend-integration.json'
       - 'next.config.mjs'
       - '.gitignore'
       - 'tests/**'
@@ -88,8 +89,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: npm ci --prefix services/api
       - run: pnpm exec next typegen
       - run: pnpm exec tsc --noEmit --incremental false
+      - name: Build Frontend with root dependencies only
+        run: pnpm build
+      - run: npm ci --prefix services/api
+      - run: pnpm exec tsc --project tsconfig.frontend-integration.json --noEmit --incremental false
       - run: node --import ./services/api/node_modules/tsx/dist/loader.mjs --test tests/*.test.ts
-      - run: pnpm build
+      - name: Verify Frontend server race flow
+        working-directory: services/api
+        run: node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/server-race-flow.integration.ts
