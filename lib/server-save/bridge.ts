@@ -1,3 +1,4 @@
+import { validateRaceReadResponse } from './race-read-validation'
 import type { components } from '../../packages/shared/src/generated/api'
 import {
   validateServerSaveCommand,
@@ -127,10 +128,14 @@ export async function handleServerSave(
       return reply(400, '실행할 수 없는 저장 요청입니다.')
     }
   } else if (request.method === 'GET') {
-    if (path !== '/v1/careers/workspace' && path !== '/v1/catalog/horses') {
+    if (
+      path !== '/v1/careers/workspace' &&
+      path !== '/v1/catalog/horses' &&
+      !new RegExp(`^/v1/careers/(${uuid})/race-runs/(${uuid})(/log)?$`).test(path)
+    ) {
       return reply(404, '지원하지 않는 저장 경로입니다.')
     }
-    if (path === '/v1/catalog/horses' && browserUrl.search) {
+    if (path !== '/v1/careers/workspace' && browserUrl.search) {
       return reply(400, '지원하지 않는 조회 조건입니다.')
     }
     for (const [key, value] of browserUrl.searchParams) {
@@ -184,7 +189,9 @@ export async function handleServerSave(
       request.method === 'GET'
         ? path === '/v1/careers/workspace'
           ? validateCareerWorkspace(result)
-          : validateHorseCatalog(result)
+          : path === '/v1/catalog/horses'
+            ? validateHorseCatalog(result)
+            : validateRaceReadResponse(result, path.endsWith('/log'))
         : command?.kind === 'action'
           ? validateActionResponse(result)
           : command?.kind === 'retire'

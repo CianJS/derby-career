@@ -24,10 +24,19 @@ import {
   raceLogDigest,
   simulateRace,
   validateRaceLog,
+  createRaceRun,
+  raceDefinitions,
+  contractedJockeys,
+  summarizeRaceLog,
   type RaceRunInput,
   type RaceSimulationLog,
 } from '../../../packages/shared/src/domain'
 import { simulateRaceV3 } from '../../../lib/career/race-sim-v3'
+import {
+  startServerCareer,
+  resolveServerAction,
+  advanceServerMonth,
+} from '../../../packages/shared/src/server-domain'
 
 type Models = components['schemas']
 type Fixture = Awaited<ReturnType<typeof fixture>>
@@ -82,6 +91,34 @@ function clientFor(f: Fixture) {
   })
 }
 
+test('fixed v3 input reproduces the same persisted JSON and digest when raw samples contain negative zero', () => {
+  let state = startServerCareer('DEV_HORSE_SERENE_STEP')
+  state.horse = { ...state.horse, id: '7d9632d8-18cb-4db3-b4db-52990fe706b3' }
+  for (let turn = 1; turn <= 2; turn++) {
+    state = resolveServerAction(state, 'rest')
+    state = advanceServerMonth(state, state.action!.actionId)
+  }
+  const identities = [
+    '6bb52167-5e94-4df5-b4a1-2292856bb635',
+    '0b21527a-f041-480f-9ca2-433ae35769e9',
+  ]
+  const run = createRaceRun(state, raceDefinitions[1], contractedJockeys[1], '선입', () =>
+    identities.shift()!,
+  )
+  const raw = simulateRace(run, 'race-sim-v3')
+  assert.ok(
+    raw.samples.some((sample) => sample.runners.some((runner) => Object.is(runner.lane, -0))),
+  )
+  const json = JSON.stringify(raw)
+  const persisted: unknown = JSON.parse(json)
+  assert.ok(validateRaceLogResponse({ log: persisted }))
+  validateRaceLog(persisted, { ...run, simulation: summarizeRaceLog(raw) })
+  assert.equal(raceLogDigest(raw), '1ctenlc')
+  assert.equal(raceLogDigest(persisted), raceLogDigest(raw))
+  assert.equal(JSON.stringify(persisted), json)
+  assert.equal(JSON.stringify(simulateRaceV3(run)), json)
+})
+
 test('default v3 API data validates and fits playback types; restart and catalogue changes reuse the exact saved log', async () => {
   const f = await fixture()
   try {
@@ -125,8 +162,9 @@ test('default v3 API data validates and fits playback types; restart and catalog
     assert.equal(run.simulation?.engineVersion, 'race-sim-v3')
     assert.equal(details.metadata.digest, raceLogDigest(log))
     assert.equal(details.metadata.byteLength, Buffer.byteLength(JSON.stringify(log)))
-    assert.deepEqual(simulateRace(run, 'race-sim-v3'), log)
-    assert.deepEqual(simulateRaceV3(run), log)
+    // Compare the exact persisted wire representation: JSON represents both -0 and 0 as 0.
+    assert.equal(JSON.stringify(simulateRace(run, 'race-sim-v3')), JSON.stringify(log))
+    assert.equal(JSON.stringify(simulateRaceV3(run)), JSON.stringify(log))
 
     for (const change of [
       { tactic: '도주' },

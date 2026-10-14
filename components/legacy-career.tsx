@@ -4653,8 +4653,8 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               }
             />
           )}{" "}
-          {saveMode === 'local' && view === "entry" && <RaceEntry setView={setView} />}{" "}
-          {saveMode === 'local' && (view === "raceplay" || view === "raceexperimental") && (
+          {view === "entry" && <RaceEntry setView={setView} />}{" "}
+          {(view === "raceplay" || view === "raceexperimental") && (
             <FocusShell setView={setView} backLabel="육성으로 돌아가기">
               <RacePlayback
                 onFinish={() => setView("result")}
@@ -4662,7 +4662,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               />
             </FocusShell>
           )}{" "}
-          {saveMode === 'local' && view === "result" && (
+          {view === "result" && (
             <FocusShell setView={setView} backLabel="육성으로 돌아가기">
               <RaceReflection
                 onNext={() => setView("training")}
