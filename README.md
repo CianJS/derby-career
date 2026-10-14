@@ -98,8 +98,11 @@ Result의 완료는 서버에 commandId만 전송하고 최신 workspace를 다�
 추가 검증 명령:
 
 ```bash
+pnpm exec tsc --project tsconfig.frontend-integration.json --noEmit --incremental false
 cd services/api
 node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/server-race-flow.integration.ts
 ```
+
+Next의 루트 타입 검사에서는 `tests/**/*.integration.ts`만 제외한다. 이 테스트가 Backend fixture를 가져오므로 API 의존성을 설치하지 않는 Frontend 배포에서는 모듈 누락을 일으킬 수 있다. 일반 Frontend 테스트와 앱·공유 import의 타입 검사는 유지하며, 서버 통합 테스트는 위 별도 설정으로 검사한다. `verify-frontend` CI는 API 의존성을 설치하기 전에 루트 의존성만으로 Next 빌드하고, 이후 API 의존성을 설치해 통합 테스트의 타입 검사와 실행을 수행한다. 타입 오류를 무시하거나 배포에 Backend 패키지를 추가하지 않는다.
 
 이 테스트는 기존 Fastify 서비스·migration·Seed와 PGlite PostgreSQL 엔진을 실제로 사용한다. Frontend bridge/공유 클라이언트/controller/journal/adapter를 통해 Month 1→7, Month 3·6 레이스, 출전/관전 중 재조회, 완료 직후 응답 유실, 동일 명령 재시도, controller 교체 중 응답, 상금/전적 1회 반영을 검사한다. 실제 브라우저 클릭·새로고침과 PostgreSQL 다중 연결 검증을 대체하지 않는다.
