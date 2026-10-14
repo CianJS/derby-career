@@ -153,7 +153,11 @@ export function RaceStrip({
         return (
           <div
             key={runner.horseId}
-            className={`race-strip-runner ${role}`}
+            className={`race-strip-runner ${role} ${spot.x > 0.75 ? 'label-left' : ''}`}
+            data-horse-id={runner.horseId}
+            data-rank={runner.rank}
+            data-distance={runner.distance}
+            title={`마번 ${gate} · ${names.get(runner.horseId)} · 현재 ${runner.rank}위`}
             style={{ '--strip-x': spot.x, '--strip-y': spot.y } as CSSProperties}
           >
             <b>{gate}</b>
@@ -167,7 +171,7 @@ export function RaceStrip({
   )
 }
 
-function GapLane({
+export function GapLane({
   frame,
   situation,
   playerHorseId,
@@ -212,6 +216,9 @@ function GapLane({
           <i
             key={item.id}
             className={`race-gap-dot ${role}`}
+            data-horse-id={item.id}
+            data-rank={frame.runners.find((runner) => runner.horseId === item.id)!.rank}
+            title={`마번 ${gates.get(item.id)} · 현재 ${frame.runners.find((runner) => runner.horseId === item.id)!.rank}위`}
             style={{ left: `${item.x * 100}%`, top: `${ys.get(item.id)! * 100}%` }}
           >
             {gates.get(item.id)}
@@ -474,6 +481,9 @@ function Stage({
         </div>
       </header>
       <PhaseMarker phaseIndex={phaseIndex} />
+      <p className="mb-2 text-xs text-muted-foreground">
+        원 안 숫자는 마번 · 오른쪽이 결승선 · 현재 순위는 FOCUS와 순위 보드에 표시됩니다.
+      </p>
       <div className="race-stage-row">
         <RaceStrip
           frame={frame}
