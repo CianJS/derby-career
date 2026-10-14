@@ -2,7 +2,7 @@
 
 프런트엔드는 루트의 Next.js 앱, 백엔드는 `services/api`의 Fastify/PostgreSQL 서비스다. 각 실행과 lockfile은 분리되어 있다.
 
-통합 브랜치는 `develop`이다. Backend는 `api/develop`, Frontend는 `frontend/develop`에서 작업하고 작은 PR로 통합한다. 담당 범위와 최신 기준 반영·검사·병합 절차는 [협업 규칙](CONTRIBUTING.md)을 따른다.
+통합 브랜치는 `develop`이다. Backend는 `api/develop`, Frontend는 해당 Work가 지정한 별도 개발 브랜치에서 작업하고 작은 PR로 통합한다. 담당 범위와 최신 기준 반영·검사·병합 절차는 [협업 규칙](CONTRIBUTING.md)을 따른다.
 
 ## 프런트엔드 로컬 실행
 
