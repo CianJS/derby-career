@@ -1,3 +1,4 @@
+import { readRaceData, readSimulationLog, writeSimulationLog } from './race-logs'
 import { executeCareerCommand } from './career-commands'
 import { CareerEventRepository } from './career-events'
 import {
@@ -21,7 +22,6 @@ import {
   raceEligibility,
   simulateRace,
   summarizeRaceLog,
-  raceLogDigest,
   tactics,
   type RaceDefinitionSnapshot,
   type JockeySnapshot,
@@ -515,9 +515,10 @@ export class CareerRepository {
           throw new ApiError(422, 'RACE_RESTRICTED', '계약 기수 중에서 선택해 주세요.')
         }
         const race = (
-          await tx.query('SELECT payload FROM race_definitions WHERE id=$1', [
-            body.raceDefinitionId,
-          ])
+          await tx.query<{ payload: RaceDefinitionSnapshot }>(
+            'SELECT payload FROM race_definitions WHERE id=$1',
+            [body.raceDefinitionId],
+          )
         ).rows[0]?.payload
         if (!race || race.month !== row.turn) {
           throw new ApiError(422, 'RACE_RESTRICTED', '현재 월에 출전할 수 있는 경주가 아닙니다.')
@@ -573,19 +574,7 @@ export class CareerRepository {
             row.state.health,
           ],
         )
-        const logJson = JSON.stringify(log)
-        await tx.query(
-          'INSERT INTO race_simulation_logs(race_run_id,engine_version,digest,duration_ms,byte_length,log,log_json) VALUES($1,$2,$3,$4,$5,$6,$7)',
-          [
-            body.raceRunId,
-            log.engineVersion,
-            raceLogDigest(log),
-            log.durationMs,
-            Buffer.byteLength(logJson),
-            logJson,
-            logJson,
-          ],
-        )
+        await writeSimulationLog(tx, body.raceRunId, log)
         await this.save(tx, row)
         return { raceRunId: body.raceRunId, career: await this.dto(tx, row) }
       },
@@ -617,17 +606,7 @@ export class CareerRepository {
         if (row.state.raceRun?.raceRunId !== runId || row.turn !== run.turn) {
           throw conflict('현재 확정 경주와 일치하지 않습니다.')
         }
-        const stored = (
-          await tx.query('SELECT * FROM race_simulation_logs WHERE race_run_id=$1', [runId])
-        ).rows[0]
-        const exactLog = stored ? JSON.parse(stored.log_json) : undefined
-        if (
-          !stored ||
-          stored.digest !== raceLogDigest(exactLog) ||
-          stored.engine_version !== run.engine_version
-        ) {
-          throw new ApiError(500, 'CORRUPT_LOG', '저장된 경주 로그를 확인할 수 없습니다.')
-        }
+        const exactLog = await readSimulationLog(tx, runId, run.engine_version)
         const result = exactLog.result
         row.state = completeServerRace(row.state, runId, result.placing, result.prizeMoney)
         const record = row.state.raceRecords.find((x) => x.raceRunId === runId)!
@@ -715,28 +694,6 @@ export class CareerRepository {
     }
   }
   async race(owner: string, id: string, runId: string, log = false) {
-    await readCareerRow(this.db, owner, id)
-    const run = (
-      await this.db.query(
-        'SELECT r.*,l.digest,l.duration_ms,l.byte_length,l.storage_version,l.log_json FROM race_runs r JOIN race_simulation_logs l ON l.race_run_id=r.id WHERE r.id=$1 AND r.career_id=$2',
-        [runId, id],
-      )
-    ).rows[0]
-    if (!run) {
-      throw notFound()
-    }
-    return log
-      ? { log: JSON.parse(run.log_json) }
-      : {
-          raceRun: run.input,
-          healthAtEntry: run.health_at_entry,
-          metadata: {
-            engineVersion: run.engine_version,
-            digest: run.digest,
-            durationMs: run.duration_ms,
-            byteLength: run.byte_length,
-            storageVersion: run.storage_version,
-          },
-        }
+    return readRaceData(this.db, owner, id, runId, log)
   }
 }
