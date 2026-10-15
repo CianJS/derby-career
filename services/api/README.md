@@ -116,7 +116,7 @@ API `actionId`는 UUID이며 `career.state.action.actionId`의 기존 도메인 
 
 ## 서버 레이스
 
-신규 출전은 기존 공유 `simulateRace`를 통해 `lib/career/race-sim-v3.ts`를 사용한다. 엔진을 생략하면 **v3**이며, `engineVersion: 'race-sim-v1'` 또는 `'race-sim-v2'`도 계속 지원한다. 적용 전 `npm run db:migrate`로 **004 migration**을 실행한다. `/health/ready`는 이 migration까지 요구하며, 기존 001~003의 체크섬과 저장 기록은 변경하지 않는다.
+신규 출전은 기존 공유 `simulateRace`를 통해 `lib/career/race-sim-v3.ts`를 사용한다. 엔진을 생략하면 **v3**이며, `engineVersion: 'race-sim-v1'` 또는 `'race-sim-v2'`도 계속 지원한다. 적용 전 `npm run db:migrate`로 **004 migration**을 실행한다. `/health/ready`는 현재 최신 006 migration까지 요구하며, 기존 001~003의 체크섬과 저장 기록은 변경하지 않는다.
 
 | 메서드와 경로                                                | 공유 클라이언트       | 반환 데이터                                                                                             |
 | ------------------------------------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -226,3 +226,69 @@ Frontend 계약은 기존 `GET /v1/events`, 상세 조회, `GET /v1/careers/{id}
 응답의 source.url은 null, source.conditionText/effectText는 빈 문자열, body는 생략한다. 내부 DB 원문과 불변 revision은 유지한다. Frontend는 구조화 conditions/choices/effects와 고정 description을 사용하고 공개 API로 비활성 전체 목록을 구현하지 않는다. 관리용 조회 API는 이번 범위에 추가하지 않았다. HTTP 경로와 응답 필드는 유지하지만 공개 대상과 원문 노출 범위를 축소한 계약 변경이다.
 
 사건그룹 ID도 sourceDigest에 포함한다. 미검토 원본의 그룹 변경은 새 revision이며 이전 승인 manifest는 실패한다. 이미 승인한 정의는 원본/그룹이 같을 때만 재가져오기를 허용한다. 변경되면 전체 import를 롤백하고 재검토를 요구한다. 승인된 이전 revision과 기존 Career의 draw/history는 덮어쓰지 않는다. `reports/event-expansion.json`의 sourceComparison은 보관 CSV와 현재 속성의20개 차이 및 양쪽 원문을 기록한다. P1의 events.drafts.import.json은 과거 검사 snapshot이므로 현재 등록 입력으로 사용하지 않는다.
+
+## 실존 경마장·경주 일정 참조 카탈로그
+
+`006_racing_reference_catalog.sql`은 `racecourses`, `racecourse_courses`, `race_schedules`를 추가한다. 기존 `race_definitions` 17개, Career/RaceRun/결과/ledger/저장 로그와 분리되어 있으며 `db:seed`와 서버 시작은 실존 카탈로그를 가져오지 않는다. `/health/ready`는 006까지 적용되어야 성공한다. 운영 DB에는 이번 작업에서 적용하지 않았다.
+
+2026-10-15 Notion의 필터 없는 기본 뷰를 끝까지 조회한 속성 snapshot을 `seeds/racing.notion.source.json`에 보존했다. 경마장 **90**, 코스 **101**, 경주 원본 **851행**이다. 비공개 Notion 페이지 식별자는 제거하고 관계는 원본의 안정 ID로 바꿨다. 공식 외부 출처·메모·원본 제원은 보존한다. 변환 결과는 `seeds/racing.catalog.json`, 검토 목록은 `reports/racing-catalog.json`이다. 이 수치는 서로 다른 851개 대회 또는 실행 가능한 경주 수가 아니다.
+
+| 구분     | 원본 경주 행 |
+| -------- | -----------: |
+| 한국 KRA |           51 |
+| 일본 JRA |          130 |
+| 일본 NAR |           46 |
+| 미국     |          624 |
+
+현재 Notion의 미국 624행은 TOBA ID 622개와 별도 브리더스컵 ID 2개(`RACE_USA_2026_BC_TURF`, `RACE_USA_2026_BC_CLASSIC`)다. 요청의 “TOBA 624”와 출처 구성이 다르지만 원본 851행을 그대로 보존했다. 미국의 동일명·경마장·등급 중복 후보는 Eddie Logan, Robert J. Frankel, Fifth Season의 3쌍이며 삭제·병합하지 않는다. `duplicateGroup`으로 묶고 검토 항목을 붙인다. 날짜 없는 **41행**은 `date_unconfirmed` **23행**, `not_run` **18행**이다. 날짜를 생성하지 않는다. 기본 목록의 total은 참고 원본 행 수이며, 실제 달력에는 `scheduleStatus=dated` 또는 year/month 필터를 사용해야 한다.
+
+### 오프라인 변환과 수동 Import
+
+```bash
+npm run racing:prepare
+npm run db:migrate
+npm run racing:import
+# 새로운 Notion 속성 JSON packet 또는 CSV 3종을 검증·변환해 snapshot 교체
+npm run racing:prepare -- /absolute/path/notion-packet.json
+npm run racing:prepare -- /absolute/path/racecourses.csv /absolute/path/courses.csv /absolute/path/races.csv
+# 검토한 입력을 명시적 DB로 가져오기
+npm run racing:import -- /absolute/path/notion-packet.json
+```
+
+JSON 형식은 `{ sourceVersion: 1, capturedAt: 'YYYY-MM-DD', racecourses: [...], courses: [...], races: [...] }`이며 각 행은 보관 snapshot과 동일한 Notion 속성명/타입이다. JSON의 `실제 개최일`은 `date:실제 개최일:start` 키다. CSV는 Notion의 표시 속성명을 사용하고 숫자는 단위 없는 숫자 또는 천 단위 쉼표 표기, 날짜는 ISO `YYYY-MM-DD`를 사용한다. 지역별 모호한 날짜나 단위가 섞인 숫자는 검증 전에 명시적으로 정리해야 한다. 빈 값은 null로 유지한다. CSV 관계는 정확한 경마장 ID/고유 제목, JSON 관계는 그 값 하나의 배열 문자열을 사용한다. Notion의 `제목 (페이지 URL)` 표기도 정확한 제목 또는 packet의 URL과 일치해야 한다. 여러 관계·존재하지 않는 관계·국가 충돌·중복 ID는 실패한다. 코스는 자동 배정하지 않는다.
+
+Import는 전체 입력 검증 후 advisory lock과 단일 트랜잭션으로 실행하며 안정 ID로 upsert한다. 같은 입력의 재실행은 변경 없음 1,042건(90+101+851), 생성·갱신 0건이다. 삭제는 수행하지 않는다. `created`, `updated`, `unchanged`, `needsReview`, `failed`, `committed`와 엔티티/국가별 건수를 JSON으로 출력한다. needsReview는 생성/갱신/변경 없음과 겹치는 검토 대상 수다. 잘못된 입력이나 DB 쓰기 실패는 전체 rollback, 성공 쓰기 0건, failed=1(실패한 배치), 종료 코드 1이다. 부분 packet에서 빠진 기존 행은 삭제되지 않으므로 **카탈로그 교체에는 전체 Export를 사용**한다. 정기 수집이나 외부 웹 요청은 없다.
+
+`gameEnabled`는 원본 체크박스와 관계없이 모두 false다. 세 테이블 모두 SQL CHECK로 true/누락/null을 거부하며 일정의 `entryEligibility`는 항상 `not_evaluated`다. 활성화 API/명령은 없다. 이후 콘텐츠·코스/엔진·경제 승인과 별도 migration/기능이 필요하다. 2026년 공식 날짜를 게임의 2028년 달력에 이식하지 않는다.
+
+### Frontend 조회 계약
+
+| API                          | 응답                                 | 공유 클라이언트    |
+| ---------------------------- | ------------------------------------ | ------------------ |
+| `GET /v1/racecourses`        | `{data: Racecourse[], pagination}`   | `listRacecourses`  |
+| `GET /v1/racecourses/{id}`   | `{racecourse, courses: Course[]}`    | `getRacecourse`    |
+| `GET /v1/race-schedule`      | `{data: RaceSchedule[], pagination}` | `listRaceSchedule` |
+| `GET /v1/race-schedule/{id}` | `RaceSchedule`                       | `getRaceSchedule`  |
+
+공개 읽기이며 인증 토큰이 필요 없다. 코스가 없는 시설도 `courses: []`로 조회한다. 목록 공통 query는 `page`(기본 1), `pageSize`(기본 20, 최대 100), `country`(`KOR/JPN/USA`), `verificationStatus`, `search`다. 일정에는 `year`, `month`, `racecourseId`, `grade`, `surface`, `minDistance`, `maxDistance`, `scheduleStatus`를 추가한다. 등급은 원본의 상위 분류(`G1/G2/G3/Listed/기타`)이며 `originalGrade`, `gradeSystem`, `internationalGrade`도 함께 표시해야 한다. USA L/LR, KRA 국내/국제, NAR 미확인을 합쳐 표시하지 않는다.
+
+일정 정렬은 `raceDate ASC NULLS LAST, id ASC`이며 경마장 정렬은 ID 오름차순이다. 각 목록 요청의 데이터와 total은 동일한 읽기 snapshot에서 조회한다. 페이지 간 순서는 데이터가 동일할 때 안정적이며 Import 도중 여러 요청에 걸친 고정 snapshot/cursor는 제공하지 않는다. 잘못된 query/거리 범위는 400, 없는 ID는 404다. `search`의 `%`/`_`는 와일드카드가 아닌 문자다. 출전 가능 여부는 이 API에서 평가하지 않는다. 게임용 후보는 기존 소유자 Career `/race-entries`, 17개 개발용 정의는 기존 `/v1/catalog/races`를 사용한다.
+
+```ts
+const result = await client.listRaceSchedule({
+  country: 'KOR',
+  year: 2026,
+  month: 9,
+  grade: 'G1',
+  surface: 'sand',
+  racecourseId: 'RC_KOR_SEOUL',
+  minDistance: 1200,
+  maxDistance: 1800,
+})
+// pagination.total = 2; 코리아컵/코리아 스프린트. 양쪽 모두 gameEnabled=false.
+const facility = await client.getRacecourse('RC_KOR_SEOUL')
+```
+
+생성 타입은 `components.schemas.Racecourse/Course/RaceSchedule`과 목록/상세를 사용한다. `generated/save-validation.mjs`의 `validateRacecourse`, `validateCourse`, `validateRaceSchedule`, `validateRacecourseList`, `validateRacecourseDetail`, `validateRaceScheduleList`로 외부 응답을 검사할 수 있다. 기존 API 응답은 변경하지 않았다. Frontend 화면 수정은 포함하지 않는다.
+
+미확인 제원·자격·상금·최대 출전두수·코스 연결은 null이다. 연령/성별 원문은 `originalEligibility`에도 보존하며 성별 제한이 없는 것을 추정하지 않는다. 미국 `distanceMeters`는 Notion 명목 환산값을 그대로 보존하고 `originalDistance`/unit 및 `distanceBasis=nominal_conversion`으로 구분한다. 실제 발주선 검증을 뜻하지 않는다. 두 중복 후보의 원문 거리/등급은 현재 메모에서 빠져 있으므로 null/검토 표시하며 다른 행에서 복사하지 않는다. NAR는 기타/미확인 상태를 유지하고 환율·게임 상금을 생성하지 않는다.

@@ -378,6 +378,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/racecourses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** listRacecourses */
+        get: operations["listRacecourses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/racecourses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** getRacecourse */
+        get: operations["getRacecourse"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/race-schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** listRaceSchedule */
+        get: operations["listRaceSchedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/race-schedule/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** getRaceSchedule */
+        get: operations["getRaceSchedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1059,6 +1127,114 @@ export interface components {
         Readiness: {
             /** @enum {string} */
             status: "ready";
+        };
+        /** @enum {string} */
+        CatalogVerificationStatus: "verified" | "partial" | "conflict" | "unverified" | "review_required";
+        /** @enum {string} */
+        CatalogCountry: "KOR" | "JPN" | "USA";
+        /** @enum {string} */
+        CatalogSurface: "turf" | "dirt" | "sand" | "synthetic" | "other" | "unknown";
+        Racecourse: {
+            id: string;
+            name: string;
+            officialName: string | null;
+            country: string;
+            countryCode: components["schemas"]["CatalogCountry"];
+            region: string | null;
+            city: string | null;
+            operator: string | null;
+            operationalStatus: string | null;
+            racingType: string | null;
+            /** Format: uri */
+            sourceUrl: string | null;
+            verificationStatus: components["schemas"]["CatalogVerificationStatus"];
+            /** @enum {boolean} */
+            gameEnabled: false;
+            notes: string;
+            reviewIssues: string[];
+        };
+        Course: {
+            id: string;
+            racecourseId: string;
+            name: string;
+            surface: components["schemas"]["CatalogSurface"];
+            configuration: string | null;
+            layout: string | null;
+            direction: string | null;
+            straightLength: number | null;
+            trackLength: number | null;
+            widthMin: number | null;
+            widthMax: number | null;
+            elevationDifference: number | null;
+            originalSpecifications: string | null;
+            confirmedDistances: string | null;
+            /** Format: uri */
+            sourceUrl: string | null;
+            verificationStatus: components["schemas"]["CatalogVerificationStatus"];
+            /** @enum {boolean} */
+            gameEnabled: false;
+            notes: string;
+            reviewIssues: string[];
+        };
+        RaceSchedule: {
+            id: string;
+            name: string;
+            year: number;
+            /** Format: date */
+            raceDate: string | null;
+            /** @enum {string} */
+            scheduleStatus: "dated" | "date_unconfirmed" | "not_run";
+            country: components["schemas"]["CatalogCountry"];
+            racecourseId: string;
+            courseId: string | null;
+            grade: string;
+            originalGrade: string | null;
+            /** @enum {string} */
+            gradeSystem: "KRA_domestic" | "JRA" | "NAR" | "USA";
+            internationalGrade: string | null;
+            surface: components["schemas"]["CatalogSurface"];
+            distanceMeters: number | null;
+            originalDistance: string | null;
+            /** @enum {string|null} */
+            originalDistanceUnit: "m" | "furlong" | "mile" | null;
+            /** @enum {string} */
+            distanceBasis: "source_meters" | "nominal_conversion" | "unconfirmed";
+            originalDate: string | null;
+            ageCondition: string | null;
+            sexCondition: string | null;
+            originalEligibility: string | null;
+            maxRunners: number | null;
+            prizeMoney: number | null;
+            /** @enum {string|null} */
+            prizeCurrency: "KRW" | "JPY" | "USD" | null;
+            prizeBasis: string | null;
+            gamePrizeMoney: number | null;
+            entryFee: number | null;
+            /**
+             * @description Reference catalog only; never a Career entry eligibility decision.
+             * @enum {string}
+             */
+            entryEligibility: "not_evaluated";
+            duplicateGroup: string | null;
+            /** Format: uri */
+            sourceUrl: string | null;
+            verificationStatus: components["schemas"]["CatalogVerificationStatus"];
+            /** @enum {boolean} */
+            gameEnabled: false;
+            notes: string;
+            reviewIssues: string[];
+        };
+        RacecourseDetail: {
+            racecourse: components["schemas"]["Racecourse"];
+            courses: components["schemas"]["Course"][];
+        };
+        RacecourseList: {
+            data: components["schemas"]["Racecourse"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        RaceScheduleList: {
+            data: components["schemas"]["RaceSchedule"][];
+            pagination: components["schemas"]["Pagination"];
         };
     };
     responses: {
@@ -1905,6 +2081,130 @@ export interface operations {
             413: components["responses"]["ApiError"];
             415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    listRacecourses: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                country?: components["schemas"]["CatalogCountry"];
+                verificationStatus?: components["schemas"]["CatalogVerificationStatus"];
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reference catalog, independent of playable RaceDefinitions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RacecourseList"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    getRacecourse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reference catalog, independent of playable RaceDefinitions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RacecourseDetail"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    listRaceSchedule: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                country?: components["schemas"]["CatalogCountry"];
+                verificationStatus?: components["schemas"]["CatalogVerificationStatus"];
+                search?: string;
+                year?: number;
+                month?: number;
+                racecourseId?: string;
+                grade?: "G1" | "G2" | "G3" | "Listed" | "기타";
+                surface?: components["schemas"]["CatalogSurface"];
+                minDistance?: number;
+                maxDistance?: number;
+                scheduleStatus?: "dated" | "date_unconfirmed" | "not_run";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reference catalog, independent of playable RaceDefinitions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RaceScheduleList"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    getRaceSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reference catalog, independent of playable RaceDefinitions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RaceSchedule"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
             503: components["responses"]["ApiError"];

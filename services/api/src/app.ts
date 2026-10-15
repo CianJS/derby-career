@@ -11,6 +11,8 @@ import { createCareerAuthorization } from './modules/auth/authorization'
 import { eventRoutes } from './routes/events'
 import { careerRoutes } from './routes/careers'
 import { ApiError } from './errors'
+import { RacingCatalogRepository } from './repositories/racing-catalog'
+import { racingCatalogRoutes } from './routes/racing-catalog'
 
 const CLIENT_ERROR_CODES: Record<number, string> = {
   400: 'INVALID_REQUEST',
@@ -122,9 +124,9 @@ export async function createApp(
   app.get('/health/ready', { schema: routeSchema(spec, '/health/ready', 'get') }, async () => {
     try {
       const result = await db.query(
-        "SELECT name FROM schema_migrations WHERE name IN ('001_foundation.sql','002_history_guards.sql','003_exact_race_log_json.sql','004_race_sim_v3.sql','005_event_activation_guards.sql')",
+        "SELECT name FROM schema_migrations WHERE name IN ('001_foundation.sql','002_history_guards.sql','003_exact_race_log_json.sql','004_race_sim_v3.sql','005_event_activation_guards.sql','006_racing_reference_catalog.sql')",
       )
-      if (result.rows.length !== 5) {
+      if (result.rows.length !== 6) {
         throw new Error('Migration missing')
       }
       return { status: 'ready' }
@@ -151,6 +153,7 @@ export async function createApp(
       }),
     )
   }
+  racingCatalogRoutes(app, spec, new RacingCatalogRepository(db))
   eventRoutes(app, spec, new EventRepository(db))
   careerRoutes(
     app,

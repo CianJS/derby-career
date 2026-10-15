@@ -1,0 +1,7487 @@
+{
+  "sourceDigest": "9869128c615c6d32da080b28bc496d49835699037ac8c93abeaeac5657d0172b",
+  "capturedAt": "2026-10-15",
+  "counts": {
+    "racecourses": 90,
+    "courses": 101,
+    "races": 851,
+    "dated": 810,
+    "dateUnconfirmed": 23,
+    "notRun": 18,
+    "gameEnabled": 0
+  },
+  "countries": {
+    "KOR": 51,
+    "JPN": 176,
+    "USA": 624
+  },
+  "providers": {
+    "KRA": 51,
+    "JRA": 130,
+    "NAR": 46,
+    "USA_TOBA_ID": 622,
+    "USA_OTHER_ID": [
+      "RACE_USA_2026_BC_TURF",
+      "RACE_USA_2026_BC_CLASSIC"
+    ]
+  },
+  "duplicateGroups": [
+    [
+      {
+        "id": "RACE_USA_2026_TOBA_5B4A759BDD98C7",
+        "name": "EDDIE LOGAN S.",
+        "raceDate": null,
+        "scheduleStatus": "date_unconfirmed"
+      },
+      {
+        "id": "RACE_USA_2026_TOBA_5D1999941F63D1",
+        "name": "EDDIE LOGAN S.",
+        "raceDate": "2026-01-08",
+        "scheduleStatus": "dated"
+      }
+    ],
+    [
+      {
+        "id": "RACE_USA_2026_TOBA_12103396919DE0",
+        "name": "ROBERT J. FRANKEL S.",
+        "raceDate": null,
+        "scheduleStatus": "date_unconfirmed"
+      },
+      {
+        "id": "RACE_USA_2026_TOBA_E9F2601FF417BF",
+        "name": "ROBERT J. FRANKEL S.",
+        "raceDate": "2026-01-08",
+        "scheduleStatus": "dated"
+      }
+    ],
+    [
+      {
+        "id": "RACE_USA_2026_TOBA_4CF0544F276C87",
+        "name": "FIFTH SEASON S.",
+        "raceDate": "2026-11-28",
+        "scheduleStatus": "dated"
+      },
+      {
+        "id": "RACE_USA_2026_TOBA_08818D1FE7BA4B",
+        "name": "FIFTH SEASON S.",
+        "raceDate": "2026-02-05",
+        "scheduleStatus": "dated"
+      }
+    ]
+  ],
+  "racecoursesWithoutCourses": [
+    "RC_USA_COLONIAL_DOWNS",
+    "RC_USA_LOS_ALAMITOS",
+    "RC_USA_GRANTS_PASS",
+    "RC_USA_ELLIS_PARK",
+    "RC_USA_FAIRMOUNT_PARK",
+    "RC_USA_THISTLEDOWN",
+    "RC_USA_HAWTHORNE",
+    "RC_USA_PENN_NATIONAL",
+    "RC_USA_LEGACY_DOWNS",
+    "RC_USA_LONE_STAR",
+    "RC_USA_FONNER_PARK",
+    "RC_USA_MOUNTAINEER",
+    "RC_USA_MAHONING_VALLEY",
+    "RC_USA_ARAPAHOE",
+    "RC_USA_EMERALD_DOWNS",
+    "RC_USA_HORSESHOE_INDIANAPOLIS",
+    "RC_USA_COLUMBUS",
+    "RC_USA_OAKLAWN",
+    "RC_USA_LOUISIANA_DOWNS",
+    "RC_USA_SUNRAY",
+    "RC_USA_PRAIRIE_MEADOWS",
+    "RC_USA_MONMOUTH",
+    "RC_USA_CHARLES_TOWN",
+    "RC_USA_CANTERBURY",
+    "RC_USA_SAM_HOUSTON",
+    "RC_USA_TAMPA_BAY",
+    "RC_USA_FINGER_LAKES",
+    "RC_USA_EVANGELINE",
+    "RC_USA_ATOKAD",
+    "RC_USA_RUIDOSO",
+    "RC_USA_SUNLAND",
+    "RC_USA_PIMLICO",
+    "RC_USA_AQUEDUCT",
+    "RC_USA_FAIR_GROUNDS",
+    "RC_USA_RETAMA_PARK",
+    "RC_USA_WILL_ROGERS",
+    "RC_USA_ALBUQUERQUE",
+    "RC_USA_HORSEMENS_PARK",
+    "RC_USA_ZIA_PARK",
+    "RC_USA_BELTERRA",
+    "RC_USA_GILLESPIE",
+    "RC_USA_DELAWARE_PARK",
+    "RC_USA_FAR_HILLS",
+    "RC_USA_TURF_PARADISE",
+    "RC_USA_MEADOWLANDS",
+    "RC_USA_LAKE_MAC",
+    "RC_USA_LAUREL_PARK",
+    "RC_USA_PARX",
+    "RC_USA_REMINGTON",
+    "RC_USA_DELTA_DOWNS"
+  ],
+  "review": [
+    {
+      "id": "RC_USA_HAWTHORNE",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_LONE_STAR",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_ARAPAHOE",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_SUNRAY",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_SAM_HOUSTON",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_RUIDOSO",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_PIMLICO",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_RETAMA_PARK",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_GILLESPIE",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_USA_FAR_HILLS",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_KOR_BUSAN_GYEONGNAM",
+      "verificationStatus": "conflict",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_CHUKYO",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_KASAMATSU",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_HANSHIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_HAKODATE",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_NAKAYAMA",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_KOKURA",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_NIIGATA",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_SAPPORO",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_FUKUSHIMA",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_KOR_YEONGCHEON",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_TOKYO",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RC_JPN_KYOTO",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_SANTA_ANITA_HILLSIDE_TURF",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_SANTA_ANITA_TURF_RAIL_15FT",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_SANTA_ANITA_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_SANTA_ANITA_TURF_INNER_RAIL",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_SARATOGA_TURF_MELLON",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_GULFSTREAM_TURF",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_BELMONT_TURF_2",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_KENTUCKY_DOWNS_TURF",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_BELMONT_DIRT",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_TURFWAY_TAPETA",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_SARATOGA_TURF_INNER",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_TIMONIUM_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_CHURCHILL_DOWNS_TURF",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_KEENELAND_TURF",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_DEL_MAR_TURF",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_GULFSTREAM_DIRT",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_DEL_MAR_DIRT",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_PRESQUE_ISLE_TAPETA",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_SARATOGA_DIRT",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_CHURCHILL_DOWNS_DIRT",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_GULFSTREAM_TAPETA",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_JPN_NIIGATA_TURF_STRAIGHT",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_KEENELAND_DIRT",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_USA_BELMONT_SYNTHETIC",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_USA_BELMONT_TURF_1",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_JPN_MONBETSU_DIRT_INNER",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_FUNABASHI_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_SAGA_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_KOR_YEONGCHEON_MAIN",
+      "verificationStatus": "unverified",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_JPN_MIZUSAWA_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_KASAMATSU_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_KOR_BUSAN_GYEONGNAM_DIRT_OUTER",
+      "verificationStatus": "conflict",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_JPN_MONBETSU_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_OBIHIRO_BANEI",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_KOR_SEOUL_DIRT_OUTER",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_MORIOKA_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_FUNABASHI_DIRT_INNER",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_OI_DIRT_INNER",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_KOR_SEOUL_DIRT_INNER",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_NAGOYA_YATOMI_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_KOR_BUSAN_GYEONGNAM_DIRT_INNER",
+      "verificationStatus": "conflict",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_JPN_OI_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_OI_DIRT_LEFT",
+      "verificationStatus": "partial",
+      "issues": [
+        "track_length_unconfirmed"
+      ]
+    },
+    {
+      "id": "CO_JPN_KANAZAWA_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_HIMEJI_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_URAWA_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_KOCHI_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_SONODA_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_KOR_JEJU_DIRT",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_MORIOKA_TURF",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "CO_JPN_KAWASAKI_DIRT_MAIN",
+      "verificationStatus": "partial",
+      "issues": []
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6B5264D1CFED35",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0C057F14BC60F4",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1891AAA7159E31",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_ADF52938F4B0AE",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_90D8460AE4F84D",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DF9A18A3B390DB",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_539C6BAA146C84",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_79C3693C070C64",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FC19489B91191B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_56834ED20422BD",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D09BF739532706",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_97E1EEF666DF7D",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_41204A3AF90CB7",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2C2396B5BA2683",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3D6640A5335E6F",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_25B5EFD41AB1DE",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_45AC44597D3810",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_33056FA3490612",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A1BFDCBAA051CD",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2197BF26FBDFD8",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9F265BE92D793E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_20C13C4C5EF38A",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6DEA84D1E0736A",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_62BAEB20CAE83B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9125B165AEA0AB",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F7DCE7C5D12874",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1F880277C9A46B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2B6E0F9838A77F",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_91EF82C60422F2",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_12CAEFF599B303",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5B4A759BDD98C7",
+      "verificationStatus": "review_required",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed",
+        "original_grade_unconfirmed",
+        "original_distance_unconfirmed",
+        "duplicate_combination_review"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D44E63FB25EBD1",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_73AB599261E53C",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_12103396919DE0",
+      "verificationStatus": "review_required",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed",
+        "original_grade_unconfirmed",
+        "original_distance_unconfirmed",
+        "duplicate_combination_review"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3A7320D2E7499B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AEDA3578186D3B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4294937B7F627E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D7C4E95CCA763C",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E0EA69F8F0320E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_59FF6D917F8BBF",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2FE0B7ED55BD59",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_EEDC56D631F55E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7827EC788ABE23",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8E3BC41D11C25C",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_916C27D92F0339",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3850E13E4F966A",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E4883894B4975C",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AA1A8DA6BB0C43",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_50D4F4222DDFBF",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_02D84C9C6F373F",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E60C213CD85F50",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4E94A19B4729A2",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8E45E5DB02FA91",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9CE49A67A10673",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_75FB520A734DDE",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F8B6AECAFF94D1",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7CB5FF1B365106",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9AC1EE30A78D77",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_20B9758FCEE9BC",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BB832783AA88AA",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_EFE5577F101F46",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "date_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F0F48DD1C09AB6",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "not_run"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_52F4C45EB4C93E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D711BD549DC290",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A4B5B76703F7D6",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_75CC3FFC325708",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_12E51CDEE33613",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4EAE6F2543F381",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C6BBE2AFDD00AA",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4E159F62A5D54D",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4DD6B5C3F01323",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8440ED970AA446",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1E41CECA47944D",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7B2422E5E6252E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3C2321B1A68BE1",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C2EEEDF118E7A2",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D1E165FD1B4AF6",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_80F5125AB3204F",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8146A13D9077FE",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E2D8D96A55AA4A",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E1060645BD9B4A",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_744B0C1BD2531C",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B9968A8AA29365",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_32EC5948ADB4E2",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9EE36553280120",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_376E4A1537B767",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_360105FF4F7C26",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FF8FD12CD748F9",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2198EC40544AF0",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_02C73E799F58DA",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5C48CCC7BD58B4",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A3A81D56315208",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0FBC083F1E2DAA",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8433C01154801F",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C74D0D6F7FD4A3",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FF04310645C42F",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_619FA7D888FAC4",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B7D306557F5F05",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DE2FC8BE8131C2",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_56E0C0D71E2CCC",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8053E065CF5841",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_30C798D5C8A61E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6E710829A0F73D",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_11FCF933036ADB",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_41058E0C05557B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B8B3A5507D436E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AF267A3E4EF947",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_15164A12D97D14",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E0A0C7C685D4EC",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3C8E46C4B5E9FF",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_45E31BF99E0EBF",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D353BFE6C76C5F",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_60076EC0A6EAF2",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FBEB8A77905BB2",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B2F6DA0CAAA68E",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_EA7B249D6BB5F5",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5D4A6F4B2BE16C",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C21A571E139771",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_264619F82B5E0F",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D58D2D45CFC22C",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_647855A367917B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_472E7C79D32C6B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CA16656D4639E9",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7CDF29C17AA626",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4D88A691140481",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4E5470FF315EA6",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E950E6438D4CBE",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4FC3CAEEAB9110",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8A6CCBD2151D50",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2EA40EFC14D82C",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4CF0544F276C87",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "duplicate_combination_review"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B44181EF99690B",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8F63F9B08A38A1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AEC44E9132C6CB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_81E874B83CE9D1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_000145E14C71FE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FA87CC0DA6F29B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_22405873F9DA33",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8DDBF6E1939D96",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_04291575082E89",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0404D29C7965FC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7B4C88DBECB03A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_EC96D4D8BFF020",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F62DCC78228AD4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_008705D138A076",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0EE419AA902887",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0C953B95B3864B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F0D3FC8058F329",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_164A7C14F50F71",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_939230F73B3671",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_73E361034EE444",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E6E671BD83E499",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3E29D34473141E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8F3965FE5C81DF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F0DB54AF16DA68",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DB055815AA2D25",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D331EFC3EE3C01",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_092B379E8C4C04",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_434580A99B32BE",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7C5AC31F8D25A8",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FB86491A36F0CD",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DBE5EAEE30CB42",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_41E7ADBB9EDC3E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2C17162C035A9E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2B0BE6A78E9870",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AC343BC71B5812",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C8D647DD641438",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7203F3178BCD97",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FB6F9A828B3809",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_11E2DC7ACEACEB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_396CE004ABC8F3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_85ACE6FC7D3C66",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_21D4832D98CEEC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A502226AB9A6FE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A97598B58F5716",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E3E446F1F6E23F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E8655A922F4CC7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E3E669B40CA682",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4E755EBEE3C9F8",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1719541FEB7C96",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_EA22BE17EA3147",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8F4D98E5F59292",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_859B2811977897",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D18FCF67C1E57D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_20A25DEAD26854",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AD6DD0B96FBEE3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_88D4E488048B26",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_20A320E317AF86",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AC5F0CF73B75BF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_845F6D9346D35A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2BA9BED7F71A7B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2E8AD1FE57C6CE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6D243DA50E18CE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FA32782FB4971C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_81CF3B38348C4B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9BC9314FE5E08C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E06040480E9B5C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E0A3D534371A3A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0C07F8241226E0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_643CEC36768B48",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_ED7A90324321C3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3C16C34C04E4F7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3AA5B6D2364450",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6DCB6E92E531BF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BAECD9D3B8DF05",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_015FBAB9972A1A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8960EE6F4FBDB4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6C0B37AE5BF245",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BA57C9B315A51F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_32528715924DE9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_400FE9A847BF93",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3D81722F258E11",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_779C85FFE11761",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C057684E052716",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_16508B7745E719",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5D6B94D0612284",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_10ADD149918E09",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_50038D4F1FEFFD",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1D4FFE62A32DD3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FB57748B020D20",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_370E797123100A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F7337F05D2D5F2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6CFF219D90B149",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_304699294768E4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D221952FC008DE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_38212E11A14CD3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4E8D83947C3AE5",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8DA20A394B8EB2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C7A9648E1ECE69",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AE1D093519C1E7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FFEDD9B355D28C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E8513002535A83",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_213D64FD823019",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_875FCA1792D010",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_143030031C7225",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AE1BC53A1B5211",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_69837FB6A19119",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B051DBCD7CCE4A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F39E845F6D43C4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F0934DCFD7C21D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_11B3F8E18211E3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D540604C4918A6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D54F642BFA8A35",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4DB24B07FE259B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F5C56480C91488",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_62FE9E7BB0B3A5",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_00AD71D6AF4EBB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_450785466D5B45",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_325DD5A2977126",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CFE54B4EE636A3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7D52F10A117F24",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5DA784D1325148",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F41BBFF9C68150",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_06F15B6D65D747",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F37CF33EF53465",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_864FD75FDE04DF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F0DB3F47D5BFF7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D824567A71AE23",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_876475B2AA3FBB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4ACF89F81EEBB8",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1184ED86E95698",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_275B5EE116C1EB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2189DDE1FF7F05",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_839AEB6AEA45FC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_78236D78988057",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D1A5B06EF7978F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1B11350900D1D9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5ADA260B5E5F9E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8641ECF15E4294",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8E246F7E1CBC3D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_15A744D25DDEDD",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_04F731259E8E05",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_ABD06EF22155AD",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_36DAA7511E82D3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C6E89EAC18E118",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_35460835692C35",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DACAF07EFFE090",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1521D4A0010AAB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_26BCD9637DBE5B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_65361D5F155192",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4A0C4D02CD5CF2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_24055B7B9783B4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A4B74B92548E48",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6A389ADA773D03",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1075475DCE26C4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9A51235B3C28CD",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AAC45E8DD8111E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_38BDB7889498F2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_433BEBB7EAA38D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_16AD831B724128",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A990B392EAAEF3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_27859C49E4B19E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CB86D9D3A27CC4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2E30DEDA4EAC9E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_924AA76FBA8A18",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_616A158C214892",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C96FA5FCBE0697",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_84351CA2099FF7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7C4D06294B69D2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_54DF083C163B1E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2F8FFA9D00CF54",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_32E6717E9F82A1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B7752E64100405",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_838363F2EF693A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D6BBC070F1DEF7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_507E2C347AA417",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1CD27FDAE64683",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7A8436D7A69DFA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A9E3734FE27844",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DC26FF0EF3F9F2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_562735A848475C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_ACAB507AD1FFE7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_62948FABCFED12",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D25EAB99FF033B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_113DACAA25C15C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FCBC3CABB54B0A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_45C56324326192",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6D2A6982C11CF2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AE37D2628A7FB2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CBA2C2217E14FB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_15AFC108C4F420",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_40B556B367E824",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0E411E3B6613B1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_74B8CE93C22A61",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DB1E703BD43289",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_388952056741B0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FD1430D039B962",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F0ECFE2A7B814C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DB540507ABA518",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D32C2BCEC4FDDD",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1BF188F2A9579E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8FC0686CEE2808",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F69710DA3A138E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_319781EAA3F89F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C449F465184E9F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6967F72F4963F9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_41D7B262241AE9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F3B59E1837A4C3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3AD5E9585612A6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2915481F6B1679",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7284431F2C04F4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_84F6D5B0A4730F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0B475826E7B0B9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4F79A24071C7E0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6A9C1494231DF4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_16CF91E58DBB9E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5D65DC5638D5DA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5716A96E911708",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0A91C7A14617B0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8BD4949DE5F900",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7D71D9BE03EF3B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FEF72D067F1351",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B649083F042AFE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1EEEC05CD09779",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7DC054BB4854C3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5F5DCC1921412D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C03F2985D1D7B0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BE98B70C2CD8F9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B18FE96B1A7213",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C5EA0210CF7B44",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E6A5B76057FCCB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E3C1F26A51DCB8",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DD1C2C4E1335CB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B4690FBC81E44D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C0CD7FE0A37887",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8E29A26D40ED5B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7DBB0A2E8E151F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0D9618AAC8D159",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B7F3BF3AE8B268",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FEC518B1A01E31",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_44A79382F420EB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9D44125391914D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6C1C7F056978EB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0C0FE1EE36A161",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_891D09FE2FA41D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2A4EC8B1FF2B23",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A2D2F42E170F6A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_131DB8BE94ABF4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_69860C167EB988",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_27CD30547E7B41",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D02DE6D44962F6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_47B4D58C2A5C2F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D8DC16370E5A45",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9BC158119171FE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A8903B0B01C036",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CA1EAEC48A56F7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_72012E1E91DCEF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_372BBD02625315",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C1DB6D8CE55629",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_82FBE72E62E028",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_05FA31E66A2D85",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_424A3C09C59F94",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2012547A42A737",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D1B26282166588",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_30E87E4A679B8E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6BB3D905EA64FF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A1DE9907C07315",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_438EE5448E70D4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6F5B9344B5C4E2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0DD3A429D1F67B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4268AEE9BB4F1B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E29F42B5BB5C4B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D6315B85CB54DA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_30E0EC5A9CDE6D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_02C991B70FC410",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_83EE67D2F1DB6C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_26A78AECD27F7F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C5AB123ED9F991",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9436A40C5CB2A2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_79AFD4B616D173",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D2203FFD4D2E8D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_777D9A77F790E7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FEF8379D77E480",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4CF68B344F0E90",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_59E10B06AD38A4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_28EAC147F98EB9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3F214F86610948",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_66397ABF568728",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DC03C37E6EECA3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_812A4114994DE9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C471B7218279E9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E79E5EE1FEBC7C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_492B1F2CFE227E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F47600C97B98D4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D3EC40477D28E0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E54823D5736461",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4AC18081FBC690",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_ACC0ABFFF57631",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7909973E80FA7A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4F9382B9BA024A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_763A676174F227",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5C677B05368398",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6510665F0C77CF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9704B0928391BA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_ABA3337320F719",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_99E9EBDCD2E019",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8CFC08B625B889",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4125E6F17278CA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6B88663695990E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_697A607F06596E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DB70D99CB89FF4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CB5913D94EED55",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_99FF2705C39623",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0E319B24D6E4A4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5E2BDADE59E42F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_47CCB8AB967459",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_08AE3AD0D6D96A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CEEA5B143E02CA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6D68BA18F3C58C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F8EA5838580461",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D559238CCD3F17",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B4DE96C064B6C6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5DAA9225C530B0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DA7279EFB3A526",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_81708613F0E5AC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_123DDE31C334CC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7D76B17B6A891B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_841B42CA9C21E8",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0DFCF0A201E6C1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D6117B1C4297CB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BFC345E231C53E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5A85945924CBB4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A8F1577C63C765",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C0AD0A94A8F406",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_63F2580D2CBF1E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9D0BB39F862B5A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4F72E13BE3D340",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3898FCD52A235A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BA2782EBD0A645",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7351926630046C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_31CA68F350FD87",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D2EB783134AC6B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7D3918C5784C9F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CE18DAC93422FB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BD4AD72C284EF0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2FD8C3D0952CA4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FB563148B6C813",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_35387CC6E9CF8A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6A14FF8AB11268",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_27B2720E7E1DC3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3989F4090540D9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_EDE2AC809F96D1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_67669F284BE0A8",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_00D3E5B2582DD9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_76072628BBC22B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_244D4677A300BA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_90364C1CDF915F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2ACE91912040DA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8DDD00424ECD2D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BCF214815EB0F6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5F7D5E215F94CC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4E337834CBCAF3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F635190A4F2747",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_28BCEA7A8EE083",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5AFF79F1AFB514",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_13462BFB41FDB1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A33ECD600A7B15",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_272A0CCEC845A2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_BDA08A9654D94A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4A05C0C54EA40F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_C1F110249EC705",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F961485E29C4E7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7B4CA22C8D8FB5",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D5D7D5F6E642AB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_6368A5FF4B0FB1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8121ABF775D2B6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9A15ADD47875DC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DC8A38CEFFBBEC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_675177BDCB74AB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_35E3E0F6CAC893",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_109E72ECBD7F0E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_242B125CB507EA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_44193411AF2A7F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_84FEA2F5D3830C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8249146A7AA464",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0953854C7A6466",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_89B5133407AD7D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DB7336010AC2A7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9871687AE68ED2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_05AD01167346D6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_548A2B8D260DFA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2B1DAE6899DEE3",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_80F14A9E50C0C1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_21CE63A81E112B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5FF667362C525E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_29ED92BCD381CF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A792A452EA1564",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3BD6DA5D89FD54",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D59321E7D67615",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D1FD8737EFDAF1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_1CB674B403596D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_87607CB401F55E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B81CC8DAF265A9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AEEC1972DDF1ED",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7E42B92213942A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_00D95FB4E4CDE5",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_939E3B05CE739B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8BCDD3C6F0049A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B56C9810DC187F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D127DD237420B6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_307B7F90CFB095",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9F042361955524",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_208C7E90C34B9B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_743EF50F03274B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E919250FA93561",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_46347151ACC34D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F89F39097724A4",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_21F24BAD055807",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_47E6351B15F424",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_68970E2AD41687",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3648B1A98791DA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_360F9273901705",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0A078C93A462F9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7A5546859D50FF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_08818D1FE7BA4B",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "duplicate_combination_review"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CE02F1D8473AA6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DA927030D4C55A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E8DEF520EC6C75",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3B32401B3C29DF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3CB77BBD873074",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A271AC7331CDEE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5ACFB04212A41E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0DDD47866FAF38",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4B587713C0AD1F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CE46262A96BF7D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_AE297C9D7057F2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_13DC650B8257C2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_93DA31D717C814",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_94F6955B0F3EF2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D4777547153BAD",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D730927659AA53",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8F946785A48F0E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3AEC4C92789E97",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DFBFFCAED4BD38",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FBFA78472913A5",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DA8FAB83168F5C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DAE382F5DB4869",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_EDFCF97BCA301D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7034C150E34347",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9FF9F67E5CD128",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8C54FB856FEB84",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CE5828BCE62576",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_088DBE3CB5CDCE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E9F2601FF417BF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "duplicate_combination_review"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_FD4590DC109428",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_DE4E702F889D0F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CF724B0B71B8F9",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_642595F8DBF644",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5F22BAA692BDDF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_A250202485863A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_45842676F0F196",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D294856F51A31A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_211CEFBBEE4F6C",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7DFE60BD7C9522",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_09B896DC90ACA7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B3687DFB8BB890",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5D1999941F63D1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "duplicate_combination_review"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_CFCBDB9418B97A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9E5735485F5F60",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_3374C2094734BC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E38280A244B352",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_7BF4E2F701DBEA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8CACA0366E8D17",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_492E34CCBFA423",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8AB5E0077605DB",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_549AF5857FE85A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D5AB23C166786F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_2918CF18956264",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B45B533F5B259E",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_E117C0CA6F174D",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_5CA30223BFB0C7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_F968A764C4BBC7",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_B24542E6BB363A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_8A4341E8A92B70",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_D2F0BBBB3362D2",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_935AA2CDFED9ED",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_55D9E7007830D1",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_4689A7CBB38E54",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_9DF28D805DA46F",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_425DA6E1E9D3C6",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_86D94F5DD36D4A",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_TOBA_0F7641104B11C0",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_032",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_009",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_033",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_010",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_018",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_002",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_016",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_039",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_008",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_030",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_045",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_036",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_042",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_017",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_004",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_034",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_024",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_025",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_007",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_031",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_011",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_012",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_001",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_041",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_019",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_027",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_023",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_014",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_044",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_021",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_026",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_028",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_035",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_037",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_038",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_040",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_046",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_029",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_013",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_006",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_022",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_003",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_005",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_043",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_015",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NAR_020",
+      "verificationStatus": "partial",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned",
+        "entry_conditions_unconfirmed",
+        "nar_grade_unconfirmed"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_086",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_092",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_105",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_091",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_090",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_089",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_084",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_097",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_102",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_098",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_094",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_101",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_083",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_103",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_095",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_085",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_082",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_087",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_100",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_088",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_104",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_099",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_093",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_096",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_081",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_034",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_066",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_015",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_046",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_076",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_020",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_016",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_050",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_019",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_049",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_061",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_008",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_071",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_022",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_040",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_053",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_063",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_074",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_005",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_041",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_024",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_077",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_025",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_037",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_065",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_036",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_056",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_080",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_059",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_014",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_006",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_001",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_073",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_067",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_051",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_072",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_017",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_055",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_052",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_054",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_033",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_078",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_075",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_068",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_057",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_062",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_045",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_018",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_038",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_069",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_031",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_021",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_032",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_029",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_028",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_013",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_023",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_012",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_048",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_058",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_026",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_002",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_079",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_064",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_070",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_043",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_027",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_007",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_039",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_030",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_010",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_004",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_044",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_003",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_011",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_042",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_035",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_047",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_060",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JRA_009",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_023",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_035",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_018",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_044",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_019",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_016",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_051",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_021",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_032",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_047",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_040",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_049",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_005",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_011",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_045",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_017",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_031",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_013",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_050",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_027",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_014",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_015",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_036",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_007",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_006",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_025",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_003",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_046",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_029",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_038",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_041",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_002",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_028",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_004",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_012",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_048",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_039",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_010",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_008",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_037",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_009",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_026",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_024",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_001",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_030",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_043",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_022",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_020",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KRA_042",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_SATSUKI_SHO",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_QUEEN_ELIZABETH_II_CUP",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_NHK_MILE_CUP",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_TAKARAZUKA_KINEN",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_YASUDA_KINEN",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KOREA_SPRINT",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_TENNO_SHO_SPRING",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_HANSHIN_JUVENILE_FILLIES",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_MILE_CHAMPIONSHIP",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_VICTORIA_MILE",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_HANSHIN_CUP",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_CHAMPIONS_CUP",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_ARIMA_KINEN",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_SPRINTERS_STAKES",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_OSAKA_HAI",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_JAPAN_CUP",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_OKA_SHO",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_ASAHI_HAI_FUTURITY",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_FEBRUARY_STAKES",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_KOR_2026_KOREA_CUP",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_BC_TURF",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_YUSHUN_HIMBA",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_USA_2026_BC_CLASSIC",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_TOKYO_YUSHUN",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_TENNO_SHO_AUTUMN",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_SHUKA_SHO",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_KIKUKA_SHO",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_TAKAMATSUNOMIYA_KINEN",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    },
+    {
+      "id": "RACE_JPN_2026_HOPEFUL_STAKES",
+      "verificationStatus": "verified",
+      "issues": [
+        "game_activation_not_approved",
+        "course_not_assigned"
+      ]
+    }
+  ]
+}

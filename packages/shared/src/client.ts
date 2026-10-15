@@ -16,6 +16,14 @@ export function createApiClient(options: ApiClientOptions) {
     listHorses: () => request<Models['HorseCatalog']>('/v1/catalog/horses'),
     listJockeys: () => request<Models['JockeyCatalog']>('/v1/catalog/jockeys'),
     listRaces: () => request<Models['RaceCatalog']>('/v1/catalog/races'),
+    listRacecourses: (query: operations['listRacecourses']['parameters']['query'] = {}) =>
+      request<Models['RacecourseList']>('/v1/racecourses', undefined, false, query),
+    getRacecourse: (id: string) =>
+      request<Models['RacecourseDetail']>(`/v1/racecourses/${encodeURIComponent(id)}`),
+    listRaceSchedule: (query: operations['listRaceSchedule']['parameters']['query'] = {}) =>
+      request<Models['RaceScheduleList']>('/v1/race-schedule', undefined, false, query),
+    getRaceSchedule: (id: string) =>
+      request<Models['RaceSchedule']>(`/v1/race-schedule/${encodeURIComponent(id)}`),
     listCareers: (query: PageQuery = {}) =>
       request<Models['CareerList']>('/v1/careers', undefined, true, query),
     getCareerWorkspace: (query: PageQuery = {}) =>

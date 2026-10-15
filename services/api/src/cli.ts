@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { importRacingCatalog, readRacingSource } from './modules/racing/import'
 import { readConfig } from './config'
 import { postgresDatabase } from './db'
 import { migrate } from './services/migrations'
@@ -11,6 +12,26 @@ const db = postgresDatabase(config.databaseUrl)
 try {
   const [command, ...args] = process.argv.slice(2)
   switch (command) {
+    case 'import-racing': {
+      const result = await readRacingSource(
+        args.length ? args : ['seeds/racing.notion.source.json'],
+      )
+        .then((source) => importRacingCatalog(db, source))
+        .catch((error: unknown) => ({
+          created: 0,
+          updated: 0,
+          unchanged: 0,
+          needsReview: 0,
+          failed: 1,
+          committed: false,
+          error: error instanceof Error ? error.message : 'Catalog source read failed',
+        }))
+      console.log(JSON.stringify(result))
+      if (!result.committed) {
+        process.exitCode = 1
+      }
+      break
+    }
     case 'migrate':
       console.log(JSON.stringify({ applied: await migrate(db) }))
       break
@@ -83,7 +104,7 @@ try {
       break
     default:
       throw new Error(
-        'Commands: migrate, seed, import-events [file], import-event-drafts <file>, session-create [subject] [ttlHours], session-revoke',
+        'Commands: migrate, seed, import-racing [json | venues.csv courses.csv races.csv], import-events [file], import-event-drafts <file>, session-create [subject] [ttlHours], session-revoke',
       )
   }
 } finally {
