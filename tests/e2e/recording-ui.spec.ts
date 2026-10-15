@@ -114,7 +114,7 @@ for (const viewport of [
     await expect(rows).toHaveCount(0)
     await page.getByPlaceholder('말 이름 검색').fill('같은 이름')
     for (const sort of ['name', 'wins', 'prize', 'recent']) {
-      await page.getByLabel('정렬', { exact: true }).selectOption(sort)
+      await page.getByRole('combobox', { name: '정렬', exact: true }).selectOption(sort)
       await expect(rows).toHaveCount(2)
     }
     expect(await rows.first().getAttribute('data-archive-id')).toBe(fixture.lifecycle.archive[0].id)
@@ -165,7 +165,7 @@ for (const viewport of [
     await expect(dialog.locator('.lab-notice-list')).toHaveCount(0)
     await expect(page.locator('dialog[open]')).toHaveCount(1)
     for (let i = 0; i < 6; i++) {
-      await page.keyboard.press('Tab')
+      await page.keyboard.press(i < 3 ? 'Tab' : 'Shift+Tab')
       expect(
         await page.evaluate(() => Boolean(document.activeElement?.closest('dialog[open]'))),
       ).toBe(true)
@@ -196,13 +196,15 @@ for (const viewport of [
       }),
     )
     await page.goto('/?view=races')
-    await expect(page.getByRole('alert')).toHaveCount(1)
+    // Next.js has its own empty route-announcer alert outside main.
+    const errors = page.getByRole('main').getByRole('alert')
+    await expect(errors).toHaveCount(1)
     await expect(page.getByRole('button', { name: '다시 시도', exact: true })).toHaveCount(1)
     await expect(page.locator('tbody tr')).toHaveCount(0)
     await page.unroute('**/api/racing-catalog/**')
     await page.getByRole('button', { name: '다시 시도', exact: true }).click()
     await expect(page.locator('tbody tr')).toHaveCount(100)
-    await expect(page.getByRole('alert')).toHaveCount(0)
+    await expect(errors).toHaveCount(0)
     await noOverflow(page)
   })
 }
@@ -235,6 +237,17 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
       run.runners.map((runner) => [runner.horseSnapshot.id, runner.horseSnapshot.name]),
     )
     const timeline = buildFeedTimeline(log, names)
+    const initialRank = frameAt(log, 5000).runners.find(
+      (runner) => runner.horseId === run.playerHorseId,
+    )!.rank
+    const change = log.samples.find(
+      (sample) =>
+        sample.tMs > 5000 &&
+        sample.tMs < log.durationMs - 3000 &&
+        frameAt(log, sample.tMs).runners.find((runner) => runner.horseId === run.playerHorseId)!
+          .rank !== initialRank,
+    )
+    const step = Math.ceil(Math.max(20000, (change?.tMs ?? 0) + 1000) / 4)
     for (let i = 0; i < 5; i++) {
       const snapshot = await page.locator('.lab-playback').evaluate((stage) => {
         const focus = stage.querySelector<HTMLElement>('.race-focus')!
@@ -294,7 +307,7 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
           .poll(async () =>
             Number(await page.locator('.lab-playback').getAttribute('data-frame-ms')),
           )
-          .toBeGreaterThan(snapshot.time + 5000)
+          .toBeGreaterThan(snapshot.time + step)
         await page.getByRole('button', { name: '일시정지', exact: true }).click()
       }
     }

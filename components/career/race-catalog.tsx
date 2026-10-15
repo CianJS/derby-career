@@ -126,12 +126,9 @@ export function Races({ setView }: { setView: (view: View) => void }) {
           <CatalogStatus
             resource={resource.status !== 'ready' ? resource : venues.resource}
             retry={() => {
-              if (resource.status === 'error') {
-                retry()
-              }
-              if (venues.resource.status === 'error') {
-                venues.retry()
-              }
+              // Refresh both reads, including a request whose failure is still in flight.
+              retry()
+              venues.retry()
             }}
           />
           {resource.status === 'ready' && (

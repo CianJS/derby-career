@@ -521,6 +521,9 @@ input::placeholder { color: var(--muted-foreground); }
 .lab-notice-details { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; font-size: .875rem; line-height: 1.9; overflow-wrap: anywhere; }
 
 /* Interaction sizes and readable race information in the existing workspaces. */
+:root:not(.dark) :is(.lab-management, .lab-monthly, .lab-playback, .lab-notice-dialog) {
+  --muted-foreground: #606c69;
+}
 .lab-topbar button, .lab-notice-dialog button, .lab-monthly button, .lab-playback button {
   min-height: 2.75rem;
 }
