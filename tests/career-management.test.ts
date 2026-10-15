@@ -72,11 +72,10 @@ test('empty stable and horse history preserve their empty states', () => {
   assert.match(archive, /함께한 기수 기록이 없습니다/)
 })
 
-test('default race and jockey catalog views retain their visible entries', () => {
+test('race catalog waits for public API and jockey catalog retains its entries', () => {
   const races = renderToStaticMarkup(createElement(Races, { setView }))
-  for (const name of ['한신 컵', '사츠키상', 'NHK 마일컵', '오사카배']) {
-    assert.ok(races.includes(name), name)
-  }
+  assert.match(races, /공개 경주 카탈로그 조회 중/)
+  assert.doesNotMatch(races, /한신 컵|사츠키상|NHK 마일컵|오사카배/)
   const jockeys = renderToStaticMarkup(createElement(Jockeys, { setView, onSelect: () => {} }))
   assert.match(jockeys, /계약 기수 3 \/ 3/)
   assert.match(jockeys, /현재 육성마 없음/)
