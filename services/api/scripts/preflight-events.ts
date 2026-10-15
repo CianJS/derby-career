@@ -8,9 +8,8 @@ import {
 } from '../src/modules/events/preflight'
 import { catalogSchema } from '../src/modules/events/schema'
 
-const [input = 'seeds/events.drafts.import.json', reportPath, draftPath, ...extra] =
-  process.argv.slice(2)
-if (extra.length) {
+const [input, reportPath, draftPath, ...extra] = process.argv.slice(2)
+if (!input || extra.length) {
   throw new Error('Usage: events:check -- input [report.json] [drafts.json]')
 }
 const canonicalPath = async (path: string) => {

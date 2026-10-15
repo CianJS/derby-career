@@ -1,5 +1,7 @@
 # 이벤트 import
 
+**현재 등록 입력은 events.expansion.source.json이며, events.drafts.import.json은 P1 당시의 역사 snapshot이다. 최신 Notion 개정과 비교한 20개 차이 및 이전/현재 원문은 reports/event-expansion.json의 sourceComparison을 확인한다. 이전 CSV 전체는 archives/에 보관한다. 현재 게임 적용 승인과는 별개다.**
+
 기존 공통 원본은 2026-10-12, 신규 보류 항목의 속성 snapshot은 2026-10-14에 조회한 Notion 이벤트 목록이다.
 
 - `events.import.json`: 실제 350개 ID·이름·게임 속성·이벤트 설명만 보존한 공개 변환 입력. Notion 페이지 본문·개별 페이지 URL·수정 시각은 포함하지 않는다.
@@ -31,7 +33,7 @@ npm run events:import-drafts -- /tmp/event-drafts.json
 
 가져오기는 revision·sourceDigest·비실행 상태를 재검증하고 기존 importer와 같은 advisory lock/트랜잭션을 사용한다. 기존 공통 및 검토 완료 항목은 덮어쓰지 않는다. 같은 원본·revision 재적용은 PK/upsert로 정의·revision·선택지·효과를 중복 생성하지 않으며, 이미 격리된 초안의 수정은 새 revision으로 보존한다. 파일을 편집해 활성화하거나 실행 조건/효과를 추가하면 이 명령이 거부한다. 원본/기존 공통 Seed를 검사 출력 경로로 지정할 수도 없다. 실패 시 이전 출력 파일은 보존하므로 현재 보고서의 `sourceDigest`/`draftPacket` 결과를 확인한다.
 
-기존 `db:seed` 및 월간 풀의 `enabled=true AND status='ready'` 필터는 그대로다. 공통 350개는 원본 바이트·변환 결과·확률 설정과 3,840개 고정 Seed 추첨/선택 효과 관측으로 회귀 검증한다. 미지원 목록과 실제 조회/본문 검증 범위는 [확장 검토 결과](../reports/event-catalog-expansion.md)에 기록한다. 비활성 항목은 기존 공개 카탈로그에서 조회할 수 있으며, 히든의 공개/힌트 정책은 후속 기획 결정이다.
+기존 `db:seed` 및 월간 풀의 `enabled=true AND status='ready'` 필터는 그대로다. 공통 350개는 원본 바이트·변환 결과·확률 설정과 3,840개 고정 Seed 추첨/선택 효과 관측으로 회귀 검증한다. 미지원 목록과 실제 조회/본문 검증 범위는 [확장 검토 결과](../reports/event-catalog-expansion.md)에 기록한다. 공개 API는 활성·검토 완료·비히든만 반환한다. 비활성·보류·히든은 공개 목록/ID 조회로 확인할 수 없다. 관리 검토에는 원본·보고서와 명시적인 내부 DB 조회를 사용한다.
 
 ## 기존 공통 350개 변환
 
@@ -59,8 +61,10 @@ npm run events:import -- /path/events.catalog.json
 
 ## 최신 전체 CSV 확장
 
-`events.expansion.source.json`은 최신 내보내기/감사 CSV의 게임 속성 8개와 검토용 사건그룹 ID를 정규화한 입력이다. 기존 `events.import.json`과 `events.catalog.json`의 공통 350개는 변경하지 않는다. `npm run events:expand -- <CSV>`로 원본과 신규 650개 구조화 Seed, 검토 보고서를 함께 생성한다. 인자 없는 재생성은 동일 결과를 유지해야 한다. `db:seed` 또는 `events:import-expansion`으로 신규 정의를 비활성 등록한다. 모든 원본 ID가 유지된다.
+`events.expansion.source.json`은 보관 CSV를 기준으로 Notion 속성 1,000개를 대조한 현행 입력이다. 신규 20개의 이름·조건·효과 개정을 반영하며, Notion에 없는 검토용 사건그룹 ID는 감사 CSV 값을 보존한다. 본문/효과 승인 전의 원문은 실행 가능한 위험 선택으로 추정하지 않는다. 기존 `events.import.json`과 `events.catalog.json`의 공통 350개는 변경하지 않는다. `npm run events:expand -- <CSV>`로 원본과 신규 650개 구조화 Seed, 검토 보고서를 함께 생성한다. 인자 없는 재생성은 동일 결과를 유지해야 한다. `db:seed` 또는 `events:import-expansion`으로 신규 정의를 비활성 등록한다. 모든 원본 ID가 유지된다.
 
-`events.expansion.catalog.json`은 변환 결과이고 `reports/event-expansion.json`은 변환/실행/검토/활성 수, 미지원 원문 및 ID, 사건그룹과 동일 규칙 묶음을 기록한다. 같은 효과를 다른 효과로 치환하거나 그룹 대표 ID를 자동 정하지 않는다. 위험 판정 시스템은 지원하지만 원본에는 위험 결과별 효과가 없으므로 실제 원본 선택을 위험 선택으로 바꾸지 않는다.
+`events.expansion.catalog.json`은 변환 결과이고 `reports/event-expansion.json`은 변환/실행/검토/활성 수, 미지원 원문 및 ID, 사건그룹과 동일 규칙 묶음을 기록한다. 같은 효과를 다른 효과로 치환하거나 그룹 대표 ID를 자동 정하지 않는다. 위험 판정 시스템은 지원하지만 개정 원문에 적힌 위험 효과 제안은 승인된 구조화 결과가 아니다. 이를 임의로 해석해 실제 위험 선택으로 바꾸지 않는다.
 
 활성화 절차와 revision을 고정한 검토 manifest는 API README를 따른다. 이전 `events.drafts.import.json`/P1 검증기는 과거 격리 경로의 회귀 검증을 위해 보존한다. 최신 원본 및 현재 변환 수를 판단할 때는 expansion 파일을 사용한다.
+
+`events:check`는 입력 경로를 명시해야 한다. 인자 없이 오래된 P1 snapshot을 최신 원본으로 오인해 처리하지 않는다. 과거 snapshot을 지정한 검사는 재현 목적이며, 현재 650개 등록에는 events:expand와 expansion import 경로를 사용한다.

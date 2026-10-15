@@ -93,13 +93,13 @@ test('event filtering, stable pagination, sorting and strict request validation 
   try {
     const all = await f.call('GET', '/v1/events?category=common&pageSize=100')
     assert.equal(all.statusCode, 200, all.body)
-    assert.equal(all.json().pagination.total, 350)
+    assert.equal(all.json().pagination.total, 315)
     const one = await f.call(
       'GET',
       '/v1/events?category=common&enabled=false&status=deferred&pageSize=100',
     )
-    assert.equal(one.json().pagination.total, 35)
-    assert.ok(one.json<Models['EventList']>().data.every((x) => !x.enabled))
+    assert.equal(one.json().pagination.total, 0)
+    assert.deepEqual(one.json().data, [])
     const pages = await Promise.all([
       f.call('GET', '/v1/events?page=1&pageSize=10'),
       f.call('GET', '/v1/events?page=2&pageSize=10'),
@@ -109,7 +109,7 @@ test('event filtering, stable pagination, sorting and strict request validation 
       20,
     )
     const descending = await f.call('GET', '/v1/events?sort=id&order=desc&pageSize=1')
-    assert.equal(descending.json().data[0].id, 'COM-0350')
+    assert.equal(descending.json().data[0].id, 'COM-0323')
     assert.equal((await f.call('GET', '/v1/events/COM-0001')).json().name, '새벽 직선 주로')
     for (const url of [
       '/v1/events?enabled=oops',

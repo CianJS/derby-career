@@ -30,6 +30,16 @@ const source = input
 const catalog = buildExpansion(source)
 const old = JSON.parse(await readFile('seeds/events.catalog.json', 'utf8'))
 const oldSource = JSON.parse(await readFile('seeds/events.import.json', 'utf8'))
+const archived = JSON.parse(
+  await readFile('seeds/archives/events.expansion.csv-snapshot-2026-10-14.json', 'utf8'),
+)
+const sourceChanges = (source.rows as Record<string, string>[]).flatMap((row) => {
+  const previous = archived.rows.find(
+    (r: Record<string, string>) => r['이벤트 ID'] === row['이벤트 ID'],
+  )
+  const changed = fields.filter((key) => row[key] !== previous?.[key])
+  return changed.length ? [{ id: row['이벤트 ID'], fields: changed, previous, current: row }] : []
+})
 const groups = new Map<string, string[]>(),
   duplicates = new Map<string, string[]>()
 const legacyDifferences = []
@@ -70,8 +80,16 @@ const report = {
   balanceReviewed: 0,
   activeExpansion: 0,
   activeLegacy: old.events.filter((e: { enabled: boolean }) => e.enabled).length,
+  sourceComparison: {
+    archive: 'seeds/archives/events.expansion.csv-snapshot-2026-10-14.json',
+    archivedDigest: digest(archived),
+    scope: source.snapshot ?? 'Supplied CSV properties only; Notion body approval not verified',
+    compared: source.rows.length,
+    changed: sourceChanges.length,
+    changes: sourceChanges,
+  },
   missingRiskOutcomes:
-    'The CSV defines no explicitly risky choice with four outcome effect sets. No choice is automatically marked risky.',
+    'Revised source text contains risk proposals, but no approved structured four-outcome mapping. Unsupported choices remain inactive; no risk effects are inferred.',
   issueCounts,
   legacyDifferences,
   issues: catalog.events
@@ -100,5 +118,6 @@ console.log(
     issues: report.issues.length,
     groups: report.groups.length,
     repeatedRules: report.repeatedRules.length,
+    sourceComparison: { compared: report.sourceComparison.compared, changed: sourceChanges.length },
   }),
 )

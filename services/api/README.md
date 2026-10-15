@@ -177,17 +177,18 @@ SQL 통합 검증은 PGlite의 실제 PostgreSQL 엔진으로 migrations/FK/trig
 
 ## 전체 1,000개 카탈로그와 검토 후 활성화
 
-최신 내보내기 CSV와 `derby_event_revision_audit.csv`의 게임 필드 8개가 동일함을 확인했다. 감사 CSV의 사건그룹 ID는 검토용이며 대표 ID를 자동 확정하지 않는다. 기존 공통 350개 Seed·revision은 보존한다. 신규 650개는 `events.expansion.source.json`에 수록하고 엄격한 오프라인 변환기로 구조화한다. HTTP 경로는 조건/효과 문자열을 해석하지 않는다.
+사용자가 제공한 CSV/감사 원본은 `seeds/archives/events.expansion.csv-snapshot-2026-10-14.json`에 보관했다. 2026-10-15 Notion의 1,000개 고유 ID 속성 8개를 전수 대조하여 신규 20개의 개정 원문을 현행 `events.expansion.source.json`에 반영했다. 공통 350개 차이는 0개다. 원본에 없던 사건그룹은 만들지 않고 이전 감사 CSV 대응을 검토용으로 유지한다. Notion 본문·밸런스 승인을 완료했다는 뜻은 아니다. 기존 공통 350개 Seed·revision은 보존한다. 신규 650개는 `events.expansion.source.json`에 수록하고 엄격한 오프라인 변환기로 구조화한다. HTTP 경로는 조건/효과 문자열을 해석하지 않는다.
 
 ```bash
-npm run events:expand -- /absolute/path/derby_event_revision_audit.csv
+npm run events:expand
+# 새 CSV로 교체할 때만: npm run events:expand -- /absolute/path/reviewed-current-export.csv
 npm run db:migrate
 npm run events:import-expansion
 ```
 
 첫 명령은 원본을 정규화하고 `events.expansion.catalog.json`과 `reports/event-expansion.json`을 재생성한다. 인자를 생략하면 저장된 정규화 원본으로 재생성한다. `db:seed`도 기존 350개와 신규 650개를 함께 등록한다. 등록은 명시적으로 설정한 DB에 수행하며 서버 시작 시 자동 실행하지 않는다. 운영 데이터 가져오기는 이번 검증에서 실행하지 않았다.
 
-신규 정의의 `review`에는 `converted`, `executable`, `contentReviewed`, `balanceReviewed`, 원본 해시와 `groupId`/`representativeId`가 있다. 변환 완료와 활성화는 별개다. 기본 신규 활성 수는 0개이며 기존 활성 수는 315개다. 현재 신규 280개가 변환/실행 가능하고 370개가 미지원 또는 검토 필요 상태다. `status=ready`만으로 추첨하지 않는다. 활성화에는 아래처럼 검토한 **현재 revision**을 지정한 manifest가 필요하다.
+신규 정의의 `review`에는 `converted`, `executable`, `contentReviewed`, `balanceReviewed`, 원본 해시와 `groupId`/`representativeId`가 있다. 변환 완료와 활성화는 별개다. 기본 신규 활성 수는 0개이며 기존 활성 수는 315개다. 현재 신규 276개가 변환/실행 가능하고 374개가 미지원 또는 검토 필요 상태다. GEN-0274/GEN-0284는 부상 상태의 훈련 결과가 현재 공유 규칙에서 도달 불가능하므로 비실행으로 분류한다. `status=ready`만으로 추첨하지 않는다. 활성화에는 아래처럼 검토한 **현재 revision**을 지정한 manifest가 필요하다.
 
 ```json
 {
@@ -212,8 +213,16 @@ npm run events:activate -- /absolute/path/reviewed-events.json
 
 새 월은 `event-director-v2`가 기본이며 기존 발생률 0.3, 보정 기준 3회, 시작/결과 시점 정책은 유지한다. 발생 게이트 후 해당 실행 시점의 조건과 선택지를 만족하는 카테고리 사이에서 45:35:12:6:2를 재분배하고, 선택된 카테고리 내 이벤트 weight로 추첨한다. 기존 월의 v1 config/pool/seed와 선택/결과 Snapshot은 그대로 재사용한다. 미지원 경주 전/후 시점과 히든 복합 조건이 불완전한 정의는 활성화할 수 없다.
 
-선택지의 선택적 `risk`는 `event-risk-v1`과 네 결과(`great_success`, `success`, `failure`, `disaster`)별 구조화 효과를 요구한다. 명시적 플레이어 선택만 15:55:25:5로 판정하고, draw seed/불변 revision/choice ID로 결과를 고정한다. 안전 선택은 원래 effects를 그대로 적용한다. CSV에 고위험 표시 및 네 결과 효과가 없으므로 기존 A/B 선택을 위험 선택으로 바꾸지 않았다. 확정 결과는 `career.event.result.risk`에 저장된다.
+선택지의 선택적 `risk`는 `event-risk-v1`과 네 결과(`great_success`, `success`, `failure`, `disaster`)별 구조화 효과를 요구한다. 명시적 플레이어 선택만 15:55:25:5로 판정하고, draw seed/불변 revision/choice ID로 결과를 고정한다. 안전 선택은 원래 effects를 그대로 적용한다. 개정된 Notion 원문에는 위험 결과 제안이 있으나 승인된 네 결과 구조화 효과는 없으므로 이를 임의 해석하거나 실제 위험 선택으로 변환하지 않았다. 네 결과의 효과도 일반 효과와 동일한 시점·성장 문맥 검사를 거치며 결과 시점 action_modifier는 등록 단계에서 거부한다. 확정 결과는 `career.event.result.risk`에 저장된다.
 
 Frontend 계약은 기존 `GET /v1/events`, 상세 조회, `GET /v1/careers/{id}`, 이벤트 이력 및 `POST /v1/careers/{id}/events/{historyId}/choice`를 유지한다. 새로운 조건 타입 5개와 optional review/risk/result.risk는 생성 타입·검증기에 포함한다. choice 요청은 기존 `{commandId, choiceId, expectedTurn}`이며 결과/Seed는 받지 않는다. 이벤트는 월간 핵심 행동을 추가 소모하지 않는다. 재시도는 같은 UUID/본문을 유지하고 과거 receipt 대신 최신 workspace를 조회한다. Frontend는 활성 여부와 검토 상태를 구분하고 위험 선택의 네 결과 표시를 별도로 구현해야 한다.
 
-미지원 원문과 ID, 111개 사건그룹, 97개 동일 조건·효과·시점 묶음은 `reports/event-expansion.json`에 있다. 그룹은 의미상 중복 확정이 아닌 검토 후보이며 원본 서술 없는 CSV로 서사/밸런스 QA 완료를 주장하지 않는다. 다음 훈련/휴식 이월, 호흡도·육성/회복 이력·연령·Archive·다음 경주 후보 관련 조건과 모호한 성장 대상은 임의 대체하지 않는다. 기존 P1 보고서는 사전 검증 당시의 기록이며 최신 확장 수치는 새 보고서를 따른다.
+미지원 원문과 ID, 111개 사건그룹, 96개 동일 조건·효과·시점 묶음은 `reports/event-expansion.json`에 있다. 그룹은 의미상 중복 확정이 아닌 검토 후보이며 원본 서술 없는 CSV로 서사/밸런스 QA 완료를 주장하지 않는다. 다음 훈련/휴식 이월, 호흡도·육성/회복 이력·연령·Archive·다음 경주 후보 관련 조건과 모호한 성장 대상은 임의 대체하지 않는다. 기존 P1 보고서는 사전 검증 당시의 기록이며 최신 확장 수치는 새 보고서를 따른다.
+
+## 공개 이벤트 접근 정책과 원본 개정
+
+공개 목록·직접 ID 조회는 활성·ready·검토 완료 비히든 정의로 한정한다. 초기 공통 활성315개를 유지하며 비활성35개와 미검토 신규650개, 승인 여부와 관계없는 히든 정의는 전체 카탈로그에서 숨긴다. query는 이 경계를 넓히지 못하고 total/페이지도 공개 범위만 집계한다. 숨긴 ID와 없는 ID는 동일 404다. 실제 발생한 히든은 소유자 인증 Career/이력 응답으로만 확인한다. 내부 SQL 풀에는 승인된 히든이 계속 포함된다.
+
+응답의 source.url은 null, source.conditionText/effectText는 빈 문자열, body는 생략한다. 내부 DB 원문과 불변 revision은 유지한다. Frontend는 구조화 conditions/choices/effects와 고정 description을 사용하고 공개 API로 비활성 전체 목록을 구현하지 않는다. 관리용 조회 API는 이번 범위에 추가하지 않았다. HTTP 경로와 응답 필드는 유지하지만 공개 대상과 원문 노출 범위를 축소한 계약 변경이다.
+
+사건그룹 ID도 sourceDigest에 포함한다. 미검토 원본의 그룹 변경은 새 revision이며 이전 승인 manifest는 실패한다. 이미 승인한 정의는 원본/그룹이 같을 때만 재가져오기를 허용한다. 변경되면 전체 import를 롤백하고 재검토를 요구한다. 승인된 이전 revision과 기존 Career의 draw/history는 덮어쓰지 않는다. `reports/event-expansion.json`의 sourceComparison은 보관 CSV와 현재 속성의20개 차이 및 양쪽 원문을 기록한다. P1의 events.drafts.import.json은 과거 검사 snapshot이므로 현재 등록 입력으로 사용하지 않는다.

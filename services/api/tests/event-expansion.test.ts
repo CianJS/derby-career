@@ -69,7 +69,7 @@ test('latest snapshot preserves all 1000 IDs and generates 650 inactive definiti
     raw.rows.map((r: Record<string, string>) => r['이벤트 ID']).sort(),
   )
   assert.equal(result.events.length, 650)
-  assert.equal(result.events.filter((e) => e.review?.converted).length, 280)
+  assert.equal(result.events.filter((e) => e.review?.converted).length, 276)
   assert.equal(
     result.events.filter((e) => e.enabled || e.review?.contentReviewed || e.review?.balanceReviewed)
       .length,
@@ -246,8 +246,7 @@ test('SQL import is idempotent, preserves old snapshots and rejects unreviewed o
       /Unreviewed/,
     )
     const detail = await f.call('GET', `/v1/events/${event.id}`)
-    assert.equal(detail.statusCode, 200, detail.body)
-    assert.equal(detail.json().review.contentReviewed, false)
+    assert.equal(detail.statusCode, 404, detail.body)
     const approval = {
       events: [
         {
@@ -262,6 +261,7 @@ test('SQL import is idempotent, preserves old snapshots and rejects unreviewed o
     }
     await activateExpansion(f.db, approval)
     assert.equal((await EventRepository.pool(f.db)).length, 316)
+    assert.equal((await f.call('GET', `/v1/events/${event.id}`)).statusCode, 200)
     await importExpansion(f.db, raw)
     assert.equal((await EventRepository.pool(f.db)).length, 316)
     await assert.rejects(activateExpansion(f.db, approval), /stale/i)

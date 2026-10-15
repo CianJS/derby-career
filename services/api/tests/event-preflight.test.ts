@@ -397,11 +397,7 @@ test('local PostgreSQL imports all 650 twice without adding executable rows or c
     const afterPool = await f.db.transaction((tx) => EventRepository.pool(tx))
     assert.deepEqual(afterPool, beforePool)
     assert.equal(eventRegressionDigest(afterPool), beforeDigest)
-    const publicDraft = (await f.call('GET', '/v1/events/GEN-0001')).json()
-    assert.equal(publicDraft.enabled, false)
-    assert.equal(publicDraft.introduction, 'hold')
-    assert.deepEqual(publicDraft.choices, [])
-    assert.equal(publicDraft.source.url, null)
+    assert.equal((await f.call('GET', '/v1/events/GEN-0001')).statusCode, 404)
     await assert.rejects(importEvents(f.db, result.catalog))
   } finally {
     await f.close()

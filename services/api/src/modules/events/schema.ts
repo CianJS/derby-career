@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { eventCategories, eventTimings } from '../../../../../packages/shared/src/events'
+import { effectSemanticIssues, unreachableTrainingResult } from './semantics'
 const stat = z.enum(['speed', 'stamina', 'power', 'guts', 'intelligence'])
 const choice = z.enum(['speed', 'stamina', 'power', 'guts', 'intelligence', 'rest', 'treatment'])
 const valueKey = z.enum([
@@ -159,6 +160,12 @@ export const eventSchema = z
   })
   .strict()
   .superRefine((e, c) => {
+    for (const issue of effectSemanticIssues(e)) {
+      c.addIssue({ code: 'custom', path: issue.path.split('.'), message: issue.code })
+    }
+    if ((e.enabled || e.review?.executable) && unreachableTrainingResult(e)) {
+      c.addIssue({ code: 'custom', message: 'UNREACHABLE_TRAINING_RESULT' })
+    }
     for (const condition of [
       ...e.conditions,
       ...e.choices.flatMap((choice) => choice.conditions),

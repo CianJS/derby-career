@@ -3,6 +3,7 @@ import type { Database } from '../../db'
 import { digest } from '../../services/identity'
 import { importEvents, categories, timings } from './import'
 import { catalogSchema } from './schema'
+import { unreachableTrainingResult } from './semantics'
 import type {
   EventCondition,
   EventDefinition,
@@ -301,6 +302,14 @@ export function buildExpansion(source: unknown) {
       if (row['대분류'] === '히든' && conditions.filter((c) => c.type !== 'always').length < 2) {
         notes.push('HIDDEN_COMPOUND: complete compound conditions required')
       }
+      if (
+        choices.length &&
+        unreachableTrainingResult({ timing: timings[row['발동시점']], conditions, choices })
+      ) {
+        notes.push(
+          'UNREACHABLE_TRAINING_RESULT: injured horses cannot train in the shared action model',
+        )
+      }
       const converted = notes.length === 0
       const definition: Omit<EventDefinition, 'revision'> = {
         id: row['이벤트 ID'],
@@ -331,6 +340,7 @@ export function buildExpansion(source: unknown) {
                 '발동시점',
                 '선택·효과',
                 '세부유형',
+                '사건그룹 ID',
               ].map((k) => [k, row[k]]),
             ),
           ),

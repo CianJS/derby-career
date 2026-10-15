@@ -89,8 +89,8 @@ export function publicEventDefinition(event: EventDefinition): EventDefinition {
     ...event,
     source: {
       url: null,
-      conditionText: event.source.conditionText,
-      effectText: event.source.effectText,
+      conditionText: '',
+      effectText: '',
     },
   }
 }

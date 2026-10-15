@@ -1,6 +1,5 @@
 import { parse } from 'csv-parse/sync'
 import { z } from 'zod'
-import { trainings } from '../../../../../packages/shared/src/domain'
 import type {
   EventDefinition,
   EventCondition,
@@ -16,6 +15,7 @@ import {
   type DraftCatalog,
 } from './drafts'
 import { digest } from '../../services/identity'
+import { effectSemanticIssues, effectSemanticCodes } from './semantics'
 
 export type InspectionIssue = {
   kind: 'error' | 'unmapped' | 'engine_gap' | 'review'
@@ -137,42 +137,9 @@ function semanticIssues(
   for (const [index, choice] of event.choices.entries()) {
     const path = `choices.${index}`
     inspectConditions([...event.conditions, ...choice.conditions], add, `${path}.conditions`)
-    for (const [ordinal, effect] of choice.effects.entries()) {
-      const effectPath = `${path}.effects.${ordinal}`
-      if (effect.type === 'action_modifier' && event.timing !== 'month_start') {
-        add(
-          'LATE_ACTION_MODIFIER',
-          effectPath,
-          '확정 행동 결과 시점의 보정을 해당 행동에 소급 적용할 수 없음',
-        )
-      }
-      if (
-        effect.type === 'action_modifier' &&
-        effect.field === 'secondaryGain' &&
-        effect.training &&
-        !trainings[effect.training].secondary
-      ) {
-        add(
-          'MISSING_SECONDARY_STAT',
-          effectPath,
-          '지능 훈련에는 공유 규칙의 보조 성장 능력치가 없음',
-        )
-      }
-      if (effect.type === 'resolved_growth_bonus') {
-        const conditions = [...event.conditions, ...choice.conditions]
-        if (
-          event.timing !== 'training_result' ||
-          !conditions.some(
-            (condition) =>
-              condition.type === 'action_is' &&
-              condition.choices.length === 1 &&
-              condition.choices[0] === effect.stat,
-          )
-        ) {
-          add('GROWTH_BONUS_CONTEXT', effectPath, '동일 능력의 확정 훈련 결과 조건이 필요함')
-        }
-      }
-    }
+  }
+  for (const issue of effectSemanticIssues(event)) {
+    add(issue.code, issue.path, issue.detail)
   }
   return issues
 }
@@ -185,7 +152,7 @@ export function inspectEventCatalog(value: unknown) {
     for (const issue of parsed.error.issues) {
       issues.push({
         kind: 'error',
-        code: 'SCHEMA',
+        code: effectSemanticCodes.includes(issue.message) ? issue.message : 'SCHEMA',
         path: issue.path.join('.'),
         detail: issue.message,
       })
