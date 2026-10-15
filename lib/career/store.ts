@@ -19,20 +19,15 @@ import {
 } from './model'
 import { withMonthEvent } from './events/director'
 import type { EventChoiceId } from './events/types'
-import { readCareer, writeCareer } from './repository'
+import { writeCareer } from './repository'
+import { restoreLocalCareer } from './local-recovery'
 import { writeLifecycleSave } from './lifecycle-repository'
 import { startLocalCareer, retireLocalCareer } from './local-career'
 import type { LifecycleSave } from './lifecycle-save'
 import { BROWSER_SAVE_KEY, readBrowserSave, STORAGE_ACCESS_MESSAGE } from './browser-save'
 import { lockRaceEntryWithLog, type RaceEntryDraft } from './race-entry'
-import { readRaceLog, removeRaceLog, writeRaceLog } from './race-log-repository'
-import {
-  raceLogDigest,
-  simulateRace,
-  summarizeRaceLog,
-  validateRaceLog,
-  type RaceSimulationResult,
-} from './race-simulation'
+import { removeRaceLog, writeRaceLog } from './race-log-repository'
+import type { RaceSimulationResult } from './race-simulation'
 
 type Snapshot = {
   ready: boolean
@@ -140,48 +135,6 @@ async function locked<T>(operation: () => T): Promise<T> {
     throw error
   }
 }
-// Saves written before the simulation engine, or a cleared browser log store, are repaired here so the
-// playback screen only ever reads a persisted log. Re-simulation is deterministic and checked by digest.
-function ensureRaceLog(career: Career): Career {
-  const run = career.raceRun
-  if (!run) {
-    return career
-  }
-  if (!run.simulation) {
-    const log = simulateRace(run)
-    writeRaceLog(log)
-    const next = { ...career, raceRun: { ...run, simulation: summarizeRaceLog(log) } }
-    writeCareer(next)
-    return next
-  }
-  let valid = false
-  try {
-    const cached = readRaceLog(run.raceRunId)
-    validateRaceLog(cached, run)
-    valid = true
-  } catch {
-    /* The derived cache can be repaired from the locked seed and digest. */
-  }
-  if (!valid) {
-    const log = simulateRace(run, run.simulation.engineVersion)
-    if (raceLogDigest(log) !== run.simulation.digest) {
-      throw new Error('저장된 경주 기록을 복원하지 못했습니다.')
-    }
-    writeRaceLog(log)
-  }
-  return career
-}
-function restored(): Career | null {
-  const saved = readCareer()
-  if (!saved) {
-    return null
-  }
-  const resolved = withMonthEvent(resolveAction(saved))
-  if (resolved !== saved) {
-    writeCareer(resolved)
-  }
-  return ensureRaceLog(resolved)
-}
 async function refresh() {
   if (!snapshot.mode) {
     return
@@ -198,7 +151,10 @@ async function refresh() {
       if (modeGeneration !== generation || snapshot.mode !== 'local') {
         throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
       }
-      return { career: restored(), localCareerId: readBrowserSave().localCareerId ?? null }
+      return {
+        career: restoreLocalCareer(),
+        localCareerId: readBrowserSave().localCareerId ?? null,
+      }
     })
     if (modeGeneration === generation) {
       publish({ ready: true, ...loaded, error: null })
@@ -260,7 +216,7 @@ async function mutate(operation: (saved: Career | null) => Career | null) {
       if (modeGeneration !== generation || snapshot.mode !== 'local') {
         throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
       }
-      const saved = restored()
+      const saved = restoreLocalCareer()
       if (saved && snapshot.localCareerId !== (readBrowserSave().localCareerId ?? null)) {
         throw new Error('다른 탭에서 육성마가 변경되었습니다. 다시 불러와 주세요.')
       }
@@ -377,7 +333,7 @@ export const careerStore = {
         if (modeGeneration !== generation || snapshot.mode !== 'local') {
           throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
         }
-        const career = restored()
+        const career = restoreLocalCareer()
         if (!career) {
           throw new Error('은퇴할 육성 기록이 없습니다.')
         }
