@@ -123,7 +123,10 @@ for (const viewport of [
       await expect(
         page.getByRole('heading', { level: 1, name: '같은 이름', exact: true }),
       ).toBeVisible()
-      await expect(page.getByText(horse.retiredAt!, { exact: true })).toBeVisible()
+      const basic = page
+        .locator('section')
+        .filter({ has: page.getByRole('heading', { name: '기본 정보 · 커리어', exact: true }) })
+      await expect(basic.getByText(horse.retiredAt!, { exact: true })).toBeVisible()
       await expect(
         page.getByText(horse.raceRecords![0].race, { exact: true }).first(),
       ).toBeVisible()
