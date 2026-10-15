@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url'
 
 // Keep format and format:check on exactly the same targets.
 const targets = [
+  '../../lib/career/local-recovery.ts',
+  '../../tests/local-recovery.test.ts',
+  '../../tests/save-response-validation.test.ts',
   'src',
   'scripts',
   'tests',

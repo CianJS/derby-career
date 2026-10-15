@@ -3,23 +3,12 @@ export type { SaveCommand } from './commands'
 import type { DerbyApiClient } from '../../packages/shared/src/client'
 import type { components } from '../../packages/shared/src/generated/api'
 import {
-  validateRaceEntryResponse,
-  validateRaceCompleteResponse,
   validateRaceEntryOptions,
-  validateCareerWorkspace,
   validateHorseCatalog,
-  validateCareerResponse,
-  validateActionResponse,
-  validateRetireCareerResponse,
 } from '../../packages/shared/src/generated/save-validation.mjs'
-import { assertCareer, type Career } from '../career/model'
-
-type Models = components['schemas']
-type ServerCareer = Models['Career'] & { state: Career }
-export type SaveWorkspace = Omit<Models['CareerWorkspace'], 'career' | 'retirements'> & {
-  career: ServerCareer | null
-  retirements: (Models['RetirementRecord'] & { snapshot: ServerCareer })[]
-}
+import { executeSaveCommand } from './execute-command'
+import { parseSaveWorkspace, type SaveWorkspace } from './workspace'
+export type { SaveWorkspace } from './workspace'
 export type SaveSnapshot = {
   ready: boolean
   busy: boolean
@@ -35,25 +24,7 @@ export type CommandJournal = {
   clear: () => void
 }
 
-function workspace(value: unknown): SaveWorkspace {
-  if (!validateCareerWorkspace(value)) {
-    throw new Error('서버 저장 응답이 계약과 다릅니다. 다시 불러와 주세요.')
-  }
-  if (value.career) {
-    assertCareer(value.career.state)
-    if (value.career.status !== 'active' || value.career.stableId !== value.stable?.id) {
-      throw new Error('서버의 현재 육성 상태를 확인하지 못했습니다.')
-    }
-  }
-  for (const record of value.retirements) {
-    assertCareer(record.snapshot.state)
-    if (record.snapshot.status !== 'retired' || record.snapshot.id !== record.careerId) {
-      throw new Error('서버 은퇴 기록을 확인하지 못했습니다.')
-    }
-  }
-  // Domain assertions above narrow generated arrays to the game's tuple types.
-  return value as SaveWorkspace
-}
+type Models = components['schemas']
 
 /** The journal holds only a request and its UUID. All displayed game data comes from fresh GETs. */
 export class ServerSaveController {
@@ -93,52 +64,12 @@ export class ServerSaveController {
     }
     return value
   }
-  private async execute(command: SaveCommand) {
-    let result: unknown
-    switch (command.kind) {
-      case 'race-entry':
-        result = await this.api.enterRace(command.careerId, command.body)
-        break
-      case 'race-complete':
-        result = await this.api.completeRace(command.careerId, command.raceRunId, command.body)
-        break
-      case 'create':
-        result = await this.api.createCareer(command.body)
-        break
-      case 'action':
-        result = await this.api.confirmAction(command.careerId, command.body)
-        break
-      case 'advance':
-        result = await this.api.advanceMonth(command.careerId, command.body)
-        break
-      case 'event':
-        result = await this.api.chooseEvent(command.careerId, command.historyId, command.body)
-        break
-      case 'retire':
-        result = await this.api.retireCareer(command.careerId, command.body)
-        break
-    }
-    const valid =
-      command.kind === 'race-entry'
-        ? validateRaceEntryResponse(result)
-        : command.kind === 'race-complete'
-          ? validateRaceCompleteResponse(result)
-          : command.kind === 'action'
-            ? validateActionResponse(result)
-            : command.kind === 'retire'
-              ? validateRetireCareerResponse(result)
-              : validateCareerResponse(result)
-    if (!valid) {
-      throw new Error('저장 응답을 확인하지 못했습니다. 같은 요청으로 다시 확인해 주세요.')
-    }
-    // Receipt replay intentionally returns historical state. Never display it as current state.
-  }
   private async readWorkspace() {
     const [saved, catalog] = await Promise.all([
       this.api.getCareerWorkspace({ page: 1, pageSize: 20 }),
       this.api.listHorses(),
     ])
-    const current = workspace(saved)
+    const current = parseSaveWorkspace(saved)
     if (!validateHorseCatalog(catalog)) {
       throw new Error('서버 육성마 후보를 읽지 못했습니다.')
     }
@@ -194,7 +125,7 @@ export class ServerSaveController {
       let rejected: Error | null = null
       if (pending) {
         try {
-          await this.execute(pending)
+          await executeSaveCommand(this.api, pending)
         } catch (error) {
           // Check the public error shape: clients can cross ESM/CJS module or browser boundaries.
           if (
@@ -253,7 +184,7 @@ export class ServerSaveController {
     }
     this.publish({ busy: true, error: null })
     try {
-      const next = workspace(
+      const next = parseSaveWorkspace(
         await this.api.getCareerWorkspace({ page: previous.pagination.page + 1, pageSize: 20 }),
       )
       if (previous.pagination.total !== next.pagination.total) {
