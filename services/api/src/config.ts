@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DEFAULT_DIRECTOR_CONFIG, type DirectorConfig } from '../../../packages/shared/src/events'
+import { CURRENT_DIRECTOR_CONFIG, type DirectorConfig } from '../../../packages/shared/src/events'
 import { directorConfigSchema } from './modules/events/schema'
 export type Config = {
   databaseUrl: string
@@ -81,7 +81,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
     corsOrigins: raw.CORS_ORIGINS.split(',').filter(Boolean),
     logLevel: raw.LOG_LEVEL,
     director: directorConfigSchema.parse(
-      env.EVENT_DIRECTOR_CONFIG ? JSON.parse(env.EVENT_DIRECTOR_CONFIG) : DEFAULT_DIRECTOR_CONFIG,
+      env.EVENT_DIRECTOR_CONFIG ? JSON.parse(env.EVENT_DIRECTOR_CONFIG) : CURRENT_DIRECTOR_CONFIG,
     ),
   }
 }

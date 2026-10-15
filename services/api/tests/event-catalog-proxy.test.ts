@@ -46,13 +46,8 @@ test('public proxy reads DB pages, filters and details without forwarding browse
       request('?status=deferred&enabled=false&sort=name&order=desc'),
     )
     const held = await deferred.json()
-    assert.equal(held.pagination.total, 35)
-    assert.ok(
-      held.data.every(
-        (event: { status: string; enabled: boolean }) =>
-          event.status === 'deferred' && !event.enabled,
-      ),
-    )
+    assert.equal(held.pagination.total, 0)
+    assert.deepEqual(held.data, [])
     const empty = await proxy.list(request('?category=hidden'))
     assert.equal((await empty.json()).pagination.total, 0)
     const absent = await proxy.detail(request(), 'COM-DOES-NOT-EXIST')

@@ -47,7 +47,7 @@ export interface paths {
         };
         /**
          * listEvents
-         * @description 실제 Notion 이벤트 카탈로그. page/pageSize 방식, id 또는 name(C collation + id) 안정 정렬. needs_mapping/deferred는 실행되지 않음. 초기 보상은 balanceVersion에 기록된 제안치.
+         * @description 공개 가능한 활성·ready·검토 완료 비히든 정의만 반환한다. query는 공개 범위를 좁히는 필터이며 enabled=false, 미검토 상태, hidden 요청은 빈 목록을 반환한다. total도 공개 범위 기준이다. page/pageSize 방식, id 또는 name(C collation + id) 안정 정렬. 기존 공통 활성315개는 유지한다.
          */
         get: operations["listEvents"];
         put?: never;
@@ -65,7 +65,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** getEvent */
+        /**
+         * getEvent
+         * @description 공개 목록과 같은 접근 정책을 적용한다. 비활성·미검토·히든 정의와 없는 ID는 동일한404를 반환한다. 히든이 실제 발생한 소유 Career의 이벤트는 인증된 Career/이력 API에서만 조회한다.
+         */
         get: operations["getEvent"];
         put?: never;
         post?: never;
@@ -447,7 +450,41 @@ export interface components {
             min?: number;
             max?: number;
         };
-        EventCondition: components["schemas"]["ConditionAlways"] | components["schemas"]["ConditionHealthy"] | components["schemas"]["ConditionTrainingAvailable"] | components["schemas"]["ConditionActionIs"] | components["schemas"]["ConditionValueRange"] | components["schemas"]["ConditionTurnRange"];
+        ConditionAptitudeAny: {
+            /** @enum {string} */
+            type: "aptitude_any";
+            names: string[];
+            grades: string[];
+        };
+        ConditionGrowthIs: {
+            /** @enum {string} */
+            type: "growth_is";
+            /** @enum {string} */
+            growth: "조숙" | "표준" | "만성";
+        };
+        ConditionHealthIs: {
+            /** @enum {string} */
+            type: "health_is";
+            health: string[];
+        };
+        ConditionRecordRange: {
+            /** @enum {string} */
+            type: "record_range";
+            /** @enum {string} */
+            metric: "starts" | "wins";
+            min?: number;
+            max?: number;
+        };
+        ConditionStatSummary: {
+            /** @enum {string} */
+            type: "stat_summary";
+            /** @enum {string} */
+            metric: "spread" | "count";
+            threshold?: number;
+            min?: number;
+            max?: number;
+        };
+        EventCondition: components["schemas"]["ConditionAptitudeAny"] | components["schemas"]["ConditionGrowthIs"] | components["schemas"]["ConditionHealthIs"] | components["schemas"]["ConditionRecordRange"] | components["schemas"]["ConditionStatSummary"] | components["schemas"]["ConditionAlways"] | components["schemas"]["ConditionHealthy"] | components["schemas"]["ConditionTrainingAvailable"] | components["schemas"]["ConditionActionIs"] | components["schemas"]["ConditionValueRange"] | components["schemas"]["ConditionTurnRange"];
         EffectValueDelta: {
             /** @enum {string} */
             type: "value_delta";
@@ -476,13 +513,34 @@ export interface components {
             ratio: number;
         };
         EventEffect: components["schemas"]["EffectValueDelta"] | components["schemas"]["EffectActionModifier"] | components["schemas"]["EffectResolvedGrowthBonus"];
+        EventRisk: {
+            /** @enum {string} */
+            version: "event-risk-v1";
+            outcomes: {
+                great_success: components["schemas"]["EventEffect"][];
+                success: components["schemas"]["EventEffect"][];
+                failure: components["schemas"]["EventEffect"][];
+                disaster: components["schemas"]["EventEffect"][];
+            };
+        };
+        EventReview: {
+            sourceDigest: string;
+            converted: boolean;
+            executable: boolean;
+            contentReviewed: boolean;
+            balanceReviewed: boolean;
+            groupId: string | null;
+            representativeId: string | null;
+        };
         EventChoice: {
+            risk?: components["schemas"]["EventRisk"];
             id: string;
             label: string;
             conditions: components["schemas"]["EventCondition"][];
             effects: components["schemas"]["EventEffect"][];
         };
         EventDefinition: {
+            review?: components["schemas"]["EventReview"];
             id: string;
             name: string;
             /** @enum {string} */
@@ -502,6 +560,7 @@ export interface components {
             conditions: components["schemas"]["EventCondition"][];
             choices: components["schemas"]["EventChoice"][];
             automatic: boolean;
+            /** @description 응답에서 url은 null, conditionText/effectText는 빈 문자열이며 body는 생략한다. 원문 조건·효과와 내부 출처는 DB의 불변 revision에만 보존한다. 화면은 구조화 conditions/choices/effects와 고정 description을 사용한다. */
             source: {
                 /** Format: uri */
                 url: string | null;
@@ -668,6 +727,12 @@ export interface components {
             healthRecovery?: number;
         };
         EventApplicationResult: {
+            risk?: {
+                /** @enum {string} */
+                version: "event-risk-v1";
+                /** @enum {string} */
+                outcome: "great_success" | "success" | "failure" | "disaster";
+            };
             changes: components["schemas"]["Change"][];
             actionChanges?: components["schemas"]["Change"][];
         };

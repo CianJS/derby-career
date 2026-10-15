@@ -171,12 +171,15 @@ paths:
           - asc
           - desc
           default: asc
-      description: 실제 Notion 이벤트 카탈로그. page/pageSize 방식, id 또는 name(C collation +
-        id) 안정 정렬. needs_mapping/deferred는 실행되지 않음. 초기 보상은 balanceVersion에 기록된 제안치.
+      description: 공개 가능한 활성·ready·검토 완료 비히든 정의만 반환한다. query는 공개 범위를 좁히는
+        필터이며 enabled=false, 미검토 상태, hidden 요청은 빈 목록을 반환한다. total도 공개 범위 기준이다.
+        page/pageSize 방식, id 또는 name(C collation + id) 안정 정렬. 기존 공통 활성315개는 유지한다.
   /v1/events/{eventId}:
     get:
       operationId: getEvent
       summary: getEvent
+      description: 공개 목록과 같은 접근 정책을 적용한다. 비활성·미검토·히든 정의와 없는 ID는 동일한404를
+        반환한다. 히든이 실제 발생한 소유 Career의 이벤트는 인증된 Career/이력 API에서만 조회한다.
       responses:
         '200':
           description: 성공
@@ -1290,8 +1293,93 @@ components:
       required:
       - type
       additionalProperties: false
+    ConditionAptitudeAny:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [aptitude_any]
+        names:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        grades:
+          type: array
+          minItems: 1
+          items:
+            type: string
+      required: [type, names, grades]
+      additionalProperties: false
+    ConditionGrowthIs:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [growth_is]
+        growth:
+          type: string
+          enum: [조숙, 표준, 만성]
+      required: [type, growth]
+      additionalProperties: false
+    ConditionHealthIs:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [health_is]
+        health:
+          type: array
+          minItems: 1
+          items:
+            type: string
+      required: [type, health]
+      additionalProperties: false
+    ConditionRecordRange:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [record_range]
+        metric:
+          type: string
+          enum: [starts, wins]
+        min:
+          type: integer
+          minimum: 0
+        max:
+          type: integer
+          minimum: 0
+      required: [type, metric]
+      additionalProperties: false
+    ConditionStatSummary:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [stat_summary]
+        metric:
+          type: string
+          enum: [spread, count]
+        threshold:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        min:
+          type: integer
+          minimum: 0
+        max:
+          type: integer
+          minimum: 0
+      required: [type, metric]
+      additionalProperties: false
     EventCondition:
       oneOf:
+      - $ref: '#/components/schemas/ConditionAptitudeAny'
+      - $ref: '#/components/schemas/ConditionGrowthIs'
+      - $ref: '#/components/schemas/ConditionHealthIs'
+      - $ref: '#/components/schemas/ConditionRecordRange'
+      - $ref: '#/components/schemas/ConditionStatSummary'
       - $ref: '#/components/schemas/ConditionAlways'
       - $ref: '#/components/schemas/ConditionHealthy'
       - $ref: '#/components/schemas/ConditionTrainingAvailable'
@@ -1374,9 +1462,62 @@ components:
       - $ref: '#/components/schemas/EffectValueDelta'
       - $ref: '#/components/schemas/EffectActionModifier'
       - $ref: '#/components/schemas/EffectResolvedGrowthBonus'
+    EventRisk:
+      type: object
+      properties:
+        version:
+          type: string
+          enum: [event-risk-v1]
+        outcomes:
+          type: object
+          properties:
+            great_success:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            success:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            failure:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            disaster:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+          required: [great_success, success, failure, disaster]
+          additionalProperties: false
+      required: [version, outcomes]
+      additionalProperties: false
+    EventReview:
+      type: object
+      properties:
+        sourceDigest:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+        converted:
+          type: boolean
+        executable:
+          type: boolean
+        contentReviewed:
+          type: boolean
+        balanceReviewed:
+          type: boolean
+        groupId:
+          type: string
+          nullable: true
+        representativeId:
+          type: string
+          nullable: true
+      required: [sourceDigest, converted, executable, contentReviewed, balanceReviewed, groupId, representativeId]
+      additionalProperties: false
     EventChoice:
       type: object
       properties:
+        risk:
+          $ref: '#/components/schemas/EventRisk'
         id: *id004
         label: *id004
         conditions:
@@ -1396,6 +1537,8 @@ components:
     EventDefinition:
       type: object
       properties:
+        review:
+          $ref: '#/components/schemas/EventReview'
         id:
           type: string
           minLength: 1
@@ -1455,6 +1598,8 @@ components:
         automatic: *id008
         source:
           type: object
+          description: 응답에서 url은 null, conditionText/effectText는 빈 문자열이며 body는 생략한다.
+            원문 조건·효과와 내부 출처는 DB의 불변 revision에만 보존한다. 화면은 구조화 conditions/choices/effects와 고정 description을 사용한다.
           properties:
             url:
               type: string
@@ -1870,6 +2015,17 @@ components:
     EventApplicationResult:
       type: object
       properties:
+        risk:
+          type: object
+          properties:
+            version:
+              type: string
+              enum: [event-risk-v1]
+            outcome:
+              type: string
+              enum: [great_success, success, failure, disaster]
+          required: [version, outcome]
+          additionalProperties: false
         changes:
           type: array
           items:

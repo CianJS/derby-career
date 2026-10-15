@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { eventCategories, eventTimings } from '../../../../../packages/shared/src/events'
+import { effectSemanticIssues, unreachableTrainingResult } from './semantics'
 const stat = z.enum(['speed', 'stamina', 'power', 'guts', 'intelligence'])
 const choice = z.enum(['speed', 'stamina', 'power', 'guts', 'intelligence', 'rest', 'treatment'])
 const valueKey = z.enum([
@@ -12,6 +13,37 @@ const valueKey = z.enum([
   'bodyLoad',
 ])
 export const conditionSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('aptitude_any'),
+      names: z.array(z.string()).min(1),
+      grades: z.array(z.enum(['A', 'B', 'C', 'D', 'E', 'F', 'G'])).min(1),
+    })
+    .strict(),
+  z.object({ type: z.literal('growth_is'), growth: z.enum(['조숙', '표준', '만성']) }).strict(),
+  z
+    .object({
+      type: z.literal('health_is'),
+      health: z.array(z.enum(['정상', '경상', '중등도 부상', '중상'])).min(1),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('record_range'),
+      metric: z.enum(['starts', 'wins']),
+      min: z.number().int().nonnegative().optional(),
+      max: z.number().int().nonnegative().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('stat_summary'),
+      metric: z.enum(['spread', 'count']),
+      threshold: z.number().int().min(0).max(1000).optional(),
+      min: z.number().int().nonnegative().optional(),
+      max: z.number().int().nonnegative().optional(),
+    })
+    .strict(),
   z.object({ type: z.literal('always') }).strict(),
   z.object({ type: z.literal('healthy') }).strict(),
   z.object({ type: z.literal('training_available'), stat }).strict(),
@@ -85,6 +117,20 @@ export const eventSchema = z
             label: z.string(),
             conditions: z.array(conditionSchema),
             effects: z.array(effectSchema),
+            risk: z
+              .object({
+                version: z.literal('event-risk-v1'),
+                outcomes: z
+                  .object({
+                    great_success: z.array(effectSchema),
+                    success: z.array(effectSchema),
+                    failure: z.array(effectSchema),
+                    disaster: z.array(effectSchema),
+                  })
+                  .strict(),
+              })
+              .strict()
+              .optional(),
           })
           .strict(),
       )
@@ -98,18 +144,84 @@ export const eventSchema = z
         body: z.string().optional(),
       })
       .strict(),
+    review: z
+      .object({
+        sourceDigest: z.string().regex(/^[a-f0-9]{64}$/),
+        converted: z.boolean(),
+        executable: z.boolean(),
+        contentReviewed: z.boolean(),
+        balanceReviewed: z.boolean(),
+        groupId: z.string().nullable(),
+        representativeId: z.string().nullable(),
+      })
+      .strict()
+      .optional(),
     mappingNotes: z.array(z.string()),
   })
   .strict()
   .superRefine((e, c) => {
+    for (const issue of effectSemanticIssues(e)) {
+      c.addIssue({ code: 'custom', path: issue.path.split('.'), message: issue.code })
+    }
+    if ((e.enabled || e.review?.executable) && unreachableTrainingResult(e)) {
+      c.addIssue({ code: 'custom', message: 'UNREACHABLE_TRAINING_RESULT' })
+    }
+    for (const condition of [
+      ...e.conditions,
+      ...e.choices.flatMap((choice) => choice.conditions),
+    ]) {
+      if (
+        'min' in condition &&
+        'max' in condition &&
+        condition.min !== undefined &&
+        condition.max !== undefined &&
+        condition.min > condition.max
+      ) {
+        c.addIssue({ code: 'custom', message: 'Reversed condition range' })
+      }
+      if (
+        condition.type === 'stat_summary' &&
+        condition.metric === 'count' &&
+        (condition.threshold === undefined || (condition.min ?? 0) > 5 || (condition.max ?? 0) > 5)
+      ) {
+        c.addIssue({
+          code: 'custom',
+          message: 'Stat count needs a threshold and range within five stats',
+        })
+      }
+    }
     if (new Set(e.choices.map((x) => x.id)).size !== e.choices.length) {
       c.addIssue({ code: 'custom', message: 'Duplicate choice ID' })
     }
     if (
       e.enabled &&
-      (e.status !== 'ready' || !e.choices.length || e.introduction !== 'candidate')
+      (e.status !== 'ready' ||
+        !e.choices.length ||
+        (e.review
+          ? !(
+              e.review.converted &&
+              e.review.executable &&
+              e.review.contentReviewed &&
+              e.review.balanceReviewed
+            )
+          : e.category !== 'common' ||
+            /^(GEN|SPC|ACC|HID)-/.test(e.id) ||
+            e.introduction !== 'candidate'))
     ) {
       c.addIssue({ code: 'custom', message: 'Only mapped candidates can be enabled' })
+    }
+    if (
+      e.category === 'hidden' &&
+      e.enabled &&
+      e.conditions.filter((c) => c.type !== 'always').length < 2
+    ) {
+      c.addIssue({ code: 'custom', message: 'Hidden events require explicit compound conditions' })
+    }
+    if (e.choices.some((choice) => choice.risk && (choice.effects.length || e.automatic))) {
+      c.addIssue({
+        code: 'custom',
+        message: 'Risk requires explicit player choice and four exclusive outcome effects',
+      })
     }
     if (e.automatic && e.choices.length !== 1) {
       c.addIssue({ code: 'custom', message: 'Automatic events need one choice' })
@@ -120,7 +232,7 @@ export const catalogSchema = z
   .strict()
 export const directorConfigSchema = z
   .object({
-    version: z.literal('event-director-v1'),
+    version: z.enum(['event-director-v1', 'event-director-v2']),
     monthlyProbability: z.number().min(0).max(1),
     pityAfterMisses: z.number().int().min(1).max(100),
     monthStartShare: z.number().min(0).max(1),

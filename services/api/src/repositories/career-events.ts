@@ -1,3 +1,4 @@
+import { resolveEventChoice } from '../modules/events/risk'
 import { randomUUID } from 'node:crypto'
 import type { Query } from '../db'
 import { ApiError, conflict } from '../errors'
@@ -36,10 +37,29 @@ export class CareerEventRepository {
       return
     }
     const choice = history.definition_snapshot.choices.find((x) => x.id === choiceId)
-    if (!choice || !conditionsMatch(choice.conditions, { career: row.state })) {
+    if (
+      !choice ||
+      !conditionsMatch(choice.conditions, {
+        career: row.state,
+        choice:
+          row.state.action?.trainingType ??
+          (row.state.action?.actionType === 'rest'
+            ? 'rest'
+            : row.state.action?.actionType === 'treatment'
+              ? 'treatment'
+              : undefined),
+      })
+    ) {
       throw new ApiError(422, 'INVALID_CHOICE', '실행할 수 없는 이벤트 선택입니다.')
     }
-    const resolved = applyImmediateEffects(row.state, choice.effects)
+    const draw = (
+      await tx.query('SELECT seed FROM event_draws WHERE career_id=$1 AND turn=$2', [
+        row.id,
+        row.turn,
+      ])
+    ).rows[0]
+    const selection = resolveEventChoice(choice, draw.seed, history.event_revision)
+    const resolved = applyImmediateEffects(row.state, selection.effects)
     row.state = resolved.career
     const state = resolved.modifiers.length ? 'selected' : 'applied'
     await tx.query(
@@ -49,7 +69,10 @@ export class CareerEventRepository {
         choiceId,
         state,
         JSON.stringify(resolved.modifiers),
-        JSON.stringify({ changes: resolved.changes }),
+        JSON.stringify({
+          changes: resolved.changes,
+          ...(selection.risk ? { risk: selection.risk } : {}),
+        }),
       ],
     )
   }

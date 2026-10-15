@@ -530,13 +530,16 @@ test('004 upgrades the v1/v2 database in place, preserves logs and receipts, and
     const checksums = (
       await f.db.query('SELECT name,checksum FROM schema_migrations ORDER BY name')
     ).rows
-    assert.deepEqual(await migrate(f.db), ['004_race_sim_v3.sql'])
+    assert.deepEqual(await migrate(f.db), [
+      '004_race_sim_v3.sql',
+      '005_event_activation_guards.sql',
+    ])
     assert.deepEqual(await migrate(f.db), [])
     assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 200)
     assert.deepEqual(
       (
         await f.db.query(
-          "SELECT name,checksum FROM schema_migrations WHERE name<>'004_race_sim_v3.sql' ORDER BY name",
+          "SELECT name,checksum FROM schema_migrations WHERE name NOT IN ('004_race_sim_v3.sql','005_event_activation_guards.sql') ORDER BY name",
         )
       ).rows,
       checksums,

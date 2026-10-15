@@ -10,6 +10,7 @@ import type {
 import { catalogSchema } from './schema'
 import { digest } from '../../services/identity'
 import type { Database } from '../../db'
+import { draftCatalogSchema, isQuarantinedEvent } from './drafts'
 
 type Row = Record<string, string>
 const stats: Record<string, Stat> = {
@@ -365,12 +366,23 @@ export function readEventSource(text: string, format: 'json' | 'csv') {
   const data = JSON.parse(text)
   return 'rows' in data ? convertNotionRows(data.rows) : catalogSchema.parse(data)
 }
-export async function importEvents(db: Database, value: unknown) {
+export async function importEvents(
+  db: Database,
+  value: unknown,
+  options: {
+    draftsOnly?: boolean
+    expansionOnly?: boolean
+    expectedRevisions?: Record<string, string>
+  } = {},
+) {
   const catalog = catalogSchema.parse(value)
   if (new Set(catalog.events.map((x) => x.id)).size !== catalog.events.length) {
     throw new Error('Duplicate event IDs in catalog')
   }
   for (const event of catalog.events) {
+    if (options.draftsOnly && !isQuarantinedEvent(event)) {
+      throw new Error(`Event is not a quarantined draft: ${event.id}`)
+    }
     const { revision, ...definition } = event
     if (digest(definition) !== revision) {
       throw new Error(`Revision checksum mismatch: ${event.id}`)
@@ -378,7 +390,56 @@ export async function importEvents(db: Database, value: unknown) {
   }
   await db.transaction(async (tx) => {
     await tx.query('SELECT pg_advisory_xact_lock(182946,2)')
+    if (options.draftsOnly) {
+      const existing = await tx.query(
+        'SELECT e.id,e.enabled,e.status,r.definition FROM event_definitions e JOIN event_revisions r ON r.event_id=e.id AND r.revision=e.current_revision WHERE e.id=ANY($1::text[])',
+        [catalog.events.map((event) => event.id)],
+      )
+      for (const row of existing.rows) {
+        if (row.enabled || row.status === 'ready' || !isQuarantinedEvent(row.definition)) {
+          throw new Error(`Draft import cannot overwrite an existing reviewed event: ${row.id}`)
+        }
+      }
+    }
     for (const event of catalog.events) {
+      if (options.expansionOnly || options.expectedRevisions) {
+        const existing = (
+          await tx.query(
+            'SELECT r.definition FROM event_definitions e JOIN event_revisions r ON r.event_id=e.id AND r.revision=e.current_revision WHERE e.id=$1',
+            [event.id],
+          )
+        ).rows[0]?.definition
+        if (
+          options.expectedRevisions &&
+          existing?.revision !== options.expectedRevisions[event.id]
+        ) {
+          throw new Error(`Stale activation revision: ${event.id}`)
+        }
+        if (options.expansionOnly) {
+          if (
+            event.category === 'common' ||
+            event.enabled ||
+            !event.review ||
+            event.review.contentReviewed ||
+            event.review.balanceReviewed
+          ) {
+            throw new Error(`Not an inactive expansion: ${event.id}`)
+          }
+          if (
+            existing?.review?.contentReviewed ||
+            existing?.review?.balanceReviewed ||
+            existing?.enabled
+          ) {
+            if (existing?.review?.sourceDigest === event.review.sourceDigest) {
+              continue
+            }
+            throw new Error(`Source changed after review: ${event.id}`)
+          }
+          if (existing && !existing.review && !isQuarantinedEvent(existing)) {
+            throw new Error(`Expansion cannot overwrite existing content: ${event.id}`)
+          }
+        }
+      }
       await tx.query(
         'INSERT INTO event_definitions(id,name,category,status,enabled,current_revision) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,category=EXCLUDED.category,status=EXCLUDED.status,enabled=EXCLUDED.enabled,current_revision=EXCLUDED.current_revision',
         [event.id, event.name, event.category, event.status, event.enabled, event.revision],
@@ -415,3 +476,17 @@ export async function importEvents(db: Database, value: unknown) {
     deferred: catalog.events.filter((x) => x.status === 'deferred').length,
   }
 }
+
+/** Deliberately different envelope/command: ordinary import rejects this packet. */
+export async function importEventDrafts(db: Database, value: unknown) {
+  const catalog = draftCatalogSchema.parse(value)
+  const result = await importEvents(
+    db,
+    { schemaVersion: 1, events: catalog.events },
+    { draftsOnly: true },
+  )
+  return { ...result, sourceDigest: catalog.sourceDigest }
+}
+
+// Reuse the existing offline grammar in preflight without changing the 350-event converter.
+export { categories, timings, introductions, conditionsFor, choicesFor }

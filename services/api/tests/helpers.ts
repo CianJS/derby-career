@@ -10,6 +10,7 @@ import { embeddedDatabase } from './database'
 import type { Database } from '../src/db'
 export async function fixture(
   options: {
+    directorVersion?: 'event-director-v1' | 'event-director-v2'
     probability?: number
     share?: number
     db?: Database
@@ -19,7 +20,7 @@ export async function fixture(
   const db = options.db ?? (await embeddedDatabase())
   try {
     await migrate(db, options.migrationsDirectory)
-    await seedDevelopmentCatalog(db)
+    await seedDevelopmentCatalog(db, false)
   } catch (error) {
     await db.close()
     throw error
@@ -33,7 +34,7 @@ export async function fixture(
     HOST: '127.0.0.1',
     LOG_LEVEL: 'silent',
     EVENT_DIRECTOR_CONFIG: JSON.stringify({
-      version: 'event-director-v1',
+      version: options.directorVersion ?? 'event-director-v1',
       monthlyProbability: options.probability ?? 0,
       pityAfterMisses: 3,
       monthStartShare: options.share ?? 1,
