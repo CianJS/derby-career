@@ -421,7 +421,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
       url.searchParams.delete('view')
       url.searchParams.delete('raceId')
     }
-    history.replaceState(history.state, '', url)
+    if (url.href !== window.location.href) { history.replaceState(history.state, '', url) }
     updateView(next)
   }, []);
   useEffect(() => {
@@ -443,27 +443,24 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [saveError, setSaveError] = useState<string | null>(null);
   useEffect(() => {
     careerStore.configure(saveMode)
-    const publicView = new URLSearchParams(window.location.search).get('view')
-    if (publicView === 'races' || publicView === 'race') { setView(publicView) }
+    const requested = new URLSearchParams(window.location.search).get('view')
+    // Restore once without invoking navigation's URL cleanup. Public routes are mode-independent.
+    if (requested === 'races' || requested === 'race') {
+      updateView(requested)
+    } else if (requested && (saveMode === 'server'
+      ? ['training', 'candidates', 'stable', 'horse'].includes(requested)
+      : process.env.NODE_ENV !== 'production' && (VIEW_NAMES as readonly string[]).includes(requested))) {
+      updateView(requested as View)
+    } else {
+      updateView('home')
+    }
     if (saveMode === 'server') {
       setHydrated(true)
-      const requested = new URLSearchParams(window.location.search).get('view')
-      if (requested && ['training', 'candidates', 'stable', 'horse'].includes(requested)) {
-        setView(requested as View)
-      }
       return
     }
     try {
       const saved = { ...initialLifecycle, ...readLifecycle() };
       setState(saved);
-      const requested = new URLSearchParams(window.location.search).get("view");
-      setView(
-        (requested === 'races' || requested === 'race' || process.env.NODE_ENV !== "production") &&
-          requested &&
-          (VIEW_NAMES as readonly string[]).includes(requested)
-          ? (requested as View)
-          : "home",
-      );
       setHydrated(true);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "마방 기록을 읽지 못했습니다. 기존 저장은 유지됩니다.");
@@ -486,10 +483,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [restoredServerView, setRestoredServerView] = useState(false)
   useEffect(() => {
     if (saveMode !== 'server') { setRestoredServerView(false); return }
-    if (!ready || busy || pending || error || !workspace || restoredServerView) return
+    if (!hydrated || !ready || busy || pending || error || !workspace || restoredServerView) return
     setRestoredServerView(true)
     if (career?.raceRun && !['races', 'race'].includes(view)) { setView('raceplay') }
-  }, [saveMode, ready, busy, pending, error, workspace, restoredServerView, career, view, setView])
+  }, [saveMode, hydrated, ready, busy, pending, error, workspace, restoredServerView, career, view, setView])
   useEffect(() => {
     if (saveMode === 'local' && hydrated && career) setState((current) => applyCareer(current, career));
   }, [career, hydrated, saveMode]);

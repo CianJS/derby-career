@@ -48,3 +48,15 @@ node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/*.integratio
 - PGlite는 실제 PostgreSQL 엔진을 쓰는 격리 테스트 DB다. 별도 운영 PostgreSQL 인스턴스나 Backend Work의 개발 DB를 확인한 것은 아니다.
 - 배포된 실제 API URL은 전달받지 않았다. 개발용 `127.0.0.1`을 원격 API 주소로 취급하지 않는다. Backend Issue #21에서 import한 DB/API 주소를 확인하면 Next 서버의 `DERBY_API_URL`을 설정해야 한다. 이 프록시 방식에서는 브라우저가 Fastify를 직접 호출하지 않아 CORS 변경은 필요하지 않다.
 - 기존 비공개 정적 Sites에는 Next 프록시/Fastify/PostgreSQL을 배포하지 않는다. 미리보기의 경주 정보는 API 연결 오류를 정직하게 표시하며 로컬 fixture로 우회하지 않는다. 실데이터 원격 미리보기에는 API를 제공하는 Next 호스팅 환경이 필요하다.
+
+## PR #23 라우팅 리뷰 수정
+
+초기 App effect가 공개 상세 `race`를 복구한 뒤 로컬 개발 화면 허용 목록으로 재판정하면서 홈으로 덮어쓰는 결함을 수정했다. 초기 복구는 한 번만 화면을 결정하고 `updateView`만 호출한다. URL을 정리하는 탐색 `setView`는 사용자의 화면 이동에만 사용한다. 서버 관전 자동 복원은 화면 hydration 이후 실행해 이미 로드된 서버 workspace가 공개 상세를 가로채지 않도록 한다.
+
+`tests/app-routing.test.ts`는 jsdom + React DOM으로 실제 App의 SSR 마크업을 hydrateRoot로 hydration하며 하위 화면/useEffect/상태 저장 구독/History API까지 실행한다. 공개 API 응답은 기존 계약 fixture, 저장 API 응답은 실패 또는 검증된 활성 Career fixture로 격리한다. 실제 HTTP·DB 연동 테스트와 구분한다. jsdom은 테스트 전용 의존성이며 실제 브라우저 엔진/스크린샷 검증이 아니다.
+
+- 수정 전 같은 테스트에서 로컬 상세 직접 URL이 실제 홈으로 이동해 실패하는 것을 확인했다.
+- 두 저장 모드에서 `?view=race&raceId=RACE_KOR_2026_KOREA_CUP&rc_page=9` 직접 진입·재마운트 후 상세와 전체 query를 보존한다.
+- 두 저장 모드에서 9페이지 목록 → 선택 ID 상세 → 실제 History Back/Forward → 명시적 홈 이동을 검증한다. 홈 이동 때에만 공개 view/ID를 제거하고 목록 조건은 보존한다.
+- 서버 active RaceRun의 최초/재마운트 관전 복원과, 이미 로드된 서버 workspace가 공개 상세를 덮지 않는 경우를 검증한다.
+- 상세 관전 복원 테스트의 로그 조회는 실패 응답으로 격리해 라우팅만 검사한다. 실제 레이스 진행/완료 검증은 기존 `server-race-flow.integration.ts`가 담당한다.
