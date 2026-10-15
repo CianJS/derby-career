@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CareerCheckpoint } from "@/components/career/checkpoint";
 import { RetirementConfirm } from '@/components/career/retirement-confirm';
 import { RaceAction, RaceEntryWorkspace } from "@/components/career/race-entry-workspace";
@@ -411,7 +411,27 @@ function RaceEntry({ setView }: { setView: (v: View) => void }) {
 export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'server' }) {
   const [localState, setState] = useState<LifecycleState>(initialLifecycle);
   const [selectedJockeyId, setSelectedJockeyId] = useState(jockeys[0].id);
-  const [view, setView] = useState<View>("home");
+  const [view, updateView] = useState<View>("home");
+  const setView = useCallback((next: View) => {
+    const url = new URL(window.location.href)
+    if (next === 'races' || next === 'race') {
+      url.searchParams.set('view', next)
+      if (next === 'races') { url.searchParams.delete('raceId') }
+    } else if (['race', 'races'].includes(url.searchParams.get('view') ?? '')) {
+      url.searchParams.delete('view')
+      url.searchParams.delete('raceId')
+    }
+    if (url.href !== window.location.href) { history.replaceState(history.state, '', url) }
+    updateView(next)
+  }, []);
+  useEffect(() => {
+    const restore = () => {
+      const requested = new URLSearchParams(window.location.search).get('view')
+      updateView(requested === 'race' || requested === 'races' ? requested : 'home')
+    }
+    window.addEventListener('popstate', restore)
+    return () => window.removeEventListener('popstate', restore)
+  }, []);
   const { career, workspace, ready, busy, pending, error } = useCareer();
   const state: LifecycleState = saveMode === 'server' && workspace
     ? { ...localState, stableName: '서버 마방', ...serverLifecycle(workspace) }
@@ -423,25 +443,24 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [saveError, setSaveError] = useState<string | null>(null);
   useEffect(() => {
     careerStore.configure(saveMode)
+    const requested = new URLSearchParams(window.location.search).get('view')
+    // Restore once without invoking navigation's URL cleanup. Public routes are mode-independent.
+    if (requested === 'races' || requested === 'race') {
+      updateView(requested)
+    } else if (requested && (saveMode === 'server'
+      ? ['training', 'candidates', 'stable', 'horse'].includes(requested)
+      : process.env.NODE_ENV !== 'production' && (VIEW_NAMES as readonly string[]).includes(requested))) {
+      updateView(requested as View)
+    } else {
+      updateView('home')
+    }
     if (saveMode === 'server') {
       setHydrated(true)
-      const requested = new URLSearchParams(window.location.search).get('view')
-      if (requested && ['training', 'candidates', 'stable', 'horse'].includes(requested)) {
-        setView(requested as View)
-      }
       return
     }
     try {
       const saved = { ...initialLifecycle, ...readLifecycle() };
       setState(saved);
-      const requested = new URLSearchParams(window.location.search).get("view");
-      setView(
-        process.env.NODE_ENV !== "production" &&
-          requested &&
-          (VIEW_NAMES as readonly string[]).includes(requested)
-          ? (requested as View)
-          : "home",
-      );
       setHydrated(true);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "마방 기록을 읽지 못했습니다. 기존 저장은 유지됩니다.");
@@ -464,10 +483,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [restoredServerView, setRestoredServerView] = useState(false)
   useEffect(() => {
     if (saveMode !== 'server') { setRestoredServerView(false); return }
-    if (!ready || busy || pending || error || !workspace || restoredServerView) return
+    if (!hydrated || !ready || busy || pending || error || !workspace || restoredServerView) return
     setRestoredServerView(true)
-    if (career?.raceRun) setView('raceplay')
-  }, [saveMode, ready, busy, pending, error, workspace, restoredServerView, career])
+    if (career?.raceRun && !['races', 'race'].includes(view)) { setView('raceplay') }
+  }, [saveMode, hydrated, ready, busy, pending, error, workspace, restoredServerView, career, view, setView])
   useEffect(() => {
     if (saveMode === 'local' && hydrated && career) setState((current) => applyCareer(current, career));
   }, [career, hydrated, saveMode]);
@@ -665,11 +684,11 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               }
             />
           )}{" "}
-          {view === "races" && <Races setView={setView} />}{" "}
-          {view === "race" && <Race setView={setView} />}{" "}
           {view === "jockeys" && <Jockeys setView={setView} onSelect={setSelectedJockeyId} />}{" "}
           {view === "jockey" && <Jockey setView={setView} jockeyId={selectedJockeyId} horses={[...(state.activeHorse ? [state.activeHorse] : []), ...state.archive]} />}
           </>}
+          {view === 'races' && <Races setView={setView} />}
+          {view === 'race' && <Race setView={setView} />}
         </main>
       </div>
     </div>

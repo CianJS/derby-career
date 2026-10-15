@@ -97,6 +97,6 @@ jobs:
       - run: npm ci --prefix services/api
       - run: pnpm exec tsc --project tsconfig.frontend-integration.json --noEmit --incremental false
       - run: node --import ./services/api/node_modules/tsx/dist/loader.mjs --test tests/*.test.ts
-      - name: Verify Frontend server race flow
+      - name: Verify Frontend API integration flows
         working-directory: services/api
-        run: node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/server-race-flow.integration.ts
+        run: node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/*.integration.ts

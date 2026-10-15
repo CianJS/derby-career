@@ -106,3 +106,11 @@ node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/server-race-
 Next의 루트 타입 검사에서는 `tests/**/*.integration.ts`만 제외한다. 이 테스트가 Backend fixture를 가져오므로 API 의존성을 설치하지 않는 Frontend 배포에서는 모듈 누락을 일으킬 수 있다. 일반 Frontend 테스트와 앱·공유 import의 타입 검사는 유지하며, 서버 통합 테스트는 위 별도 설정으로 검사한다. `verify-frontend` CI는 API 의존성을 설치하기 전에 루트 의존성만으로 Next 빌드하고, 이후 API 의존성을 설치해 통합 테스트의 타입 검사와 실행을 수행한다. 타입 오류를 무시하거나 배포에 Backend 패키지를 추가하지 않는다.
 
 이 테스트는 기존 Fastify 서비스·migration·Seed와 PGlite PostgreSQL 엔진을 실제로 사용한다. Frontend bridge/공유 클라이언트/controller/journal/adapter를 통해 Month 1→7, Month 3·6 레이스, 출전/관전 중 재조회, 완료 직후 응답 유실, 동일 명령 재시도, controller 교체 중 응답, 상금/전적 1회 반영을 검사한다. 실제 브라우저 클릭·새로고침과 PostgreSQL 다중 연결 검증을 대체하지 않는다.
+
+## 공개 경주 정보 연동
+
+경주 정보 목록·상세는 두 저장 모드에서 동일한 공개 API를 사용한다. Next 서버에 `DERBY_API_URL`을 설정하고 API DB에 참고 카탈로그를 import해야 한다. 브라우저는 `/api/racing-catalog/v1/race-schedule` 및 `/api/racing-catalog/v1/racecourses`를 조회하고, Next는 공유 클라이언트와 생성된 검증기로 Fastify 응답을 확인한다. cookie/Authorization은 전달하지 않는다.
+
+경주 목록은 100행 단위 서버 페이지네이션을 사용하며 국가·기준연도·월·등급·노면·거리·경마장·경주명·일정 상태를 필터링한다. 연도는 기준연도, 월은 실제 개최일 기준이다. 필터·페이지·선택 ID는 URL에 보존하고 뒤로 가기에서는 선택 행과 스크롤을 복원한다. 출처 통화/상금 기준과 중복 후보를 유지하며, 이 자료를 게임 달력이나 출전 후보로 사용하지 않는다. API 미연결/빈 DB를 mock으로 대체하지 않는다.
+
+검증 기록과 한계는 [Frontend 경주 카탈로그 연동](docs/frontend-race-catalog.md)을 참고한다. 정적 Sites에는 Next 프록시/Fastify/PostgreSQL이 없으므로 API 연결 오류가 표시된다. 실제 데이터 조회는 API가 연결된 Next 실행 환경에서 확인해야 한다.
