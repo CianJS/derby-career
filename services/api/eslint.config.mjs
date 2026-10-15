@@ -4,6 +4,16 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export const FRONTEND_FILES = [
+  'components/career/horse-record.tsx',
+  'components/career/jockey-record.tsx',
+  'components/career/legacy-catalog.ts',
+  'components/career/legacy-types.ts',
+  'components/career/management.tsx',
+  'components/career/navigation.tsx',
+  'components/career/presentation.tsx',
+  'components/career/race-catalog.tsx',
+  'components/career/stable.tsx',
+  'tests/career-management.test.ts',
   'app/api/event-catalog/**/*.ts',
   'app/dev/event-catalog/**/*.tsx',
   'components/dev/event-catalog.tsx',

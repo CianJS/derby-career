@@ -1,90 +1,12 @@
 import type { components, operations } from './generated/api'
+import { createApiTransport, type ApiClientOptions } from './api-transport'
+
+export { DerbyApiError } from './api-transport'
 type Models = components['schemas']
 export type EventListQuery = operations['listEvents']['parameters']['query']
 export type PageQuery = { page?: number; pageSize?: number }
-export class DerbyApiError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-    public requestId?: string,
-  ) {
-    super(message)
-  }
-}
-export function createApiClient(options: {
-  baseUrl: string
-  fetch?: typeof fetch
-  getSessionToken?: () => string | undefined | Promise<string | undefined>
-}) {
-  const perform = options.fetch ?? globalThis.fetch
-  const request = async <T>(
-    path: string,
-    body?: unknown,
-    privateRequest = false,
-    query?: Record<string, unknown>,
-  ): Promise<T> => {
-    const search = new URLSearchParams()
-    for (const [key, value] of Object.entries(query ?? {})) {
-      if (value !== undefined) {
-        search.set(key, String(value))
-      }
-    }
-    const headers: Record<string, string> = { Accept: 'application/json' }
-    if (body !== undefined) {
-      headers['Content-Type'] = 'application/json'
-    }
-    if (privateRequest) {
-      const token = await options.getSessionToken?.()
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
-    }
-    const response = await perform(
-      `${options.baseUrl.replace(/\/$/, '')}${path}${search.size ? '?' + search : ''}`,
-      {
-        method: body === undefined ? 'GET' : 'POST',
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-        credentials: 'omit',
-        cache: 'no-store',
-      },
-    )
-    let result: unknown
-    try {
-      result = await response.json()
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) {
-        throw error
-      }
-      throw new DerbyApiError(
-        response.ok ? 502 : response.status,
-        response.ok ? 'INVALID_RESPONSE' : 'HTTP_ERROR',
-        'API 응답을 읽지 못했습니다.',
-      )
-    }
-    if (!response.ok) {
-      const details =
-        result &&
-        typeof result === 'object' &&
-        'error' in result &&
-        result.error &&
-        typeof result.error === 'object'
-          ? result.error
-          : {}
-      throw new DerbyApiError(
-        response.status,
-        'code' in details && typeof details.code === 'string' ? details.code : 'HTTP_ERROR',
-        'message' in details && typeof details.message === 'string'
-          ? details.message
-          : 'API 요청을 처리하지 못했습니다.',
-        'requestId' in details && typeof details.requestId === 'string'
-          ? details.requestId
-          : undefined,
-      )
-    }
-    return result as T
-  }
+export function createApiClient(options: ApiClientOptions) {
+  const request = createApiTransport(options)
   const careerPath = (id: string) => `/v1/careers/${encodeURIComponent(id)}`
   return {
     listEvents: (query: EventListQuery = {}) =>
