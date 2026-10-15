@@ -128,9 +128,9 @@ export function Jockey({
                 : '미계약',
             ],
             [
-              '잔여 기간',
+              '계약 만료일',
               (career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS).includes(j.id)
-                ? '2029년 12월까지'
+                ? '만료일 정보 없음'
                 : '—',
             ],
             career?.horse

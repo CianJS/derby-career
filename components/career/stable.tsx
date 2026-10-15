@@ -1,6 +1,5 @@
 'use client'
 
-import { FilterMenu } from '@/components/career/filter-menu'
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { View, CareerHorse } from './legacy-types'
@@ -10,7 +9,7 @@ import { Management } from './management'
 export function Stable({
   setView,
   archive = [],
-  onArchiveSelect: _onArchiveSelect = () => {},
+  onArchiveSelect = () => {},
 }: {
   setView: (v: View) => void
   archive?: CareerHorse[]
@@ -18,29 +17,25 @@ export function Stable({
 }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('recent')
-  const horses = archive.map(
-    (horse, index) =>
-      [
-        horse.name,
-        `${horse.age} ${horse.sex}`,
-        horse.record,
-        horse.best,
-        horse.prize,
-        horse.retiredAt || '기록 없음',
-        index,
-      ] as const,
-  )
-  const filtered = horses
-    .filter(([, name]) => name.includes(query))
+  // Both save modes provide newest retirements first; keep that order for ties as well.
+  const filtered = archive
+    .filter((horse) =>
+      horse.name.toLocaleLowerCase('ko-KR').includes(query.trim().toLocaleLowerCase('ko-KR')),
+    )
     .sort((a, b) =>
       sort === 'name'
-        ? a[0].localeCompare(b[0], 'ko')
+        ? a.name.localeCompare(b.name, 'ko')
         : sort === 'wins'
-          ? Number(b[2].match(/\d+승/)?.[0]) - Number(a[2].match(/\d+승/)?.[0])
+          ? Number(b.record.match(/(\d+)승/)?.[1] ?? 0) -
+            Number(a.record.match(/(\d+)승/)?.[1] ?? 0)
           : sort === 'prize'
-            ? Number(b[4].replace(/[^\d]/g, '')) - Number(a[4].replace(/[^\d]/g, ''))
-            : b[6] - a[6],
+            ? Number(b.prize.replace(/[^\d]/g, '')) - Number(a.prize.replace(/[^\d]/g, ''))
+            : 0,
     )
+  const select = (id: string) => {
+    onArchiveSelect(id)
+    setView('horseArchive')
+  }
   return (
     <Management
       title="마구간"
@@ -59,7 +54,8 @@ export function Stable({
             {archive.slice(0, 2).map((horse) => (
               <button
                 key={horse.id}
-                onClick={() => setView('horseArchive')}
+                onClick={() => select(horse.id)}
+                data-archive-id={horse.id}
                 className="flex w-full items-center justify-between border-b border-border py-3 text-left"
               >
                 <span>
@@ -86,31 +82,19 @@ export function Stable({
             className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
           />
         </label>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-muted-foreground">정렬</span>
-          <FilterMenu
-            label=""
-            value={
-              { recent: '최근 육성순', name: '이름순', wins: '통산 승수순', prize: '누적 상금순' }[
-                sort
-              ] ?? '최근 육성순'
-            }
-            options={['최근 육성순', '이름순', '통산 승수순', '누적 상금순']}
-            onChange={(v) =>
-              setSort(
-                (
-                  {
-                    '최근 육성순': 'recent',
-                    이름순: 'name',
-                    '통산 승수순': 'wins',
-                    '누적 상금순': 'prize',
-                  } as Record<string, string>
-                )[v] ?? 'recent',
-              )
-            }
-            align="right"
-          />
-        </div>
+        <label className="flex items-center gap-2 text-sm">
+          정렬
+          <select
+            value={sort}
+            onChange={(event) => setSort(event.target.value)}
+            className="min-h-11 rounded-lg border border-border bg-card px-3 text-sm"
+          >
+            <option value="recent">최근 은퇴순</option>
+            <option value="name">이름순</option>
+            <option value="wins">통산 승수순</option>
+            <option value="prize">누적 상금순</option>
+          </select>
+        </label>
       </div>
       <Section eyebrow="CAREER ARCHIVE" title="은퇴 경주마">
         <div className="hidden grid-cols-[1.5fr_1fr_1fr_1fr_1fr_100px_24px] gap-4 border-b border-border px-4 pb-3 text-[10px] tracking-wide text-muted-foreground md:grid">
@@ -122,18 +106,26 @@ export function Stable({
           <span>은퇴 시점</span>
           <span />
         </div>
-        {filtered.map(([name, age, record, best, prize, retired]) => (
+        {archive.length > 0 && filtered.length === 0 && (
+          <p role="status" className="py-6 text-sm text-muted-foreground">
+            이름이 일치하는 은퇴 기록이 없습니다.
+          </p>
+        )}
+        {filtered.map((horse) => (
           <button
-            key={name}
-            onClick={() => setView('horseArchive')}
+            key={horse.id}
+            data-archive-id={horse.id}
+            onClick={() => select(horse.id)}
             className="group grid w-full gap-2 border-b border-border px-4 py-4 text-left last:border-0 hover:bg-accent/40 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_100px_24px] md:items-center md:gap-4"
           >
-            <span className="font-serif text-base">{name}</span>
-            <span className="text-xs text-muted-foreground">{age}</span>
-            <span className="text-xs">{record}</span>
-            <span className="text-xs">{best}</span>
-            <span className="text-xs text-primary">{prize}</span>
-            <span className="text-xs text-muted-foreground">{retired}</span>
+            <span className="font-serif text-base">{horse.name}</span>
+            <span className="text-sm text-muted-foreground">
+              {horse.age} {horse.sex}
+            </span>
+            <span className="text-sm">{horse.record}</span>
+            <span className="text-sm">{horse.best}</span>
+            <span className="text-sm text-primary">{horse.prize}</span>
+            <span className="text-sm text-muted-foreground">{horse.retiredAt || '기록 없음'}</span>
             <ChevronRight
               size={15}
               className="text-primary opacity-0 transition group-hover:opacity-100"

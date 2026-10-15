@@ -3,6 +3,7 @@ import type { HorseRaceRecord } from '@/lib/career/records'
 export type View =
   | 'home'
   | 'setup'
+  | 'settings'
   | 'candidates'
   | 'careerComplete'
   | 'retirementConfirm'

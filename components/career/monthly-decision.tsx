@@ -5,7 +5,7 @@ import { isRaceTurn, raceEligibility, racesForTurn } from '@/lib/career/race-ent
 import { ArrowLeft, ArrowRight, Brain, Check, Dumbbell, Flag, Flame, HeartPulse, LockKeyhole, Moon, Wind, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ActionResult } from '@/components/career/action-result'
-import { AppliedEventNote, MonthEventCard, trainingEventPreview } from '@/components/career/month-event'
+import { AppliedEventNote, MonthEventCard, trainingEventPreview, visibleMonthEvent } from '@/components/career/month-event'
 import { BALANCE } from '@/lib/career/balance'
 import { actionName, labels, statKeys, trainings, type Career, type Stat } from '@/lib/career/model'
 import { careerStore, useCareer } from '@/lib/career/store'
@@ -41,13 +41,16 @@ export function MonthlyDecision({ career, busy, raceEntry }: { career: Career; b
     { id: 'treatment', name: '치료', Icon: HeartPulse, hint: injured ? `건강 · ${career.health} 회복` : '치료할 부상이 없습니다', disabled: !injured },
     { id: 'race', name: '경주', Icon: Flag, hint: serverMode ? '서버 출전 조건 확인' : raceHint, disabled: false },
   ]
-  const title = panel ? tabs.find(tab => tab.id === panel)!.name : locked ? '이번 달의 육성 결과' : '이번 달, 무엇에 집중할까요?'
+  const title = career.raceRun ? '확정된 출전' : locked ? '월간 행동 결과' : panel ? tabs.find(tab => tab.id === panel)!.name : '이번 달, 무엇에 집중할까요?'
+  const localEvent = !serverMode ? visibleMonthEvent(career) : null
+  const eventChoice = serverMode ? eventPending : !!localEvent?.definition.choices && localEvent.event.status === 'offered'
   const commit = (choice: Stat | 'rest' | 'treatment') => { setCommittedMonth(career.month); void careerStore.commit(choice, career.month) }
   const back = <button type="button" onClick={() => setPanel(null)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"><ArrowLeft size={13} aria-hidden />행동 선택으로</button>
   return <section aria-labelledby="monthly-decision" className="lab-monthly px-4 py-3.5 md:px-5">
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-3">{panel && !locked && back}<h2 id="monthly-decision" className="text-base font-bold">{title}</h2></div><span className="flex items-center gap-1.5 text-xs text-muted-foreground">{locked ? <LockKeyhole size={13} aria-hidden /> : null}{locked ? '행동 확정 · 결과 잠김' : '한 달에 핵심 행동 1회'}</span></div>
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-3">{panel && !locked && back}<h2 id="monthly-decision" className="text-base font-bold">{title}</h2></div><span className="flex items-center gap-1.5 text-xs text-muted-foreground">{locked ? <LockKeyhole size={13} aria-hidden /> : null}{career.raceRun ? '출전 확정 · 관전 대기' : locked ? result ? '행동 확정 · 결과 저장' : '행동 확정 · 결과 확인 중' : '한 달에 핵심 행동 1회'}</span></div>
     {career.raceRun ? <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold text-primary">출전이 확정되었습니다.</p><p className="mt-1 text-xs text-muted-foreground">{career.raceRun.raceDefinitionSnapshot.name} · {career.raceRun.player.jockeySnapshot.name} · {career.raceRun.player.tactic}</p><p className="mt-1 text-xs">이번 달의 다른 행동은 선택할 수 없습니다.</p></div><div className="min-w-60 flex-1 md:max-w-sm">{raceEntry}</div></div> : !locked ? <>
-      {serverMode ? <ServerMonthEvent busy={busy} /> : <MonthEventCard career={career} busy={busy} />}
+      <div role="region" aria-label="이벤트 확인" className="mb-4 border-b border-border pb-4"><h3 className="mb-2 text-sm font-bold">이벤트 확인</h3><p className="mb-3 text-sm text-muted-foreground">{eventChoice ? serverMode ? '먼저 이벤트 선택을 확정하세요. 월간 행동은 추가로 소모되지 않습니다.' : '이벤트를 선택하거나 건너뛴 뒤 월간 행동을 선택하세요. 이벤트 선택은 행동 횟수를 소모하지 않습니다.' : '이벤트 상태를 확인한 뒤 이번 달 행동 하나를 확정하세요.'}</p>{serverMode ? <ServerMonthEvent busy={busy} /> : localEvent ? <MonthEventCard career={career} busy={busy} /> : <p className="text-sm text-muted-foreground">이번 달 표시할 이벤트가 없습니다.</p>}</div>
+      <h3 className="mb-2 text-sm font-bold">월간 행동 선택 · 실행</h3>
       {!panel && <div role="group" aria-label="월간 행동 선택" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{tabs.map(({ id, name, Icon, hint, disabled }) => <button key={id} type="button" disabled={disabled || blocked} onClick={() => setPanel(id)} className="lab-action-tab"><span className="flex items-center gap-2 text-sm font-bold"><Icon size={16} className="text-primary" aria-hidden />{name}</span><span className="text-xs leading-5 text-muted-foreground">{hint}</span></button>)}</div>}
       {panel === 'training' && <div className="flex flex-col gap-3">
         {strained && <div role="status" className="lab-warn px-3 py-2 text-xs"><b className="font-semibold">피로가 높습니다.</b> <span className="text-muted-foreground">{STRAIN_WARNING.replace('피로가 높습니다. ', '')}{riskPercent > 0 && ` 현재 부상 위험 ${riskPercent}%`}</span></div>}
@@ -62,8 +65,8 @@ export function MonthlyDecision({ career, busy, raceEntry }: { career: Career; b
       </div>}
       {!panel && injured && <p role="status" className="lab-warn mt-3 px-3 py-2 text-xs"><b className="font-semibold">건강 · {career.health}</b> <span className="text-muted-foreground">{INJURY_NOTICE}</span></p>}
       {!panel && strained && <p role="status" className="lab-warn mt-3 px-3 py-2 text-xs"><b className="font-semibold">피로가 높습니다.</b> <span className="text-muted-foreground">{STRAIN_WARNING.replace('피로가 높습니다. ', '')}</span></p>}
-    </> : <div aria-live="polite"><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary"><Check size={16} aria-hidden /><span>Month {career.month} · {actionName(career.action!)}</span></div>
-      {result !== null && result !== undefined ? <><ActionResult action={career.action!} animate={committedMonth === career.month} />{serverMode ? <ServerMonthEvent busy={busy} /> : <AppliedEventNote action={career.action!} />}<div className="mt-3 flex flex-wrap items-center justify-between gap-4"><p className="text-xs text-muted-foreground">결과가 저장되었습니다. 다음 달에 새로운 행동을 선택할 수 있습니다.</p><Button size="lg" disabled={blocked} onClick={() => void careerStore.next(career.action!.actionId)}>다음 달 시작<ArrowRight data-icon="inline-end" aria-hidden /></Button></div></> : <p className="py-4 text-sm text-muted-foreground">행동은 확정되었습니다. 저장된 결과를 불러오고 있습니다.</p>}
+    </> : <div role="region" aria-label="저장된 월간 행동 결과" aria-live="polite"><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary"><Check size={16} aria-hidden /><span>Month {career.month} · {actionName(career.action!)}</span></div>
+      {result !== null && result !== undefined ? <><ActionResult action={career.action!} animate={committedMonth === career.month} />{serverMode ? <ServerMonthEvent busy={busy} /> : <AppliedEventNote action={career.action!} />}<div className="mt-3 flex flex-wrap items-center justify-between gap-4"><p className="text-xs text-muted-foreground">{eventPending ? '행동 결과가 저장되었습니다. 이벤트 선택을 마치면 다음 달로 진행할 수 있습니다.' : '결과가 저장되었습니다. 다음 달에 새로운 행동을 선택할 수 있습니다.'}</p><Button size="lg" disabled={blocked} onClick={() => void careerStore.next(career.action!.actionId)}>다음 달 시작<ArrowRight data-icon="inline-end" aria-hidden /></Button></div></> : <p className="py-4 text-sm text-muted-foreground">행동은 확정되었습니다. 저장된 결과를 불러오고 있습니다.</p>}
     </div>}
   </section>
 }

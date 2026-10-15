@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import postcss from 'postcss'
-import { RaceStrip, GapLane, PositionBoard } from '../components/career/race-playback'
+import { RaceStrip, GapLane, PositionBoard, RaceFocus } from '../components/career/race-playback'
+import { PositionHistory } from '../components/career/race-position-history'
 import { startCareer } from '../lib/career/model'
 import { contractedJockeys, createRaceRun, raceDefinitions } from '../lib/career/race-entry'
 import { simulateRace, type RaceFrame } from '../lib/career/race-simulation'
@@ -54,6 +55,38 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
           raceDistance: log.raceDistance,
         }),
       )
+      const focus = renderToStaticMarkup(
+        createElement(RaceFocus, {
+          frame,
+          situation: now,
+          moment: null,
+          commentary: '',
+          speedLabel: 'x1',
+          names,
+          playerHorseId: run.playerHorseId,
+          gates,
+        }),
+      )
+      const history = renderToStaticMarkup(
+        createElement(PositionHistory, {
+          log,
+          frame,
+          playerHorseId: run.playerHorseId,
+          names,
+        }),
+      )
+      assert.match(focus, new RegExp(`data-rank="${now.rank}"`))
+      assert.match(
+        focus,
+        new RegExp(
+          `data-remaining="${Math.max(0, Math.round(log.raceDistance - frame.runners.find((r) => r.horseId === run.playerHorseId)!.distance))}"`,
+        ),
+      )
+      assert.match(focus, /내 말 남은 거리/)
+      assert.match(history, new RegExp(`data-player-rank="${now.rank}"`))
+      for (const html of [strip, board, focus, history]) {
+        assert.match(html, new RegExp(`data-frame-ms="${frame.tMs}"`))
+      }
       assert.match(board, new RegExp(`${now.rank}위 / ${frame.runners.length}두`))
       const me = frame.runners.find((r) => r.horseId === run.playerHorseId)!
       assert.match(markerAttributes(strip, me.horseId), new RegExp(`data-rank="${now.rank}"`))

@@ -9,6 +9,9 @@ import type { components } from '../packages/shared/src/generated/api'
 import { buildFixture } from '../lib/career/fixtures'
 import { parseSaveWorkspace, type SaveWorkspace } from '../lib/server-save/workspace'
 import { validateRaceEntryOptions } from '../packages/shared/src/generated/save-validation.mjs'
+import { BROWSER_SAVE_KEY, readBrowserSave, writeBrowserSave } from '../lib/career/browser-save'
+import { careerStore } from '../lib/career/store'
+import { managementFixture } from './helpers/management-fixture'
 
 type Models = components['schemas']
 const catalog: {
@@ -24,7 +27,12 @@ const detailPath = `/?view=race&raceId=${raceId}&rc_page=9&rc_pageSize=100&rc_co
 let activeFetch: typeof fetch
 const routeFetch: typeof fetch = (input, init) => activeFetch(input, init)
 
-async function harness(mode: 'local' | 'server', path: string, workspace?: SaveWorkspace) {
+async function harness(
+  mode: 'local' | 'server',
+  path: string,
+  workspace?: SaveWorkspace,
+  seed?: () => void,
+) {
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
     url: 'https://derby.test' + path,
     pretendToBeVisual: true,
@@ -61,6 +69,7 @@ async function harness(mode: 'local' | 'server', path: string, workspace?: SaveW
   })
   dom.window.scrollTo = () => {}
   dom.window.HTMLElement.prototype.scrollIntoView = () => {}
+  seed?.()
   const requests: string[] = []
   install('fetch', routeFetch)
   activeFetch = async (input) => {
@@ -113,6 +122,10 @@ async function harness(mode: 'local' | 'server', path: string, workspace?: SaveW
       { status: 503 },
     )
   }
+  if (seed) {
+    careerStore.configure(mode)
+    await careerStore.refresh()
+  }
   // Hydrate the actual App's server markup; effects, store subscriptions and History run in a DOM.
   const [{ default: App }, { hydrateRoot }, { renderToString }] = await Promise.all([
     import('../components/legacy-career'),
@@ -164,6 +177,103 @@ async function harness(mode: 'local' | 'server', path: string, workspace?: SaveW
     },
   }
 }
+
+test('actual App: settings preserves active career and duplicate-name archives; archive selection uses its saved identity', async () => {
+  const fixture = managementFixture()
+  const h = await harness('local', '/', undefined, () => writeBrowserSave(fixture))
+  const click = async (selector: string) => {
+    const element = h.container.querySelector<HTMLButtonElement>(selector)
+    assert.ok(element, selector)
+    await act(async () => element.click())
+  }
+  try {
+    await h.waitFor(() => h.container.textContent!.includes('육성 계속'))
+    const before = readBrowserSave()
+    await click('button[aria-label="설정"]')
+    assert.equal(h.container.querySelector('h1')?.textContent, '설정')
+    assert.match(h.container.textContent!, /보존할 마방/)
+    assert.doesNotMatch(h.container.textContent!, /마방 생성|최초 등록/)
+    assert.equal(
+      h.container.querySelector('[aria-label="마방 자금"]')?.textContent?.trim(),
+      '자금 미구현',
+    )
+    assert.deepEqual(readBrowserSave().career, before.career)
+    assert.deepEqual(readBrowserSave().lifecycle?.archive, before.lifecycle?.archive)
+    assert.equal(readBrowserSave().lifecycle?.stableName, before.lifecycle?.stableName)
+    await click('header button')
+    const stableButton = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('STABLE'),
+    )!
+    await act(async () => stableButton.click())
+    // The list and recent cards both carry the same immutable IDs.
+    for (const horse of fixture.lifecycle.archive) {
+      await click(`[data-archive-id="${horse.id}"]`)
+      assert.match(h.container.textContent!, new RegExp(horse.retiredAt!))
+      assert.match(h.container.textContent!, new RegExp(horse.raceRecords![0].race))
+      const back = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+        b.textContent?.includes('← 마구간으로'),
+      )!
+      await act(async () => back.click())
+    }
+    assert.equal(h.container.querySelectorAll('[data-archive-id]').length, 4)
+    assert.equal(
+      h.container.querySelectorAll('[data-archive-id]')[2].getAttribute('data-archive-id'),
+      fixture.lifecycle.archive[0].id,
+    )
+    const sort = h.container.querySelector<HTMLSelectElement>('select')!
+    assert.equal(sort.value, 'recent')
+    await act(async () => {
+      sort.value = 'prize'
+      sort.dispatchEvent(new h.dom.window.Event('change', { bubbles: true }))
+    })
+    await act(async () => {
+      sort.value = 'recent'
+      sort.dispatchEvent(new h.dom.window.Event('change', { bubbles: true }))
+    })
+    assert.equal(
+      h.container.querySelectorAll('[data-archive-id]')[2].getAttribute('data-archive-id'),
+      fixture.lifecycle.archive[0].id,
+    )
+    const jockeyNav = [...h.container.querySelectorAll<HTMLButtonElement>('aside nav button')].find(
+      (b) => b.textContent?.includes('기수'),
+    )!
+    await act(async () => jockeyNav.click())
+    const jockey = [...h.container.querySelectorAll<HTMLButtonElement>('main button')].find((b) =>
+      b.textContent?.includes('한도윤'),
+    )!
+    await act(async () => jockey.click())
+    assert.match(h.container.textContent!, /만료일 정보 없음/)
+    assert.doesNotMatch(h.container.textContent!, /2029년|12월까지/)
+    await h.reload()
+    assert.deepEqual(readBrowserSave().career, before.career)
+    assert.deepEqual(readBrowserSave().lifecycle?.archive, before.lifecycle?.archive)
+    assert.ok(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY))
+  } finally {
+    await h.close()
+  }
+})
+
+test('actual App: header uses current authoritative server funds rather than local lifecycle money', async () => {
+  const workspace = activeServerWorkspace()
+  workspace.career = null
+  workspace.stable!.funds = 12345
+  const h = await harness('server', '/', workspace)
+  try {
+    await h.waitFor(
+      () =>
+        h.container.querySelector('[aria-label="마방 자금"]')?.textContent?.includes('12,345') ===
+        true,
+    )
+    workspace.stable!.funds = 98765
+    await act(async () => {
+      await careerStore.refresh()
+    })
+    assert.match(h.container.querySelector('[aria-label="마방 자금"]')!.textContent!, /98,765/)
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
+  } finally {
+    await h.close()
+  }
+})
 for (const mode of ['local', 'server'] as const) {
   test(`actual App ${mode}: direct detail URL survives initialization and reload without deleting ID or filters`, async () => {
     const h = await harness(mode, detailPath)

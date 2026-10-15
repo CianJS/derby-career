@@ -6,7 +6,15 @@ import { useTheme } from 'next-themes'
 import { Archive, ChevronRight, House, Moon, Settings, Sun, Trophy, UserRound } from 'lucide-react'
 import type { View } from './legacy-types'
 
-export function Header({ setView }: { setView: (v: View) => void }) {
+export function Header({
+  setView,
+  funds = null,
+  saveMode = 'local',
+}: {
+  setView: (v: View) => void
+  funds?: number | null
+  saveMode?: 'local' | 'server'
+}) {
   const { theme = 'dark', setTheme } = useTheme()
   const [menu, setMenu] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -19,7 +27,13 @@ export function Header({ setView }: { setView: (v: View) => void }) {
           DERBY CAREER
         </button>
         <div className="ml-auto flex items-center gap-2 text-muted-foreground">
-          <span className="hidden text-xs sm:block">₩42,800,000</span>
+          <span className="text-xs" aria-label="마방 자금">
+            {funds === null
+              ? saveMode === 'server'
+                ? '자금 정보 없음'
+                : '자금 미구현'
+              : `₩${funds.toLocaleString('ko-KR')}`}
+          </span>
           <NoticeCenter />
           <div className="relative">
             <button
@@ -49,7 +63,7 @@ export function Header({ setView }: { setView: (v: View) => void }) {
           </div>
           <button
             aria-label="설정"
-            onClick={() => setView('setup')}
+            onClick={() => setView('settings')}
             className="rounded-lg p-2 hover:bg-accent"
           >
             <Settings size={17} />

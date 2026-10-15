@@ -47,7 +47,7 @@ export function PositionHistory({ log, frame, playerHorseId, names, markers = []
   const playerRank = current.ranks.get(playerHorseId)!
   const lastX = x(current.tMs)
 
-  return <div className="race-ranking-panel">
+  return <div className="race-ranking-panel" data-frame-ms={frame.tMs} data-player-rank={playerRank}>
     <div className="panel-title"><span>POSITION HISTORY</span><span>{names.get(playerHorseId)} 현재 {playerRank}위</span></div>
     <div className="px-3 py-3">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`전체 ${count}두의 순위 변화. ${names.get(playerHorseId)}은(는) 현재 ${playerRank}위입니다.`} className="block h-auto w-full">
