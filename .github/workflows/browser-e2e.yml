@@ -1,0 +1,89 @@
+name: Browser E2E
+
+on:
+  workflow_dispatch:
+  # Run before opening the PR, so its description can cite an actual successful run.
+  push:
+    branches: ['feature/qa-browser-e2e']
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'services/api/**'
+      - 'packages/shared/**'
+      - 'contracts/**'
+      - 'tests/e2e/**'
+      - 'scripts/run-browser-e2e.mjs'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'next.config.mjs'
+      - 'tsconfig.json'
+      - '.github/workflows/browser-e2e.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  catalog-chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Keep this version in sync with the exact @playwright/test dependency.
+    container: mcr.microsoft.com/playwright:v1.58.2-noble
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: derby
+          POSTGRES_PASSWORD: browser_fixture_only
+          POSTGRES_DB: derby_browser_e2e_test
+        options: >-
+          --health-cmd "pg_isready -U derby -d derby_browser_e2e_test"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      DATABASE_URL: postgresql://derby:browser_fixture_only@postgres:5432/derby_browser_e2e_test
+      AUTH_MODE: disabled
+      LOG_LEVEL: silent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci
+        working-directory: services/api
+      - name: Migrate and import repository fixtures into PostgreSQL 17
+        working-directory: services/api
+        run: |
+          npm run db:migrate
+          npm run db:seed
+          npm run racing:prepare
+          npm run racing:import
+          git diff --exit-code -- seeds reports
+      - run: npm run build
+        working-directory: services/api
+      - run: pnpm build
+      - name: Run real HTTP catalog E2E in Chromium
+        run: pnpm test:e2e
+      - name: Upload browser evidence and sanitized process logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .e2e-artifacts/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
