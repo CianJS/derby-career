@@ -10,6 +10,10 @@ paths, and runs on pushes to `feature/qa-browser-e2e` so CI can be checked befor
 opening this initial PR. It needs no production secrets and has only `contents: read`.
 The job container reaches its disposable PostgreSQL service at `postgres:5432`.
 Built Fastify and Next.js run in that same container on loopback ports 4000 and 3000.
+`scripts/prepare-browser-e2e.mjs` runs the four fixture commands in order and checks
+that every seed/report file remains byte-identical using SHA-256. This also works
+with source-archive checkouts without Git metadata. Failed fixture commands preserve
+their status and sanitized output in logs and CI annotations.
 
 ## Run locally
 

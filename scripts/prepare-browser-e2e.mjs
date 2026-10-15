@@ -1,11 +1,32 @@
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, appendFileSync } from 'node:fs'
+import { mkdirSync, appendFileSync, readdirSync, readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const directory = resolve(root, '.e2e-artifacts/logs')
 mkdirSync(directory, { recursive: true })
+
+// Source-archive checkouts may lack .git. Compare fixture bytes directly rather than
+// letting `git diff seeds reports` fall back to a directory-to-directory no-index diff.
+function snapshot(relative, result = new Map()) {
+  for (const entry of readdirSync(resolve(root, relative), { withFileTypes: true })) {
+    const path = `${relative}/${entry.name}`
+    if (entry.isDirectory()) {
+      snapshot(path, result)
+    } else {
+      result.set(
+        path,
+        createHash('sha256')
+          .update(readFileSync(resolve(root, path)))
+          .digest('hex'),
+      )
+    }
+  }
+  return result
+}
+const before = snapshot('services/api/reports', snapshot('services/api/seeds'))
 
 function sanitize(value) {
   let text = String(value)
@@ -23,7 +44,6 @@ for (const [command, ...args] of [
   ['npm', 'run', 'db:seed'],
   ['npm', 'run', 'racing:prepare'],
   ['npm', 'run', 'racing:import'],
-  ['git', 'diff', '--exit-code', '--stat', '--', 'seeds', 'reports'],
 ]) {
   const result = spawnSync(command, args, {
     cwd: resolve(root, 'services/api'),
@@ -46,4 +66,15 @@ for (const [command, ...args] of [
     console.error(`::error::${message}`)
     process.exit(result.status ?? 1)
   }
+}
+
+const after = snapshot('services/api/reports', snapshot('services/api/seeds'))
+const changed = [...new Set([...before.keys(), ...after.keys()])].filter(
+  (path) => before.get(path) !== after.get(path),
+)
+if (changed.length) {
+  console.error(`::error::Fixture preparation changed protected files: ${changed.join(', ')}`)
+  process.exitCode = 1
+} else {
+  console.log(`Protected fixture check: ${before.size} files unchanged (SHA-256)`)
 }
