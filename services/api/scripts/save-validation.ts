@@ -37,6 +37,12 @@ function portableSchema(value: unknown): unknown {
 export async function generateSaveValidation() {
   const spec = await readContract()
   const models = [
+    'Racecourse',
+    'Course',
+    'RaceSchedule',
+    'RacecourseList',
+    'RacecourseDetail',
+    'RaceScheduleList',
     'ServerSaveCommand',
     'CareerWorkspace',
     'HorseCatalog',
@@ -60,6 +66,11 @@ export async function generateSaveValidation() {
   addFormats(ajv, { mode: 'fast' })
   // Use the installed fast format's RegExp directly so standalone output has no Ajv runtime import.
   const dateTime = fastFormats['date-time']
+  const date = fastFormats.date
+  if (typeof date !== 'object' || !('validate' in date) || !(date.validate instanceof RegExp)) {
+    throw new Error('The date validator is no longer portable')
+  }
+  ajv.addFormat('date', date.validate)
   if (
     typeof dateTime !== 'object' ||
     !('validate' in dateTime) ||

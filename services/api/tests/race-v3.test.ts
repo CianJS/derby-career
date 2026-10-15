@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { copyFile, mkdtemp, rm } from 'node:fs/promises'
@@ -533,17 +534,23 @@ test('004 upgrades the v1/v2 database in place, preserves logs and receipts, and
     assert.deepEqual(await migrate(f.db), [
       '004_race_sim_v3.sql',
       '005_event_activation_guards.sql',
+      '006_racing_reference_catalog.sql',
     ])
     assert.deepEqual(await migrate(f.db), [])
     assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 200)
     assert.deepEqual(
       (
         await f.db.query(
-          "SELECT name,checksum FROM schema_migrations WHERE name NOT IN ('004_race_sim_v3.sql','005_event_activation_guards.sql') ORDER BY name",
+          "SELECT name,checksum FROM schema_migrations WHERE name < '004' ORDER BY name",
         )
       ).rows,
       checksums,
     )
+    const imported = await importRacingCatalog(
+      f.db,
+      await readRacingSource(['seeds/racing.notion.source.json']),
+    )
+    assert.equal(imported.committed, true, JSON.stringify(imported))
     for (const saved of previous) {
       assert.equal(
         (await f.call('GET', `/v1/careers/${saved.id}/race-runs/${saved.body.raceRunId}/log`)).body,

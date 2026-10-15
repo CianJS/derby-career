@@ -1047,6 +1047,213 @@ paths:
         schema: *id003
       description: 저장된 Simulation Log의 결과만 사용. 결과/상금은 요청으로 받지 않음. 동일 RaceRun은 새로운
         commandId로 호출해도 상금/월 진행 중복 없음. 완료 시 다음 월로 진행.
+  /v1/racecourses:
+    get:
+      operationId: listRacecourses
+      summary: listRacecourses
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: country
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogCountry'
+      - name: verificationStatus
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+      - name: search
+        in: query
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 120
+      responses:
+        '200':
+          description: Reference catalog, independent of playable RaceDefinitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RacecourseList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/racecourses/{id}:
+    get:
+      operationId: getRacecourse
+      summary: getRacecourse
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+      responses:
+        '200':
+          description: Reference catalog, independent of playable RaceDefinitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RacecourseDetail'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/race-schedule:
+    get:
+      operationId: listRaceSchedule
+      summary: listRaceSchedule
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: country
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogCountry'
+      - name: verificationStatus
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+      - name: search
+        in: query
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 120
+      - name: year
+        in: query
+        schema:
+          type: integer
+          minimum: 1900
+          maximum: 2200
+      - name: month
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 12
+      - name: racecourseId
+        in: query
+        schema:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+      - name: grade
+        in: query
+        schema:
+          type: string
+          enum:
+          - G1
+          - G2
+          - G3
+          - Listed
+          - 기타
+      - name: surface
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogSurface'
+      - name: minDistance
+        in: query
+        schema:
+          type: number
+          minimum: 0
+          maximum: 100000
+      - name: maxDistance
+        in: query
+        schema:
+          type: number
+          minimum: 0
+          maximum: 100000
+      - name: scheduleStatus
+        in: query
+        schema:
+          type: string
+          enum:
+          - dated
+          - date_unconfirmed
+          - not_run
+      responses:
+        '200':
+          description: Reference catalog, independent of playable RaceDefinitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceScheduleList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/race-schedule/{id}:
+    get:
+      operationId: getRaceSchedule
+      summary: getRaceSchedule
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+      responses:
+        '200':
+          description: Reference catalog, independent of playable RaceDefinitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceSchedule'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
 components:
   securitySchemes:
     CareerBearer:
@@ -2838,3 +3045,379 @@ components:
       required:
       - status
       additionalProperties: false
+    CatalogVerificationStatus:
+      type: string
+      enum:
+      - verified
+      - partial
+      - conflict
+      - unverified
+      - review_required
+    CatalogCountry:
+      type: string
+      enum:
+      - KOR
+      - JPN
+      - USA
+    CatalogSurface:
+      type: string
+      enum:
+      - turf
+      - dirt
+      - sand
+      - synthetic
+      - other
+      - unknown
+    Racecourse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - officialName
+      - country
+      - countryCode
+      - region
+      - city
+      - operator
+      - operationalStatus
+      - racingType
+      - sourceUrl
+      - verificationStatus
+      - gameEnabled
+      - notes
+      - reviewIssues
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        name:
+          type: string
+        officialName:
+          type: string
+          nullable: true
+        country:
+          type: string
+        countryCode:
+          $ref: '#/components/schemas/CatalogCountry'
+        region:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        operator:
+          type: string
+          nullable: true
+        operationalStatus:
+          type: string
+          nullable: true
+        racingType:
+          type: string
+          nullable: true
+        sourceUrl:
+          type: string
+          format: uri
+          nullable: true
+        verificationStatus:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+        gameEnabled:
+          type: boolean
+          enum:
+          - false
+        notes:
+          type: string
+        reviewIssues:
+          type: array
+          items:
+            type: string
+    Course:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - racecourseId
+      - name
+      - surface
+      - configuration
+      - layout
+      - direction
+      - straightLength
+      - trackLength
+      - widthMin
+      - widthMax
+      - elevationDifference
+      - originalSpecifications
+      - confirmedDistances
+      - sourceUrl
+      - verificationStatus
+      - gameEnabled
+      - notes
+      - reviewIssues
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        racecourseId:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        name:
+          type: string
+        surface:
+          $ref: '#/components/schemas/CatalogSurface'
+        configuration:
+          type: string
+          nullable: true
+        layout:
+          type: string
+          nullable: true
+        direction:
+          type: string
+          nullable: true
+        straightLength:
+          type: number
+          minimum: 0
+          nullable: true
+        trackLength:
+          type: number
+          minimum: 0
+          nullable: true
+        widthMin:
+          type: number
+          minimum: 0
+          nullable: true
+        widthMax:
+          type: number
+          minimum: 0
+          nullable: true
+        elevationDifference:
+          type: number
+          minimum: 0
+          nullable: true
+        originalSpecifications:
+          type: string
+          nullable: true
+        confirmedDistances:
+          type: string
+          nullable: true
+        sourceUrl:
+          type: string
+          format: uri
+          nullable: true
+        verificationStatus:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+        gameEnabled:
+          type: boolean
+          enum:
+          - false
+        notes:
+          type: string
+        reviewIssues:
+          type: array
+          items:
+            type: string
+    RaceSchedule:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - year
+      - raceDate
+      - scheduleStatus
+      - country
+      - racecourseId
+      - courseId
+      - grade
+      - originalGrade
+      - gradeSystem
+      - internationalGrade
+      - surface
+      - distanceMeters
+      - originalDistance
+      - originalDistanceUnit
+      - distanceBasis
+      - originalDate
+      - ageCondition
+      - sexCondition
+      - originalEligibility
+      - maxRunners
+      - prizeMoney
+      - prizeCurrency
+      - prizeBasis
+      - gamePrizeMoney
+      - entryFee
+      - entryEligibility
+      - duplicateGroup
+      - sourceUrl
+      - verificationStatus
+      - gameEnabled
+      - notes
+      - reviewIssues
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        name:
+          type: string
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2200
+        raceDate:
+          type: string
+          format: date
+          nullable: true
+        scheduleStatus:
+          type: string
+          enum:
+          - dated
+          - date_unconfirmed
+          - not_run
+        country:
+          $ref: '#/components/schemas/CatalogCountry'
+        racecourseId:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        courseId:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+          nullable: true
+        grade:
+          type: string
+        originalGrade:
+          type: string
+          nullable: true
+        gradeSystem:
+          type: string
+          enum:
+          - KRA_domestic
+          - JRA
+          - NAR
+          - USA
+        internationalGrade:
+          type: string
+          nullable: true
+        surface:
+          $ref: '#/components/schemas/CatalogSurface'
+        distanceMeters:
+          type: number
+          minimum: 0
+          nullable: true
+        originalDistance:
+          type: string
+          nullable: true
+        originalDistanceUnit:
+          type: string
+          enum:
+          - m
+          - furlong
+          - mile
+          nullable: true
+        distanceBasis:
+          type: string
+          enum:
+          - source_meters
+          - nominal_conversion
+          - unconfirmed
+        originalDate:
+          type: string
+          nullable: true
+        ageCondition:
+          type: string
+          nullable: true
+        sexCondition:
+          type: string
+          nullable: true
+        originalEligibility:
+          type: string
+          nullable: true
+        maxRunners:
+          type: integer
+          minimum: 1
+          nullable: true
+        prizeMoney:
+          type: number
+          minimum: 0
+          nullable: true
+        prizeCurrency:
+          type: string
+          enum:
+          - KRW
+          - JPY
+          - USD
+          nullable: true
+        prizeBasis:
+          type: string
+          nullable: true
+        gamePrizeMoney:
+          type: number
+          minimum: 0
+          nullable: true
+        entryFee:
+          type: number
+          minimum: 0
+          nullable: true
+        entryEligibility:
+          type: string
+          enum:
+          - not_evaluated
+          description: Reference catalog only; never a Career entry eligibility decision.
+        duplicateGroup:
+          type: string
+          nullable: true
+        sourceUrl:
+          type: string
+          format: uri
+          nullable: true
+        verificationStatus:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+        gameEnabled:
+          type: boolean
+          enum:
+          - false
+        notes:
+          type: string
+        reviewIssues:
+          type: array
+          items:
+            type: string
+    RacecourseDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - racecourse
+      - courses
+      properties:
+        racecourse:
+          $ref: '#/components/schemas/Racecourse'
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Course'
+    RacecourseList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Racecourse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    RaceScheduleList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RaceSchedule'
+        pagination:
+          $ref: '#/components/schemas/Pagination'

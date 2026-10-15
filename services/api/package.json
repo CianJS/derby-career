@@ -29,7 +29,9 @@
     "events:import-drafts": "node --env-file-if-exists=.env --import tsx src/cli.ts import-event-drafts",
     "events:expand": "node --import tsx scripts/expand-events.ts",
     "events:import-expansion": "node --env-file-if-exists=.env --import tsx src/cli.ts import-event-expansion",
-    "events:activate": "node --env-file-if-exists=.env --import tsx src/cli.ts activate-event-expansion"
+    "events:activate": "node --env-file-if-exists=.env --import tsx src/cli.ts activate-event-expansion",
+    "racing:prepare": "node --import tsx scripts/prepare-racing.ts",
+    "racing:import": "node --env-file-if-exists=.env --import tsx src/cli.ts import-racing"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",

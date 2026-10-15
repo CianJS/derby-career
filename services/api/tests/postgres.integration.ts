@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { postgresDatabase } from '../src/db'
+import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
 import { fixture } from './helpers'
 import { createApp } from '../src/app'
 import { oidcConfig, testIssuer } from './oidc-helpers'
@@ -283,6 +284,54 @@ test('real PostgreSQL retirement serializes retries, different commands and conc
         0,
       )
     }
+  } finally {
+    await f.close()
+  }
+})
+
+test('real PostgreSQL serializes reference catalog imports without touching playable races', async () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
+  }
+  const f = await fixture({ db: postgresDatabase(url) })
+  try {
+    const source = await readRacingSource(['seeds/racing.notion.source.json'])
+    const before = (await f.call('GET', '/v1/catalog/races')).json()
+    const results = await Promise.all(
+      Array.from({ length: 3 }, () => importRacingCatalog(f.db, source)),
+    )
+    assert.ok(
+      results.every((r) => r.committed),
+      JSON.stringify(results),
+    )
+    assert.ok(results.every((r) => r.created + r.updated + r.unchanged === 1042))
+    assert.ok(results.filter((r) => r.created > 0).length <= 1)
+    assert.equal((await importRacingCatalog(f.db, source)).unchanged, 1042)
+    for (const [table, count] of [
+      ['racecourses', 90],
+      ['racecourse_courses', 101],
+      ['race_schedules', 851],
+    ] as const) {
+      assert.equal(
+        Number((await f.db.query(`SELECT count(*) AS n FROM ${table}`)).rows[0].n),
+        count,
+      )
+      await assert.rejects(
+        f.db.query(`UPDATE ${table} SET payload=jsonb_set(payload,'{gameEnabled}','true')`),
+      )
+    }
+    assert.deepEqual((await f.call('GET', '/v1/catalog/races')).json(), before)
+    assert.equal((await f.call('GET', '/health/ready')).statusCode, 200)
+    const schedule = (await f.call('GET', '/v1/race-schedule?country=USA&pageSize=100')).json()
+    assert.equal(schedule.pagination.total, 624)
+    assert.equal(
+      Number(
+        (await f.db.query('SELECT count(*) AS n FROM race_schedules WHERE race_date IS NULL'))
+          .rows[0].n,
+      ),
+      41,
+    )
   } finally {
     await f.close()
   }
