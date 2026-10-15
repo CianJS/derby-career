@@ -1,15 +1,11 @@
+import { validateSaveResponse } from '../../packages/shared/src/save-response-validation'
 import { validateSaveCommand, type SaveCommand } from './commands'
 import {
   validateRaceEntryOptions,
-  validateRaceEntryResponse,
-  validateRaceCompleteResponse,
   validateRaceRunResponse,
   validateRaceLogResponse,
   validateCareerWorkspace,
   validateHorseCatalog,
-  validateActionResponse,
-  validateRetireCareerResponse,
-  validateCareerResponse,
 } from '../../packages/shared/src/generated/save-validation.mjs'
 
 type Env = Record<string, string | undefined>
@@ -206,15 +202,7 @@ export async function handleServerSave(
               : path.endsWith('/log')
                 ? validateRaceLogResponse(result)
                 : validateRaceRunResponse(result)
-        : command?.kind === 'race-entry'
-          ? validateRaceEntryResponse(result)
-          : command?.kind === 'race-complete'
-            ? validateRaceCompleteResponse(result)
-            : command?.kind === 'action'
-              ? validateActionResponse(result)
-              : command?.kind === 'retire'
-                ? validateRetireCareerResponse(result)
-                : validateCareerResponse(result)
+        : validateSaveResponse(command?.kind ?? 'create', result)
     if (!valid) {
       return reply(502, '서버 저장 응답이 계약과 다릅니다. 같은 요청으로 다시 확인해 주세요.')
     }
