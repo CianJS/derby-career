@@ -4,6 +4,9 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export const FRONTEND_FILES = [
+  'lib/career/local-recovery.ts',
+  'tests/local-recovery.test.ts',
+  'tests/save-response-validation.test.ts',
   'components/career/horse-record.tsx',
   'components/career/jockey-record.tsx',
   'components/career/legacy-catalog.ts',
