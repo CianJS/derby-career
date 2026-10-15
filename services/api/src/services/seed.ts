@@ -1,9 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import { horses, jockeyCatalog, raceDefinitions } from '../../../../packages/shared/src/domain'
 import { importEvents } from '../modules/events/import'
+import { importExpansion } from '../modules/events/expansion'
 import type { Database } from '../db'
 
-export async function seedDevelopmentCatalog(db: Database) {
+export async function seedDevelopmentCatalog(db: Database, includeExpansion = true) {
   await db.transaction(async (tx) => {
     for (const horse of horses) {
       await tx.query(
@@ -30,5 +31,15 @@ export async function seedDevelopmentCatalog(db: Database) {
       )
     }
   })
-  return importEvents(db, JSON.parse(await readFile('seeds/events.catalog.json', 'utf8')))
+  const legacy = await importEvents(
+    db,
+    JSON.parse(await readFile('seeds/events.catalog.json', 'utf8')),
+  )
+  const expansion = includeExpansion
+    ? await importExpansion(
+        db,
+        JSON.parse(await readFile('seeds/events.expansion.source.json', 'utf8')),
+      )
+    : null
+  return { ...legacy, expansion }
 }

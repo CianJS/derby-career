@@ -44,6 +44,16 @@ const signed = (value: number) => (value > 0 ? `+${value}` : String(value))
 
 export function conditionText(condition: Models['EventCondition']): string {
   switch (condition.type) {
+    case 'aptitude_any':
+      return `${condition.names.join(' 또는 ')} 적성: ${condition.grades.join('/')}`
+    case 'growth_is':
+      return `성장형: ${condition.growth}`
+    case 'health_is':
+      return `건강: ${condition.health.join(' 또는 ')}`
+    case 'record_range':
+      return `${condition.metric === 'wins' ? '승리' : '출전'}: ${condition.min ?? 0} ~ ${condition.max ?? '제한 없음'}`
+    case 'stat_summary':
+      return `${condition.metric === 'spread' ? '최고/최저 능력 차이' : `능력 ${condition.threshold} 이상인 개수`}: ${condition.min ?? 0} ~ ${condition.max ?? '제한 없음'}`
     case 'always':
       return '별도 조건 없음'
     case 'healthy':

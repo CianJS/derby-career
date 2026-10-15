@@ -64,6 +64,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run contract:check
       - run: npm run events:convert && git diff --exit-code -- seeds/events.catalog.json
+      - run: npm run events:expand && git diff --exit-code -- seeds/events.expansion.source.json seeds/events.expansion.catalog.json reports/event-expansion.json
       - run: npm test
       - run: npm run db:migrate && npm run db:seed
       - run: npm run test:postgres
