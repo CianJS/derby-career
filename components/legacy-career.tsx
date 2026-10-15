@@ -17,6 +17,7 @@ import { Section, FocusShell } from './career/presentation'
 import { Header, Sidebar } from './career/navigation'
 import { jockeys } from './career/legacy-catalog'
 import { Stable } from './career/stable'
+import { StableSettings } from './career/stable-settings'
 import { Horse, ArchivedHorseRecord } from './career/horse-record'
 import { Races, Race } from './career/race-catalog'
 import { Jockeys, Jockey } from './career/jockey-record'
@@ -110,7 +111,7 @@ const candidates: CareerHorse[] = [
 const initialLifecycle: LifecycleState = {
   stableName: "",
   country: "대한민국",
-  funds: "₩42,800,000",
+  funds: "",
   activeHorse: null,
   archive: [],
   candidateSeed: "stable-candidates-v1",
@@ -500,7 +501,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
     })
     return () => { current = false }
   }, [state, hydrated, saveMode]);
+  const canCreateStable = saveMode === 'local' && hydrated && ready && !busy && !pending && !error && !saveError &&
+    !state.stableName && !state.activeHorse && !career && state.archive.length === 0;
   const createStable = (name: string, country: string) => {
+    if (!canCreateStable) return;
     setState((current) => ({
       ...current,
       stableName: name,
@@ -564,14 +568,14 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   ].includes(view);
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Header setView={setView} />
+      <Header setView={setView} saveMode={saveMode} funds={saveMode === 'server' ? workspace?.stable?.funds ?? null : null} />
       <div className="flex min-h-[calc(100vh-57px)]">
         {management && <Sidebar view={view} setView={setView} />}
         <main className="min-w-0 flex-1">
           {saveMode === 'server' && (
             <div className="m-4 rounded-lg border border-border p-3 text-sm" role={error ? 'alert' : 'status'}>
               <p>로컬 서버 저장 · {busy ? '서버 확인 중…' : pending ? '저장 결과 확인 필요' : ready ? '서버 기록 연결됨' : '연결 중…'}</p>
-              <p className="mt-1 text-xs text-muted-foreground">훈련·휴식·치료·이벤트·은퇴를 서버에 저장합니다. 경주 연결은 준비 중입니다.</p>
+              <p className="mt-1 text-xs text-muted-foreground">훈련·휴식·치료·이벤트·경주·은퇴를 서버에 저장합니다.</p>
               {error && <p className="mt-2">{error}</p>}
               <button disabled={busy} onClick={() => void careerStore.refresh()} className="mt-2 text-xs underline">{pending ? '같은 요청으로 다시 확인' : '서버 기록 새로고침'}</button>
             </div>
@@ -583,7 +587,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               <a href="/" target="_blank" rel="noreferrer" className="ml-3 underline">새 탭에서 열기</a>
             </p>
           )}
-          {view === "setup" && (
+          {(view === 'settings' || (view === 'setup' && !canCreateStable)) && (
+            <StableSettings setView={setView} stableName={saveMode === 'local' ? state.stableName : ''} country={state.country} mode={saveMode} canCreate={canCreateStable} />
+          )}
+          {view === "setup" && canCreateStable && (
             <StableSetup setView={setView} onCreate={createStable} />
           )}{" "}
           {view === "careerComplete" && (
@@ -674,16 +681,17 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               horse={state.activeHorse}
             />
           )}{" "}
-          {view === "horseArchive" && (
+          {view === "horseArchive" && state.archive.some((item) => item.id === selectedArchiveId) && (
             <ArchivedHorseRecord
               setView={setView}
               horse={
-                state.archive.find((item) => item.id === selectedArchiveId) ||
-                state.archive[0] ||
-                candidates[0]
+                state.archive.find((item) => item.id === selectedArchiveId)!
               }
             />
           )}{" "}
+          {view === 'horseArchive' && !state.archive.some((item) => item.id === selectedArchiveId) && (
+            <div className="p-6"><p role="status">선택한 은퇴 기록을 찾을 수 없습니다.</p><button onClick={() => setView('stable')} className="mt-3 min-h-11 text-primary underline">마구간으로 돌아가기</button></div>
+          )}
           {view === "jockeys" && <Jockeys setView={setView} onSelect={setSelectedJockeyId} />}{" "}
           {view === "jockey" && <Jockey setView={setView} jockeyId={selectedJockeyId} horses={[...(state.activeHorse ? [state.activeHorse] : []), ...state.archive]} />}
           </>}

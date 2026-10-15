@@ -133,7 +133,8 @@ export function RaceStrip({
     <div
       className="race-strip"
       role="img"
-      aria-label={`레이스 스트립. 결승까지 ${frame.remaining}미터 남았습니다.`}
+      aria-label={`레이스 스트립. 가로는 주행 거리, 세로는 겹침을 조정한 진로이며 순위 행이 아닙니다. 선두 남은 거리 ${frame.remaining}미터.`}
+      data-frame-ms={frame.tMs}
       style={{ '--strip-rows': rows, '--strip-h': `${heightRem}rem` } as CSSProperties}
     >
       <div className="race-strip-lanes" />
@@ -229,7 +230,7 @@ export function GapLane({
   )
 }
 
-function RaceFocus({
+export function RaceFocus({
   frame,
   situation,
   moment,
@@ -250,7 +251,13 @@ function RaceFocus({
 }) {
   const nameOf = (id: string) => names.get(id) ?? ''
   return (
-    <aside className={`race-focus ${moment ? 'has-moment' : ''}`} aria-label="내 말 현황">
+    <aside
+      className={`race-focus ${moment ? 'has-moment' : ''}`}
+      aria-label="내 말 현황"
+      data-frame-ms={frame.tMs}
+      data-rank={situation.rank}
+      data-remaining={situation.remaining}
+    >
       <div className="race-focus-head">
         <span>FOCUS</span>
         <span className="race-focus-speed">{speedLabel}</span>
@@ -260,7 +267,7 @@ function RaceFocus({
           <strong>{situation.rank}</strong>위<small> / {situation.total}두</small>
         </p>
         <p className="race-focus-remaining">
-          <span>남은 거리</span>
+          <span>내 말 남은 거리</span>
           <b>{situation.remaining}m</b>
         </p>
       </div>
@@ -312,7 +319,7 @@ export function PositionBoard({
 }) {
   const player = frame.runners.find((runner) => runner.horseId === playerHorseId)
   return (
-    <div className="race-ranking-panel">
+    <div className="race-ranking-panel" data-frame-ms={frame.tMs}>
       <div className="panel-title">
         <span>POSITION BOARD</span>
         <span>
@@ -323,7 +330,13 @@ export function PositionBoard({
         {frame.runners.map((runner) => {
           const isPlayer = runner.horseId === playerHorseId
           return (
-            <li key={runner.horseId} className={isPlayer ? 'player' : ''}>
+            <li
+              key={runner.horseId}
+              className={isPlayer ? 'player' : ''}
+              data-horse-id={runner.horseId}
+              data-rank={runner.rank}
+              data-distance={runner.distance}
+            >
               <b>{runner.rank}</b>
               <span>{names.get(runner.horseId)}</span>
               {isPlayer ? <em>YOU</em> : <i />}
@@ -418,25 +431,24 @@ function Stage({
   const moment = momentOf(analysis)
   const finished = time >= log.durationMs
   const phaseIndex = phases.indexOf(frame.phase)
-  const secondBucket = Math.floor(time / 1000) * 1000
   const commentary = useMemo(
-    () => liveCommentary(log, secondBucket, run.playerHorseId, names),
-    [log, secondBucket, run.playerHorseId, names],
+    () => liveCommentary(log, frame.tMs, run.playerHorseId, names),
+    [log, frame.tMs, run.playerHorseId, names],
   )
   const feedTimeline = useMemo(() => buildFeedTimeline(log, names), [log, names])
-  const feedBucket = Math.floor(time / 500) * 500
-  const feed = useMemo(() => feedAt(feedTimeline, feedBucket), [feedTimeline, feedBucket])
+  const feed = useMemo(() => feedAt(feedTimeline, frame.tMs), [feedTimeline, frame.tMs])
   const race = run.raceDefinitionSnapshot
   const speedLabel = mode === 'AUTO' ? `AUTO · x${effectiveSpeed}` : `x${effectiveSpeed}`
 
   return (
-    <div className="lab-playback mt-3">
+    <div className="lab-playback mt-3" data-frame-ms={frame.tMs}>
       <header className="race-broadcast-header">
         <div>
           <h1 className="ui-page-title font-serif">{race.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {race.surface} {race.distance}m · {run.runners.length}두 ·{' '}
-            {run.player.jockeySnapshot.name} · {run.player.tactic} · 남은 거리 {frame.remaining}m
+            {run.player.jockeySnapshot.name} · {run.player.tactic} · 선두 남은 거리{' '}
+            <span data-leader-remaining={frame.remaining}>{frame.remaining}m</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -482,7 +494,9 @@ function Stage({
       </header>
       <PhaseMarker phaseIndex={phaseIndex} />
       <p className="mb-2 text-xs text-muted-foreground">
-        원 안 숫자는 마번 · 오른쪽이 결승선 · 현재 순위는 FOCUS와 순위 보드에 표시됩니다.
+        원 안 숫자는 마번 · 가로는 주행 거리(오른쪽이 결승선) · 세로는 진로를 바탕으로 겹침을 조정한
+        위치이며 고정 차선이나 순위 행이 아닙니다. 현재 순위는 FOCUS와 POSITION BOARD에서
+        확인하세요.
       </p>
       <div className="race-stage-row">
         <RaceStrip
