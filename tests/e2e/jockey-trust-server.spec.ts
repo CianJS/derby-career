@@ -1,3 +1,4 @@
+import { setTimeout as delay } from 'node:timers/promises'
 import { test, expect } from '@playwright/test'
 import { BROWSER_SAVE_KEY } from '../../lib/career/browser-save'
 
@@ -33,6 +34,12 @@ test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt,
   await expect.poll(async () => (await get()).career?.state.careerTurnIndex).toBe(1)
   for (let month = 1; month <= 6; month++) {
     if (month === 4) {
+      // Six months of accelerated clicks plus development StrictMode reads can exceed
+      // the real 120/minute API quota. Respect its window; never raise the server limit.
+      const cooldownUntil = Date.now() + 61_000
+      while (Date.now() < cooldownUntil) {
+        await delay(Math.min(10_000, cooldownUntil - Date.now()))
+      }
       await page.setViewportSize({ width: 1440, height: 900 })
     }
     if (month !== 3 && month !== 6) {

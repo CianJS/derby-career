@@ -26,6 +26,6 @@ Local 공유 `chooseEvent`/`resolveAction`은 `applyTrustEvent(...).career`를 �
 
 ## 검증 환경
 
-기존 CI의 PostgreSQL 17 + Fastify + production Next + 고정 Playwright Chromium을 유지한다. Server 브라우저 검증에는 별도의 loopback Fastify 개발 모드와 Next dev를 띄워 **기존 개발 세션** bridge를 사용한다. 테스트 DB의 임시 세션 토큰은 서버 환경에만 전달하며 로그/브라우저/아티팩트에 저장하지 않는다. production bridge 차단은 변경하지 않는다.
+기존 CI의 PostgreSQL 17 + Fastify + production Next + 고정 Playwright Chromium을 유지한다. Server 브라우저 검증에는 별도의 loopback Fastify 개발 모드와 Next dev를 띄워 **기존 개발 세션** bridge를 사용한다. 테스트 DB의 임시 세션 토큰은 서버 환경에만 전달하며 로그/브라우저/아티팩트에 저장하지 않는다. production bridge 차단은 변경하지 않는다. 6개월을 연속 클릭하는 개발 모드 테스트는 실제 120회/분 API 한도를 존중하도록 Month 3 이후 다음 요청 창을 기다린다. 서버 제한을 올리거나 429를 가짜 응답으로 덮지 않는다.
 
 Local은 실제 공유 v4 엔진/완료 로직의 증가·감소·0 사례를 사용해 결과/새로고침/은퇴/새 말 초기화를 검증한다. Server는 실제 HTTP와 DB로 Month 1~7, Month 3/6 경주, 관전/출전 직후 새로고침, 응답 유실과 동일 요청 재시도/중복 완료, 관계 보존과 Local 미혼합을 검증한다. 기존 소유권/리비전/말 전환 통합 검사와 v1/v2/v3/v4 Playback 회귀를 유지한다. 실행 결과와 증거는 PR #33 본문에 기록한다.
