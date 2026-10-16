@@ -225,3 +225,38 @@ test('unreadable journal and quota failure block writes without contacting API o
   assert.equal(requests, 0)
   assert.equal(cleared, false)
 })
+
+test('private trust read bridge validates current and retired identities and never accepts trust uploads', async () => {
+  const careerId = randomUUID()
+  const path = `/v1/careers/${careerId}/jockey-relations`
+  const url = 'http://127.0.0.1:3000/api/server-save' + path
+  const body = {
+    careerId,
+    ownedHorseId: randomUUID(),
+    revision: 2,
+    status: 'retired',
+    data: [{ jockeyId: 'SEO_JIAN', starts: 2, trust: 30 }],
+  }
+  let forwarded = 0
+  const upstream: typeof fetch = async (_input, options) => {
+    forwarded++
+    assert.equal(
+      new Headers(options?.headers).get('authorization'),
+      'Bearer ' + env.DERBY_API_DEV_SESSION_TOKEN,
+    )
+    return Response.json(body)
+  }
+  const reply = await handleServerSave(new Request(url), env, upstream)
+  assert.equal(reply.status, 200)
+  assert.deepEqual(await reply.json(), body)
+  assert.equal(reply.headers.get('cache-control'), 'no-store')
+  assert.equal((await handleServerSave(new Request(url + '?trust=100'), env, upstream)).status, 400)
+  assert.equal(
+    (await handleServerSave(post(undefined, path, { trust: 100 }), env, upstream)).status,
+    400,
+  )
+  assert.equal(forwarded, 1)
+  const malformed: typeof fetch = async () =>
+    Response.json({ ...body, data: [{ jockeyId: 'SEO_JIAN', starts: 2, trust: 101 }] })
+  assert.equal((await handleServerSave(new Request(url), env, malformed)).status, 502)
+})

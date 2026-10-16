@@ -9,3 +9,6 @@ export * from '../../../lib/career/post-race'
 export * from '../../../lib/career/records'
 export * from '../../../lib/career/health'
 export { applyActionEffects } from '../../../lib/career/events/effects'
+
+export * from '../../../lib/career/jockey-trust'
+export * from '../../../lib/career/race-sim-v4'

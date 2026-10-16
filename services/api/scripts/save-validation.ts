@@ -52,6 +52,7 @@ export async function generateSaveValidation() {
     'EnterRace',
     'CompleteRace',
     'RaceEntryOptions',
+    'JockeyRelationsResponse',
     'RaceEntryResponse',
     'RaceRunResponse',
     'RaceLogResponse',

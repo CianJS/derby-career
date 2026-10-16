@@ -34,7 +34,7 @@ pnpm dev
 2. `services/api`에서 `npm run session:create -- local-developer 8`로 발급한 token을 루트 `.env.local`의 `DERBY_API_DEV_SESSION_TOKEN`에 넣는다. `DERBY_API_URL`은 `http://127.0.0.1:4000` 등 루프백 HTTP 주소를 사용한다.
 3. 루트에서 `pnpm dev:server-save`를 실행하고 `http://127.0.0.1:3000`에서 접속한다. 별도 포트는 `PORT` 환경변수로 설정한다.
 
-말 생성·육성 상태 복원·훈련/휴식/치료·월 진행·서버 이벤트 선택·은퇴와 Archive 조회를 서버 기록으로 처리한다. 서버 모드는 기존 Career와 마방 쿠키를 읽거나 수정하지 않고, 브라우저 저장을 가져오지 않는다. 경주 후보와 제한·계약 기수는 서버에서 조회하고, 출전·관전·완료는 저장된 v3 RaceRun/Log로 처리한다. 경주 완료가 다음 월까지 진행하므로 별도 월 진행 요청을 보내지 않는다. 서버 경주를 Local Save나 로컬 시뮬레이션으로 우회하지 않는다.
+말 생성·육성 상태 복원·훈련/휴식/치료·월 진행·서버 이벤트 선택·은퇴와 Archive 조회를 서버 기록으로 처리한다. 서버 모드는 기존 Career와 마방 쿠키를 읽거나 수정하지 않고, 브라우저 저장을 가져오지 않는다. 경주 후보와 제한·계약 기수는 서버에서 조회하고, 출전·관전·완료는 저장된 RaceRun/Log로 처리한다. 경주 완료가 다음 월까지 진행하므로 별도 월 진행 요청을 보내지 않는다. 서버 경주를 Local Save나 로컬 시뮬레이션으로 우회하지 않는다.
 
 Next `/api/server-save`는 명시적으로 켠 로컬 개발 모드에서만 열리고, 실행 명령은 Next를 `127.0.0.1`에 바인딩한다. token은 Next 서버 환경변수에만 있고 브라우저에는 전달하지 않는다. 운영 빌드에서는 저장 bridge가 항상 404다. 운영 로그인/세션 연동과 기존 저장 이관은 별도 범위다.
 
@@ -55,7 +55,7 @@ Next `/api/server-save`는 명시적으로 켠 로컬 개발 모드에서만 열
 
 설정이 없거나 잘못되면 503 `API_NOT_CONFIGURED`, API 연결 실패나 서버 오류는 502 `CATALOG_UNAVAILABLE`, 5초 초과는 504 `CATALOG_TIMEOUT`이다. 상세 404와 요청 제한 429도 구분한다. 성공·실패 응답은 캐시하지 않고 화면에서 재시도할 수 있다. 고정 이벤트 데이터로 대체하지 않는다.
 
-기존 `/api/events`와 월간 이벤트의 조건·효과 계약은 새 API 카탈로그와 다르다. 기존 육성 화면과 Local Save는 현재 계산을 유지하며, 조회 화면은 Career 저장을 읽거나 변경하지 않는다. 로컬 서버 저장 모드는 DB 이벤트를 별도로 표시하며, 기존 브라우저 이벤트 fixture와 함께 계산하지 않는다. 레이스 v3는 새 경주의 기본 엔진이며 기존 v1/v2 로그는 저장된 버전으로만 재생한다. 운영 로그인과 기존 저장 이관은 후속 범위다. ��탈로그의 초기 보상은 최종 밸런스가 아닌 버전이 있는 제안치다.
+기존 `/api/events`와 월간 이벤트의 조건·효과 계약은 새 API 카탈로그와 다르다. 기존 육성 화면과 Local Save는 현재 계산을 유지하며, 조회 화면은 Career 저장을 읽거나 변경하지 않는다. 로컬 서버 저장 모드는 DB 이벤트를 별도로 표시하며, 기존 브라우저 이벤트 fixture와 함께 계산하지 않는다. 레이스 v4는 새 경주의 기본 엔진이며 기존 v1/v2/v3 로그는 저장된 버전으로만 재생한다. 운영 로그인과 기존 저장 이관은 후속 범위다. ��탈로그의 초기 보상은 최종 밸런스가 아닌 버전이 있는 제안치다.
 
 ## 개발 검사
 
@@ -87,11 +87,11 @@ Next 운영 빌드는 타입 오류를 건너뛰지 않는다. 기존 v1 경주 
 
 ## 서버 레이스 전체 연동
 
-기존 단일 Race Entry Workspace에서 서버 `getRaceEntryOptions`의 경주별 eligible/제한 사유·계약 기수/호흡도·전술만 표시한다. 추천은 조회된 후보 안에서 기존 거리 적성/기승 적합도 계산으로 결정하며, 같은 Career/월의 재조회에서 수동 선택을 초기화하지 않는다. 서버 제한은 확정 요청에서 다시 검증된다.
+기존 단일 Race Entry Workspace에서 서버 `getRaceEntryOptions`의 경주별 eligible/제한 사유·계약 기수/신뢰도·전술만 표시한다. 추천은 조회된 후보 안에서 기존 거리 적성/기승 적합도 계산으로 결정하며, 같은 Career/월의 재조회에서 수동 선택을 초기화하지 않는다. 서버 제한은 확정 요청에서 다시 검증된다.
 
 출전과 완료는 Frontend `lib/server-save/commands.ts`의 Journal 명령으로 처리하고 생성된 `validateEnterRace`/`validateCompleteRace`로 본문을 검증한다. 공통 ServerSaveCommand에는 레이스 envelope가 아직 없으므로 Frontend에서만 확장한다. 최초 UUID와 본문을 sessionStorage에 보관하고 불확실한 응답에는 같은 요청을 재전송한다. 저장 모드를 떠난 controller는 늦은 응답으로 화면이나 Journal을 변경하지 않는다.
 
-Adapter와 Next bridge는 생성 RaceRun/Log 응답 검증기 및 기존 digest 검증을 사용한다. 서버 로그를 Local Save에 쓰거나 재시뮬레이션하지 않는다. v1/v2/v3 저장 로그를 같은 Playback/Position Board/History/Feed/Result에 재생한다. 서버 새로고침 시 미완료 출전이 있으면 관전으로 돌아오고, 저장된 로그를 처음부터 다시 재생한다. 관전 시각은 게임 상태로 저장하지 않는다.
+Adapter와 Next bridge는 생성 RaceRun/Log 응답 검증기 및 기존 digest 검증을 사용한다. 서버 로그를 Local Save에 쓰거나 재시뮬레이션하지 않는다. v1/v2/v3/v4 저장 로그를 같은 Playback/Position Board/History/Feed/Result에 재생한다. 서버 새로고침 시 미완료 출전이 있으면 관전으로 돌아오고, 저장된 로그를 처음부터 다시 재생한다. 관전 시각은 게임 상태로 저장하지 않는다.
 
 Result의 완료는 서버에 commandId만 전송하고 최신 workspace를 다시 읽는다. 서버가 이미 상금·전적·건강과 다음 월 진행을 처리하므로 클라이언트 보상을 적용하거나 months/advance를 추가 호출하지 않는다. 로컬 브라우저 저장 경로는 기존 방식을 유지한다.
 

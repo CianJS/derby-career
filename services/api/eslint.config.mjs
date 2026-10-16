@@ -4,6 +4,8 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export const FRONTEND_FILES = [
+  'lib/career/jockey-trust.ts',
+  'lib/career/race-sim-v4.ts',
   'lib/career/local-recovery.ts',
   'tests/local-recovery.test.ts',
   'tests/save-response-validation.test.ts',

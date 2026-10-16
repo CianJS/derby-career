@@ -1,3 +1,4 @@
+import { hydrateJockeyRelations } from './jockey-relations'
 import type { Query } from '../db'
 import { notFound } from '../errors'
 import type { Career } from '../../../../packages/shared/src/domain'
@@ -79,6 +80,7 @@ export async function readCareerRow(
   if (!row) {
     throw notFound()
   }
+  await hydrateJockeyRelations(tx, row)
   return row
 }
 

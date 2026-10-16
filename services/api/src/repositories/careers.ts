@@ -1,3 +1,8 @@
+import {
+  hydrateJockeyRelations,
+  writeJockeyRelations,
+  readJockeyRelations,
+} from './jockey-relations'
 import { readRaceData, readSimulationLog, writeSimulationLog } from './race-logs'
 import { executeCareerCommand } from './career-commands'
 import { CareerEventRepository } from './career-events'
@@ -19,6 +24,7 @@ import {
   startCareer,
   canRace,
   createRaceRun,
+  createTrustContext,
   raceEligibility,
   simulateRace,
   summarizeRaceLog,
@@ -62,6 +68,7 @@ export class CareerRepository {
     this.eventsRepository = new CareerEventRepository(director)
   }
   private async dto(tx: Query, row: CareerRow) {
+    await hydrateJockeyRelations(tx, row)
     const stable = (await tx.query('SELECT funds FROM stables WHERE id=$1', [row.stable_id]))
       .rows[0]
     return {
@@ -78,6 +85,7 @@ export class CareerRepository {
     }
   }
   private async save(tx: Query, row: CareerRow) {
+    await writeJockeyRelations(tx, row)
     row.turn = row.state.careerTurnIndex
     row.revision++
     await tx.query(
@@ -181,6 +189,7 @@ export class CareerRepository {
           [row.id, row.stable_id, owner, horseId, 1, JSON.stringify(state), row.seed],
         )
         await this.eventsRepository.createMonth(tx, row)
+        await writeJockeyRelations(tx, row)
         await tx.query('UPDATE careers SET state=$2 WHERE id=$1', [
           row.id,
           JSON.stringify(row.state),
@@ -449,6 +458,20 @@ export class CareerRepository {
     }
     return null
   }
+  async jockeyRelations(owner: string, id: string) {
+    return this.db.transaction(async (tx) => {
+      await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+      const row = await readCareerRow(tx, owner, id)
+      const relations = await readJockeyRelations(tx, row.horse_id)
+      return {
+        careerId: row.id,
+        ownedHorseId: row.horse_id,
+        revision: row.revision,
+        status: row.status,
+        data: Object.entries(relations).map(([jockeyId, relation]) => ({ jockeyId, ...relation })),
+      }
+    })
+  }
   async raceEntryOptions(owner: string, id: string) {
     return this.db.transaction(async (tx) => {
       await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
@@ -553,6 +576,7 @@ export class CareerRepository {
           }
           return seed
         })
+        run.trustContext = createTrustContext(run)
         const log = simulateRace(run, body.engineVersion ?? API_RACE_ENGINE_VERSION)
         run.simulation = summarizeRaceLog(log)
         row.state = { ...row.state, raceRun: run }
@@ -629,10 +653,6 @@ export class CareerRepository {
           row.stable_id,
           result.prizeMoney,
         ])
-        await tx.query(
-          'UPDATE jockey_chemistry SET starts=starts+1 WHERE horse_id=$1 AND jockey_id=$2',
-          [row.horse_id, run.jockey_id],
-        )
         await tx.query('UPDATE monthly_actions SET resolved_at=now(),result=$2 WHERE id=$1', [
           run.action_id,
           JSON.stringify(result),

@@ -1,5 +1,6 @@
 import {
   hashSeed,
+  careerJockeyRelations,
   isHealthy,
   canonicalHealth,
   statKeys,
@@ -11,6 +12,7 @@ import type {
   EventDefinition,
   EventCondition,
   EventTiming,
+  EventChoice,
 } from '../../../../../packages/shared/src/events'
 
 import {
@@ -78,6 +80,27 @@ export function conditionsMatch(conditions: EventCondition[], context: EventCont
     }
   })
 }
+/** Reject an unavailable explicit target before drawing/offering a choice, including any risk branch. */
+export function trustChoiceAvailable(choice: EventChoice, career: Career): boolean {
+  if (
+    !choice.effects.some((e) => e.type === 'jockey_trust') &&
+    !Object.values(choice.risk?.outcomes ?? {}).some((effects) =>
+      effects.some((e) => e.type === 'jockey_trust'),
+    )
+  ) {
+    return true
+  }
+  if (career.raceRun) {
+    return false
+  }
+  const relations = careerJockeyRelations(career)
+  return [...choice.effects, ...Object.values(choice.risk?.outcomes ?? {}).flat()].every(
+    (effect) =>
+      effect.type !== 'jockey_trust' ||
+      career.contractedJockeyIds.includes(effect.jockeyId) ||
+      Object.hasOwn(relations, effect.jockeyId),
+  )
+}
 const random = (seed: string, label: string) => hashSeed(`${seed}:${label}`) / 4294967296
 export type DrawPlan = { gatePassed: boolean; deferredToResult: boolean }
 export function planDraw(
@@ -116,7 +139,9 @@ export function drawEvent(
         (e.category !== 'hidden' || e.conditions.filter((c) => c.type !== 'always').length >= 2) &&
         e.timing === timing &&
         conditionsMatch(e.conditions, context) &&
-        e.choices.some((c) => conditionsMatch(c.conditions, context)),
+        e.choices.some(
+          (c) => conditionsMatch(c.conditions, context) && trustChoiceAvailable(c, context.career),
+        ),
     )
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   if (version === 'event-director-v2') {

@@ -826,11 +826,44 @@ paths:
         schema: *id003
       - *id001
       - *id002
+  /v1/careers/{careerId}/jockey-relations:
+    get:
+      operationId: getJockeyRelations
+      summary: 현역 또는 은퇴마의 기수 신뢰도 조회
+      description: 소유자 범위에서 현재 저장된 말-기수 신뢰도와 완료 기승 횟수를 조회한다. Career와 owned horse 식별자 및 revision을 확인하며 은퇴 관계도 보존한다. 알려진 관계만 반환하고 결과를 캐시하지 않는다.
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JockeyRelationsResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
   /v1/careers/{careerId}/race-entries:
     get:
       operationId: getRaceEntryOptions
       summary: 현재 Career의 출전 조건과 계약 기수 조회
-      description: 소유자 범위의 일관된 읽기. 현재 육성 월의 DB 경주와 제한 사유, 실제 계약 기수의 현재 호흡도, 전술 목록을 반환한다. 조회는 Seed나 Snapshot을 만들거나 행동을 확정하지 않는다. restrictionReason이 null이어도 개별 경주의 eligible을 확인해야 한다.
+      description: 소유자 범위의 일관된 읽기. 현재 육성 월의 DB 경주와 제한 사유, 실제 계약 기수의 현재 신뢰도, 전술 목록을 반환한다. 조회는 Seed나 Snapshot을 만들거나 행동을 확정하지 않는다. restrictionReason이 null이어도 개별 경주의 eligible을 확인해야 한다.
       responses:
         '200':
           description: 성공
@@ -1593,6 +1626,83 @@ components:
       - $ref: '#/components/schemas/ConditionActionIs'
       - $ref: '#/components/schemas/ConditionValueRange'
       - $ref: '#/components/schemas/ConditionTurnRange'
+    TrustValue:
+      type: integer
+      minimum: 0
+      maximum: 100
+      description: 말-기수 신뢰도. Snapshot의 기존 chemistry 필드와 같은 단위.
+    JockeyRelation:
+      type: object
+      properties:
+        starts: {type: integer, minimum: 0}
+        trust: {$ref: '#/components/schemas/TrustValue'}
+      required: [starts, trust]
+      additionalProperties: false
+    JockeyRelations:
+      type: object
+      additionalProperties: {$ref: '#/components/schemas/JockeyRelation'}
+    JockeyRelationsResponse:
+      type: object
+      description: 소유한 현역 또는 은퇴 Career의 확인된 관계만 반환. 정보가 없는 관계를 추정하지 않는다.
+      properties:
+        careerId: {type: string, format: uuid}
+        ownedHorseId: {type: string, format: uuid}
+        revision: {type: integer, minimum: 1}
+        status: {type: string, enum: [active, retired]}
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              jockeyId: {type: string}
+              starts: {type: integer, minimum: 0}
+              trust: {$ref: '#/components/schemas/TrustValue'}
+            required: [jockeyId, starts, trust]
+            additionalProperties: false
+      required: [careerId, ownedHorseId, revision, status, data]
+      additionalProperties: false
+    TrustContext:
+      type: object
+      description: 출전 전 고정 v3 평가 Seed 3개의 평균 전력. 최강 상대 대비 2% 이상 우위일 때 우승 유력.
+      properties:
+        version: {type: string, enum: [jockey-trust-v1]}
+        favorite: {type: boolean}
+        playerRating: {type: number, minimum: 0}
+        strongestOpponentRating: {type: number, minimum: 0}
+      required: [version, favorite, playerRating, strongestOpponentRating]
+      additionalProperties: false
+    TrustChange:
+      type: object
+      properties:
+        version: {type: string, enum: [jockey-trust-v1]}
+        before: {$ref: '#/components/schemas/TrustValue'}
+        after: {$ref: '#/components/schemas/TrustValue'}
+        delta: {type: integer, minimum: -6, maximum: 15}
+        reason: {type: string, enum: [growth, decline]}
+        favorite: {type: boolean}
+        rated: {type: boolean}
+        lossProbability: {type: number, minimum: 0, maximum: 1}
+        roll: {type: number, minimum: 0, maximum: 1, exclusiveMaximum: true}
+      required: [version, before, after, delta, reason, favorite, rated, lossProbability, roll]
+      additionalProperties: false
+    TrustEventChange:
+      type: object
+      properties:
+        jockeyId: {type: string}
+        before: {$ref: '#/components/schemas/TrustValue'}
+        after: {$ref: '#/components/schemas/TrustValue'}
+        delta: {type: integer, minimum: -12, maximum: 12}
+      required: [jockeyId, before, after, delta]
+      additionalProperties: false
+    EffectJockeyTrust:
+      type: object
+      description: 현재 말의 명시된 계약 또는 기존 관계 기수의 신뢰도만 변경.
+      properties:
+        type: {type: string, enum: [jockey_trust]}
+        jockeyId: {type: string, minLength: 1, maxLength: 100}
+        amount: {type: integer, enum: [-12, -8, -5, 5, 8, 12]}
+      required: [type, jockeyId, amount]
+      additionalProperties: false
     EffectValueDelta:
       type: object
       properties:
@@ -1666,6 +1776,7 @@ components:
       additionalProperties: false
     EventEffect:
       oneOf:
+      - $ref: '#/components/schemas/EffectJockeyTrust'
       - $ref: '#/components/schemas/EffectValueDelta'
       - $ref: '#/components/schemas/EffectActionModifier'
       - $ref: '#/components/schemas/EffectResolvedGrowthBonus'
@@ -1934,6 +2045,8 @@ components:
     HorseRaceRecord:
       type: object
       properties:
+        trustChange:
+          $ref: '#/components/schemas/TrustChange'
         raceRunId: *id004
         race: *id004
         result: *id004
@@ -2090,6 +2203,7 @@ components:
           - race-sim-v1
           - race-sim-v2
           - race-sim-v3
+          - race-sim-v4
         digest: *id004
         durationMs: *id009
         result:
@@ -2103,6 +2217,8 @@ components:
     RaceRun:
       type: object
       properties:
+        trustContext:
+          $ref: '#/components/schemas/TrustContext'
         raceRunId: *id004
         month: *id009
         raceDefinitionSnapshot:
@@ -2134,6 +2250,8 @@ components:
     CareerState:
       type: object
       properties:
+        jockeyTrust:
+          $ref: '#/components/schemas/JockeyRelations'
         version:
           type: integer
           enum:
@@ -2222,6 +2340,10 @@ components:
     EventApplicationResult:
       type: object
       properties:
+        trustChanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustEventChange'
         risk:
           type: object
           properties:
@@ -2548,7 +2670,8 @@ components:
           - race-sim-v1
           - race-sim-v2
           - race-sim-v3
-          description: 생략 시 race-sim-v3. 과거 요청 재시도에서는 생략 여부도 최초 본문과 같게 유지한다.
+          - race-sim-v4
+          description: 생략 시 race-sim-v4. 과거 요청 재시도에서는 생략 여부도 최초 본문과 같게 유지한다.
       required:
       - raceRunId
       - raceDefinitionId
@@ -2567,6 +2690,7 @@ components:
           - race-sim-v1
           - race-sim-v2
           - race-sim-v3
+          - race-sim-v4
         restrictionReason:
           type: string
           nullable: true
@@ -2653,6 +2777,7 @@ components:
           - race-sim-v1
           - race-sim-v2
           - race-sim-v3
+          - race-sim-v4
         digest: *id004
         durationMs: *id009
         byteLength: *id009
@@ -2771,6 +2896,7 @@ components:
           - race-sim-v1
           - race-sim-v2
           - race-sim-v3
+          - race-sim-v4
         seed: *id004
         raceDistance: *id009
         durationMs: *id009

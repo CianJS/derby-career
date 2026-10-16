@@ -300,6 +300,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/careers/{careerId}/jockey-relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 현역 또는 은퇴마의 기수 신뢰도 조회
+         * @description 소유자 범위에서 현재 저장된 말-기수 신뢰도와 완료 기승 횟수를 조회한다. Career와 owned horse 식별자 및 revision을 확인하며 은퇴 관계도 보존한다. 알려진 관계만 반환하고 결과를 캐시하지 않는다.
+         */
+        get: operations["getJockeyRelations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/careers/{careerId}/race-entries": {
         parameters: {
             query?: never;
@@ -309,7 +329,7 @@ export interface paths {
         };
         /**
          * 현재 Career의 출전 조건과 계약 기수 조회
-         * @description 소유자 범위의 일관된 읽기. 현재 육성 월의 DB 경주와 제한 사유, 실제 계약 기수의 현재 호흡도, 전술 목록을 반환한다. 조회는 Seed나 Snapshot을 만들거나 행동을 확정하지 않는다. restrictionReason이 null이어도 개별 경주의 eligible을 확인해야 한다.
+         * @description 소유자 범위의 일관된 읽기. 현재 육성 월의 DB 경주와 제한 사유, 실제 계약 기수의 현재 신뢰도, 전술 목록을 반환한다. 조회는 Seed나 Snapshot을 만들거나 행동을 확정하지 않는다. restrictionReason이 null이어도 개별 경주의 eligible을 확인해야 한다.
          */
         get: operations["getRaceEntryOptions"];
         put?: never;
@@ -553,6 +573,65 @@ export interface components {
             max?: number;
         };
         EventCondition: components["schemas"]["ConditionAptitudeAny"] | components["schemas"]["ConditionGrowthIs"] | components["schemas"]["ConditionHealthIs"] | components["schemas"]["ConditionRecordRange"] | components["schemas"]["ConditionStatSummary"] | components["schemas"]["ConditionAlways"] | components["schemas"]["ConditionHealthy"] | components["schemas"]["ConditionTrainingAvailable"] | components["schemas"]["ConditionActionIs"] | components["schemas"]["ConditionValueRange"] | components["schemas"]["ConditionTurnRange"];
+        /** @description 말-기수 신뢰도. Snapshot의 기존 chemistry 필드와 같은 단위. */
+        TrustValue: number;
+        JockeyRelation: {
+            starts: number;
+            trust: components["schemas"]["TrustValue"];
+        };
+        JockeyRelations: {
+            [key: string]: components["schemas"]["JockeyRelation"];
+        };
+        /** @description 소유한 현역 또는 은퇴 Career의 확인된 관계만 반환. 정보가 없는 관계를 추정하지 않는다. */
+        JockeyRelationsResponse: {
+            /** Format: uuid */
+            careerId: string;
+            /** Format: uuid */
+            ownedHorseId: string;
+            revision: number;
+            /** @enum {string} */
+            status: "active" | "retired";
+            data: {
+                jockeyId: string;
+                starts: number;
+                trust: components["schemas"]["TrustValue"];
+            }[];
+        };
+        /** @description 출전 전 고정 v3 평가 Seed 3개의 평균 전력. 최강 상대 대비 2% 이상 우위일 때 우승 유력. */
+        TrustContext: {
+            /** @enum {string} */
+            version: "jockey-trust-v1";
+            favorite: boolean;
+            playerRating: number;
+            strongestOpponentRating: number;
+        };
+        TrustChange: {
+            /** @enum {string} */
+            version: "jockey-trust-v1";
+            before: components["schemas"]["TrustValue"];
+            after: components["schemas"]["TrustValue"];
+            delta: number;
+            /** @enum {string} */
+            reason: "growth" | "decline";
+            favorite: boolean;
+            rated: boolean;
+            lossProbability: number;
+            roll: number;
+        };
+        TrustEventChange: {
+            jockeyId: string;
+            before: components["schemas"]["TrustValue"];
+            after: components["schemas"]["TrustValue"];
+            delta: number;
+        };
+        /** @description 현재 말의 명시된 계약 또는 기존 관계 기수의 신뢰도만 변경. */
+        EffectJockeyTrust: {
+            /** @enum {string} */
+            type: "jockey_trust";
+            jockeyId: string;
+            /** @enum {integer} */
+            amount: -12 | -8 | -5 | 5 | 8 | 12;
+        };
         EffectValueDelta: {
             /** @enum {string} */
             type: "value_delta";
@@ -580,7 +659,7 @@ export interface components {
             stat: "speed" | "stamina" | "power" | "guts" | "intelligence";
             ratio: number;
         };
-        EventEffect: components["schemas"]["EffectValueDelta"] | components["schemas"]["EffectActionModifier"] | components["schemas"]["EffectResolvedGrowthBonus"];
+        EventEffect: components["schemas"]["EffectJockeyTrust"] | components["schemas"]["EffectValueDelta"] | components["schemas"]["EffectActionModifier"] | components["schemas"]["EffectResolvedGrowthBonus"];
         EventRisk: {
             /** @enum {string} */
             version: "event-risk-v1";
@@ -673,6 +752,7 @@ export interface components {
             statusChanges?: components["schemas"]["StatusChange"][];
         };
         HorseRaceRecord: {
+            trustChange?: components["schemas"]["TrustChange"];
             raceRunId?: string;
             race: string;
             result: string;
@@ -742,12 +822,13 @@ export interface components {
         };
         RaceSimulationSummary: {
             /** @enum {string} */
-            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
+            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3" | "race-sim-v4";
             digest: string;
             durationMs: number;
             result: components["schemas"]["RaceSimulationResult"];
         };
         RaceRun: {
+            trustContext?: components["schemas"]["TrustContext"];
             raceRunId: string;
             month: number;
             raceDefinitionSnapshot: components["schemas"]["RaceDefinition"];
@@ -760,6 +841,7 @@ export interface components {
             simulation?: components["schemas"]["RaceSimulationSummary"];
         };
         CareerState: {
+            jockeyTrust?: components["schemas"]["JockeyRelations"];
             /** @enum {integer} */
             version: 1;
             horse: components["schemas"]["HorseDefinition"];
@@ -795,6 +877,7 @@ export interface components {
             healthRecovery?: number;
         };
         EventApplicationResult: {
+            trustChanges?: components["schemas"]["TrustEventChange"][];
             risk?: {
                 /** @enum {string} */
                 version: "event-risk-v1";
@@ -945,15 +1028,15 @@ export interface components {
             tactic: "도주" | "선행" | "선입" | "추입";
             expectedTurn: number;
             /**
-             * @description 생략 시 race-sim-v3. 과거 요청 재시도에서는 생략 여부도 최초 본문과 같게 유지한다.
+             * @description 생략 시 race-sim-v4. 과거 요청 재시도에서는 생략 여부도 최초 본문과 같게 유지한다.
              * @enum {string}
              */
-            engineVersion?: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
+            engineVersion?: "race-sim-v1" | "race-sim-v2" | "race-sim-v3" | "race-sim-v4";
         };
         RaceEntryOptions: {
             career: components["schemas"]["Career"];
             /** @enum {string} */
-            defaultEngineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
+            defaultEngineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3" | "race-sim-v4";
             restrictionReason: string | null;
             races: {
                 /** @enum {string} */
@@ -982,7 +1065,7 @@ export interface components {
         };
         RaceLogMetadata: {
             /** @enum {string} */
-            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
+            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3" | "race-sim-v4";
             digest: string;
             durationMs: number;
             byteLength: number;
@@ -1033,7 +1116,7 @@ export interface components {
         RaceSimulationLog: {
             raceRunId: string;
             /** @enum {string} */
-            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3";
+            engineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3" | "race-sim-v4";
             seed: string;
             raceDistance: number;
             durationMs: number;
@@ -1909,6 +1992,35 @@ export interface operations {
             413: components["responses"]["ApiError"];
             415: components["responses"]["ApiError"];
             422: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    getJockeyRelations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                careerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JockeyRelationsResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
             503: components["responses"]["ApiError"];
