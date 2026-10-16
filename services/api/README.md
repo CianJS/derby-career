@@ -2,6 +2,8 @@
 
 독립 Fastify / TypeScript / PostgreSQL 서비스다. 프론트엔드는 기존 루트 `pnpm` 실행을 유지하고, API는 이 디렉터리의 `npm` 및 별도 lockfile을 사용한다. 실제 배포·유료 서비스·운영 비밀키는 구성하지 않았다.
 
+Vercel 공개 카탈로그 배포는 [배포 설정·DB 준비·검증 절차](docs/vercel-deployment.md)를 따른다. `services/api/vercel.json`은 기존 Frontend 프로젝트 설정과 별개다. API 전용 대상 및 환경 DB를 승인한 후 적용하며 운영 배포/DB 변경은 자동으로 실행하지 않는다.
+
 ## 로컬 실행
 
 Node.js 22 이상과 Docker Compose 또는 PostgreSQL 17 이상이 필요하다.

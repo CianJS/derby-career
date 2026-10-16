@@ -6,8 +6,8 @@ import { parse } from 'yaml'
 type ContractValue = any
 export type ApiContract = Record<string, ContractValue>
 
-export async function readContract() {
-  return parse(await readFile(resolve('../../contracts/openapi.yaml'), 'utf8')) as ApiContract
+export async function readContract(path: string | URL = resolve('../../contracts/openapi.yaml')) {
+  return parse(await readFile(path, 'utf8')) as ApiContract
 }
 export function resolveSchema(schema: ContractValue, spec: ApiContract): ContractValue {
   if (Array.isArray(schema)) {

@@ -30,7 +30,11 @@ const CLIENT_ERROR_MESSAGES: Record<number, string> = {
 export async function createApp(
   db: Database,
   config: Config,
-  options: { jwksFetch?: FetchImplementation } = {},
+  options: {
+    jwksFetch?: FetchImplementation
+    contractPath?: string | URL
+    logErrorDetails?: boolean
+  } = {},
 ) {
   if (
     config.authMode === 'dev-session' &&
@@ -51,7 +55,7 @@ export async function createApp(
     ajv: { customOptions: { removeAdditional: false, allErrors: false } },
     requestTimeout: 15000,
   })
-  const spec = await readContract()
+  const spec = await readContract(options.contractPath)
   app.setErrorHandler((error, request, reply) => {
     const known = error instanceof ApiError
     const fastifyError = error as FastifyError
@@ -64,7 +68,10 @@ export async function createApp(
           ? fastifyError.statusCode
           : 500
     if (status >= 500 && (!known || status !== 503)) {
-      request.log.error({ err: error }, 'API request failed')
+      request.log.error(
+        options.logErrorDetails === false ? { status } : { err: error },
+        'API request failed',
+      )
     }
     if (status === 401) {
       reply.header('WWW-Authenticate', 'Bearer')
