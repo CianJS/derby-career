@@ -202,7 +202,9 @@ export function summarizeRaceLog(log: RaceSimulationLog): RaceSimulationSummary 
 }
 
 export function simulateRace(run: RaceRunInput, version: string = SIMULATION_ENGINE_VERSION): RaceSimulationLog {
-  if (version === RACE_SIM_V4_VERSION) return simulateRaceV4(run)
+  if (version === RACE_SIM_V4_VERSION) {
+    return simulateRaceV4(run)
+  }
   if (version === RACE_SIM_V3_VERSION) return simulateRaceV3(run)
   return simulateWithProfile(run, engineProfileFor(version))
 }

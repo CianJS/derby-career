@@ -1,4 +1,9 @@
-import { jockeyTrust, createTrustContext, assertTrust, type TrustContext } from './jockey-trust'
+import {
+  jockeyTrust,
+  createTrustContext,
+  assertTrust,
+  type TrustContext,
+} from './jockey-trust'
 import type { Career, Horse, Values } from './model'
 import { summarizeRecords } from './records'
 import { canRace, careerHealth } from './health'
@@ -61,7 +66,10 @@ export const stressRaceDefinitions: RaceDefinitionSnapshot[] = [
   { id: 'DEV_M3_FULL_GATE_1600', name: '풀게이트 마일', month: 3, surface: 'Turf', distance: 1600, raceClass: '미승리', runners: 18, courseProfile: '표준 직선 / 표준 코너', prize: 8000000, entryFee: 0, maxWins: 0 },
 ]
 export const jockeyCatalog: JockeySnapshot[] = [...contractedJockeys, ...freeAgentJockeys]
-export const contractedRoster = (career: Career) => jockeyCatalog.filter(j => career.contractedJockeyIds.includes(j.id)).map(j => ({ ...j, chemistry: jockeyTrust(career, j.id) }))
+export const contractedRoster = (career: Career) =>
+  jockeyCatalog
+    .filter(j => career.contractedJockeyIds.includes(j.id))
+    .map(j => ({ ...j, chemistry: jockeyTrust(career, j.id) }))
 export const winCount = (career: Career) => summarizeRecords(career.raceRecords).wins
 export const maiden = (career: Career) => winCount(career) === 0
 export function raceEligibility(career: Career, race: RaceDefinitionSnapshot): string | null {
@@ -127,7 +135,13 @@ export function lockRaceEntryWithLog(career: Career, draft: RaceEntryDraft, iden
   if (ineligible) throw new Error(ineligible)
   const jockey = jockeyCatalog.find(j => j.id === draft.jockeyId)
   if (!jockey || !career.contractedJockeyIds.includes(jockey.id)) throw new Error('계약하지 않은 기수는 출전시킬 수 없습니다.')
-  const raceRun = createRaceRun(career, race, { ...jockey, chemistry: jockeyTrust(career, jockey.id) }, draft.tactic, identity)
+  const raceRun = createRaceRun(
+    career,
+    race,
+    { ...jockey, chemistry: jockeyTrust(career, jockey.id) },
+    draft.tactic,
+    identity,
+  )
   raceRun.trustContext = createTrustContext(raceRun)
   const log = simulateRace(raceRun)
   return { career: { ...career, raceRun: { ...raceRun, simulation: summarizeRaceLog(log) } }, log }
@@ -136,9 +150,18 @@ export function assertRaceRun(run: RaceRunInput, career: Career) {
   const fail = () => { throw new Error('저장된 출전 정보를 읽을 수 없습니다. 기존 저장은 유지됩니다.') }
   const known = [...raceDefinitions, ...stressRaceDefinitions].find(r => r.id === run?.raceDefinitionSnapshot?.id)
   if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || !known || run.month !== known.month || career.careerTurnIndex !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || run.raceDefinitionSnapshot.month !== known.month || run.raceDefinitionSnapshot.runners !== known.runners || !Array.isArray(run.runners) || run.runners.length !== known.runners) fail()
-  if (run.trustContext !== undefined && (run.trustContext.version !== 'jockey-trust-v1' ||
-    typeof run.trustContext.favorite !== 'boolean' || !Number.isFinite(run.trustContext.playerRating) ||
-    !Number.isFinite(run.trustContext.strongestOpponentRating) || run.trustContext.playerRating < 0 || run.trustContext.strongestOpponentRating < 0)) fail()
+  if (
+    run.trustContext !== undefined && (
+      run.trustContext.version !== 'jockey-trust-v1' ||
+      typeof run.trustContext.favorite !== 'boolean' ||
+      !Number.isFinite(run.trustContext.playerRating) ||
+      !Number.isFinite(run.trustContext.strongestOpponentRating) ||
+      run.trustContext.playerRating < 0 ||
+      run.trustContext.strongestOpponentRating < 0
+    )
+  ) {
+    fail()
+  }
   const summary = run.simulation
   if (summary !== undefined && (!summary.digest || !summary.engineVersion || !summary.result || summary.result.playerHorseId !== run.playerHorseId || !Number.isInteger(summary.result.placing) || summary.result.placing < 1 || summary.result.placing > run.runners.length || !Number.isFinite(summary.result.prizeMoney) || summary.result.prizeMoney < 0)) fail()
   for (const runner of run.runners) {
