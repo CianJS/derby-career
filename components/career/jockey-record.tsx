@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useCareer } from '@/lib/career/store'
+import { jockeyTrust } from '@/lib/career/jockey-trust'
+import { JockeyTrustValue } from './jockey-trust'
 import { jockeyProfiles } from '@/lib/career/race-entry'
 import { summarizeRecords } from '@/lib/career/records'
 import { Flag } from 'lucide-react'
@@ -17,7 +19,8 @@ export function Jockeys({
   setView: (v: View) => void
   onSelect: (id: string) => void
 }) {
-  const { career } = useCareer()
+  const snapshot = useCareer()
+  const { career } = snapshot
   const [tab, setTab] = useState('contract')
   const contractedIds = career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS
   const list = jockeys.filter((j) => contractedIds.includes(j.id) === (tab === 'contract'))
@@ -64,13 +67,10 @@ export function Jockeys({
             <p className="mt-1 text-xs text-primary">
               {contractedIds.includes(j.id) ? '계약 중' : '계약 가능'}
             </p>
-            {career?.horse ? (
-              <p className="mt-1 text-xs">
-                현재 육성마 호흡도 · <b className="text-primary">{j.chem} / 100</b>
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-muted-foreground">현재 육성마 없음</p>
-            )}
+            <p className="mt-1 text-xs">
+              {career?.horse ? `${career.horse.name}와 신뢰도 · ` : '신뢰도 · '}
+              <JockeyTrustValue trust={jockeyTrust(snapshot, j.id)} />
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-2 text-xs">
               {['스타트', '페이스 판단', '진로 판단', '승부 타이밍', '기승 안정'].map((a, i) => (
                 <span key={a} className="flex justify-between border-b border-border py-1">
@@ -95,7 +95,8 @@ export function Jockey({
   jockeyId: string
   horses: CareerHorse[]
 }) {
-  const { career } = useCareer()
+  const snapshot = useCareer()
+  const { career } = snapshot
   const j = jockeys.find((j) => j.id === jockeyId) ?? jockeys[0]
   const riddenHorses = horses.filter((h) => h.raceRecords?.some((r) => r.jockeyId === j.id))
   const records = riddenHorses.flatMap((h) =>
@@ -133,9 +134,6 @@ export function Jockey({
                 ? '만료일 정보 없음'
                 : '—',
             ],
-            career?.horse
-              ? ['현재 육성마와 호흡도', `${j.chem} / 100`]
-              : ['현재 육성마', '현재 육성마 없음'],
           ].map(([a, b]) => (
             <div key={a} className="border-b border-r border-border px-4 py-3">
               <span className="text-xs text-muted-foreground">{a}</span>
@@ -143,6 +141,15 @@ export function Jockey({
             </div>
           ))}
         </div>
+      </Section>
+      <Section eyebrow="HORSE / JOCKEY" title="말과 기수의 신뢰도">
+        <p className="text-sm">
+          {career?.horse ? `${career.horse.name} ↔ ${j.name} · ` : `${j.name} · `}
+          <JockeyTrustValue trust={jockeyTrust(snapshot, j.id)} />
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          현재 육성마와 이 기수 사이의 관계이며, 기수의 공통 능력치와 다릅니다.
+        </p>
       </Section>
       <Section eyebrow="ABILITIES" title="기수 능력">
         <div className="grid gap-4 md:grid-cols-5">

@@ -308,12 +308,11 @@ function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
             {relations.map(([id, r]) => (
               <div
                 key={id}
-                className="flex items-center justify-between border-b border-border py-2.5 text-xs"
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2.5 text-xs"
               >
                 <b className="font-serif text-sm">{r.name}</b>
                 <span className="text-muted-foreground">
-                  {r.starts}전 · Chemistry {jockeys.find((j) => j.id === id)?.chem ?? '—'} · 최고{' '}
-                  {r.best === 99 ? '—' : `${r.best}착`}
+                  {r.starts}전 · 신뢰도 정보 없음 · 최고 {r.best === 99 ? '—' : `${r.best}착`}
                 </span>
               </div>
             ))}

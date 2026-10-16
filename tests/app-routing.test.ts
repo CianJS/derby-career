@@ -12,6 +12,7 @@ import { validateRaceEntryOptions } from '../packages/shared/src/generated/save-
 import { BROWSER_SAVE_KEY, readBrowserSave, writeBrowserSave } from '../lib/career/browser-save'
 import { careerStore } from '../lib/career/store'
 import { managementFixture } from './helpers/management-fixture'
+import { contractedJockeys, racesForTurn } from '../lib/career/race-entry'
 
 type Models = components['schemas']
 const catalog: {
@@ -32,6 +33,7 @@ async function harness(
   path: string,
   workspace?: SaveWorkspace,
   seed?: () => void,
+  raceOptions?: Models['RaceEntryOptions'],
 ) {
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
     url: 'https://derby.test' + path,
@@ -82,7 +84,7 @@ async function harness(
       return Response.json({ data: [] })
     }
     if (workspace && url.pathname.endsWith('/race-entries')) {
-      const options = {
+      const options = raceOptions ?? {
         career: workspace.career,
         defaultEngineVersion: 'race-sim-v3',
         restrictionReason: '이미 확정된 출전입니다.',
@@ -177,6 +179,92 @@ async function harness(
     },
   }
 }
+
+test('actual App: server trust agrees across list/detail/entry, jockey selection and reload; read failure hides old values', async () => {
+  const workspace = activeServerWorkspace()
+  delete workspace.career!.state.raceRun
+  const options: Models['RaceEntryOptions'] = {
+    career: workspace.career!,
+    defaultEngineVersion: 'race-sim-v3',
+    restrictionReason: null,
+    races: racesForTurn(3).map((definition) => ({
+      sourceKind: 'development_fixture',
+      definition,
+      eligible: true,
+      restrictionReason: null,
+    })),
+    jockeys: contractedJockeys.map((j, i) => ({ ...j, chemistry: [0, 72, 100][i] })),
+    tactics: ['도주', '선행', '선입', '추입'],
+  }
+  const h = await harness('server', '/', workspace, undefined, options)
+  const clickText = async (text: string) => {
+    const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes(text),
+    )
+    assert.ok(button, text)
+    await act(async () => button.click())
+  }
+  try {
+    await h.waitFor(() => h.container.textContent!.includes('육성 계속'))
+    await clickText('JOCKEYS')
+    await h.waitFor(
+      () => h.container.querySelectorAll('[data-trust-status="available"]').length === 3,
+    )
+    for (const [name, value] of [
+      ['한도윤', '0'],
+      ['서지안', '72'],
+    ] as const) {
+      const card = [...h.container.querySelectorAll('main button')].find((b) =>
+        b.textContent?.includes(name),
+      )!
+      assert.equal(card.querySelector('[data-trust-status]')!.textContent, `${value} / 100`)
+      await clickText(name)
+      assert.equal(h.container.querySelector('[data-trust-status]')!.textContent, `${value} / 100`)
+      assert.match(h.container.textContent!, /말과 기수의 신뢰도/)
+      await clickText('← 기수 목록')
+    }
+    await h.reload()
+    await clickText('JOCKEYS')
+    await h.waitFor(
+      () => h.container.querySelectorAll('[data-trust-status="available"]').length === 3,
+    )
+    await clickText('DERBY CAREER')
+    await clickText('육성 계속')
+    await clickText('경주')
+    await clickText('경주 출전 준비')
+    const select = async (id: string, value: string) => {
+      const radio = h.container.querySelector<HTMLInputElement>(
+        `input[name="entry-jockey"][value="${id}"]`,
+      )!
+      await act(async () => radio.click())
+      const summary = h.container.querySelector('[aria-label="출전 요약"]')!
+      assert.equal(summary.querySelector('[data-trust-status]')!.textContent, `${value} / 100`)
+    }
+    await select('HAN_DOYUN', '0')
+    await select('SEO_JIAN', '72')
+    assert.doesNotMatch(h.container.textContent!, /호흡도|chemistry/i)
+    const previousFetch = activeFetch
+    activeFetch = async () => {
+      throw new Error('신뢰도 조회 실패 테스트')
+    }
+    await act(async () => {
+      await careerStore.refresh()
+    })
+    assert.equal(h.container.querySelectorAll('[data-trust-status="available"]').length, 0)
+    assert.ok(h.container.querySelector('[data-trust-status="error"]'))
+    activeFetch = previousFetch
+    await act(async () => {
+      await careerStore.refresh()
+    })
+    assert.equal(
+      h.container.querySelector('[aria-label="출전 요약"] [data-trust-status]')!.textContent,
+      '72 / 100',
+    )
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
+  } finally {
+    await h.close()
+  }
+})
 
 test('actual App: settings preserves active career and duplicate-name archives; archive selection uses its saved identity', async () => {
   const fixture = managementFixture()

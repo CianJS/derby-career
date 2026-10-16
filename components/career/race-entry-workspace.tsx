@@ -15,6 +15,8 @@ import {
   type RaceEntryDraft,
 } from '@/lib/career/race-entry'
 import { careerStore, useCareer } from '@/lib/career/store'
+import { jockeyTrust, raceEntryJockeyTrust, type JockeyTrust } from '@/lib/career/jockey-trust'
+import { JockeyTrustValue } from './jockey-trust'
 import { recommendRaceEntry, updateRaceEntryDraft } from '@/lib/career/race-entry-recommendation'
 import { cn } from '@/lib/utils'
 import type { components } from '@/packages/shared/src/generated/api'
@@ -50,8 +52,9 @@ export function RaceAction({ onOpen }: { onOpen: () => void }) {
 }
 
 export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }) {
+  const snapshot = useCareer()
   const { ready, career, busy, pending, error, mode, localCareerId, workspace, raceOptions } =
-    useCareer()
+    snapshot
   if (!ready) {
     return (
       <p role="status" className="py-8 text-sm">
@@ -82,6 +85,7 @@ export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }
       onStartRace={onStartRace}
       canConfirm={mode === 'local' || !!raceOptions}
       serverOptions={mode === 'server' ? raceOptions : undefined}
+      trustForJockey={(id) => jockeyTrust(snapshot, id)}
     />
   )
 }
@@ -93,12 +97,14 @@ export function RaceEntryForm({
   onStartRace,
   canConfirm = true,
   serverOptions,
+  trustForJockey = (id) => raceEntryJockeyTrust(serverOptions, id),
 }: {
   career: Career
   busy: boolean
   error: string | null
   onStartRace?: () => void
   serverOptions?: components['schemas']['RaceEntryOptions'] | null
+  trustForJockey?: (jockeyId: string) => JockeyTrust
   canConfirm?: boolean
 }) {
   const [draft, setDraft] = useState<RaceEntryDraft>(() =>
@@ -265,14 +271,15 @@ export function RaceEntryForm({
                 </span>
                 <span className="text-xs text-muted-foreground">{j.style}</span>
                 <span className="grid w-full grid-cols-2 gap-x-5 gap-y-2 text-xs tabular-nums">
-                  {(['start', 'pace', 'path', 'timing', 'stability', 'chemistry'] as const).map(
-                    (key) => (
-                      <span key={key} className="flex justify-between border-b border-border pb-1">
-                        <span className="capitalize text-muted-foreground">{key}</span>
-                        <b>{j[key]}</b>
-                      </span>
-                    ),
-                  )}
+                  {(['start', 'pace', 'path', 'timing', 'stability'] as const).map((key) => (
+                    <span key={key} className="flex justify-between border-b border-border pb-1">
+                      <span className="capitalize text-muted-foreground">{key}</span>
+                      <b>{j[key]}</b>
+                    </span>
+                  ))}
+                </span>
+                <span className="w-full text-xs">
+                  {career.horse.name}와 신뢰도 · <JockeyTrustValue trust={trustForJockey(j.id)} />
                 </span>
                 <span className="text-xs text-primary">기승 적합도 · {fit.label}</span>
                 <span className="text-[11px] leading-5 text-muted-foreground">
@@ -320,6 +327,12 @@ export function RaceEntryForm({
               <dd className="mt-2 leading-5">{value}</dd>
             </div>
           ))}
+          <div>
+            <dt className="text-muted-foreground">신뢰도</dt>
+            <dd className="mt-2 leading-5">
+              {jockey ? <JockeyTrustValue trust={trustForJockey(jockey.id)} /> : '선택 전'}
+            </dd>
+          </div>
         </dl>
         <div className="flex justify-end">
           {locked ? (

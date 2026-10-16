@@ -19,13 +19,14 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [])
-  if (!ready)
+  if (!ready) {
     return (
       <p role="status" className="py-8 text-sm">
         경주 결과를 불러오는 중…
       </p>
     )
-  if (!career || !run)
+  }
+  if (!career || !run) {
     return (
       <div className="py-8 text-sm">
         <p role="alert">확정된 경주 결과가 없습니다.</p>
@@ -34,7 +35,8 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
         </Button>
       </div>
     )
-  if (!loaded.data)
+  }
+  if (!loaded.data) {
     return (
       <div className="py-8 text-sm">
         <p
@@ -51,6 +53,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
         </Button>
       </div>
     )
+  }
 
   const log = loaded.data.log
   const race = run.raceDefinitionSnapshot
@@ -77,7 +80,9 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
   const advance = async () => {
     setSubmitting(true)
     try {
-      if (await careerStore.completeRace(run.raceRunId, result)) onNext()
+      if (await careerStore.completeRace(run.raceRunId, result)) {
+        onNext()
+      }
     } finally {
       setSubmitting(false)
     }
@@ -171,6 +176,9 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
             </li>
           ))}
         </ul>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {run.player.jockeySnapshot.name} · 신뢰도 변화 정보 없음
+        </p>
         <p className="mt-2 text-sm text-muted-foreground">
           {mode === 'server'
             ? '결과를 확정하면 서버에 저장된 상금·전적·건강과 다음 달 상태를 불러옵니다.'

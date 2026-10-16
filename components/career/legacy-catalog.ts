@@ -55,7 +55,6 @@ export const jockeys = [...contractedJockeys, ...freeAgentJockeys].map((j) => ({
   ...j,
   meta: j.style,
   contract: '—',
-  chem: j.chemistry,
   abilities: [j.start, j.pace, j.path, j.timing, j.stability],
 }))
 
