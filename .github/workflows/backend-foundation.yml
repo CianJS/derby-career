@@ -76,6 +76,45 @@ jobs:
           trap 'kill "$API_PROCESS_ID" 2>/dev/null || true' EXIT
           curl --silent --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:4000/health/ready > /dev/null
           node scripts/http-smoke.mjs
+  verify-vercel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: derby
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: derby_deployment_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U derby -d derby_deployment_test"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      DATABASE_URL_UNPOOLED: postgresql://derby:local_ci_only@127.0.0.1:5432/derby_deployment_test
+      TEST_DATABASE_URL: postgresql://derby:local_ci_only@127.0.0.1:5432/derby_deployment_test
+      NODE_ENV: production
+      AUTH_MODE: disabled
+      LOG_LEVEL: silent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: npm ci --include=dev
+      - run: npm run deployment:db -- migrate
+      - name: Import only real reference data twice (no development seed)
+        run: |
+          npm run deployment:db -- import-racing
+          npm run deployment:db -- import-racing
+      - run: npm run build:vercel
+      - name: Verify relocated function against clean PostgreSQL
+        run: node --import tsx --test tests/vercel-build.integration.ts
   verify-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 10

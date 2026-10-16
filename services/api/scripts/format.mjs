@@ -9,6 +9,7 @@ const targets = [
   '../../tests/local-recovery.test.ts',
   '../../tests/save-response-validation.test.ts',
   'src',
+  'vercel.json',
   'scripts',
   'tests',
   'eslint.config.mjs',
