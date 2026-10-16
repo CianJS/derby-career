@@ -134,6 +134,7 @@ test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt,
   await page.getByRole('button', { name: '현재 육성마 상세', exact: true }).click()
   await page.getByRole('button', { name: '은퇴', exact: true }).click()
   await page.getByRole('button', { name: '은퇴 확정', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Career Archive 보기', exact: true })).toBeVisible()
   await home()
   await page.getByRole('button', { name: /STABLE 마구간/ }).click()
   await page.locator('[data-archive-id]').first().click()

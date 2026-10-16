@@ -80,6 +80,9 @@ for (const width of [390, 1440]) {
       expect((await read()).career.raceRecords).toHaveLength(1)
       await page.getByRole('button', { name: '은퇴', exact: true }).click()
       await page.getByRole('button', { name: '은퇴 확정', exact: true }).click()
+      await expect(
+        page.getByRole('button', { name: 'Career Archive 보기', exact: true }),
+      ).toBeVisible()
       await expect.poll(async () => (await read()).career).toBeNull()
       const retired = await read()
       expect(retired.career).toBeNull()
