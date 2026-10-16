@@ -81,14 +81,18 @@ for (const viewport of [
         BROWSER_SAVE_KEY,
       )
       await page.getByRole('button', { name: '레이스 시작', exact: true }).click()
-      await page.getByRole('button', { name: '건너뛰기', exact: true }).click()
+      await page
+        .getByRole('button', { name: '경주 연출을 건너뛰고 결과 보기', exact: true })
+        .click()
       await expect(page.getByText('서지안 · 신뢰도 변화 정보 없음', { exact: true })).toBeVisible()
       await expect(page.getByText('신뢰도 변화 없음', { exact: true })).toHaveCount(0)
       await page.reload()
       await page.getByRole('button', { name: '육성 계속', exact: true }).click()
       await page.getByRole('button', { name: '출전 정보 확인', exact: true }).click()
       await page.getByRole('button', { name: '레이스 시작', exact: true }).click()
-      await page.getByRole('button', { name: '건너뛰기', exact: true }).click()
+      await page
+        .getByRole('button', { name: '경주 연출을 건너뛰고 결과 보기', exact: true })
+        .click()
       expect(
         await page.evaluate(
           (key) => JSON.parse(localStorage.getItem(key)!).career.raceRecords,
