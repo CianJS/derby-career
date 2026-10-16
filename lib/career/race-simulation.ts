@@ -1,6 +1,7 @@
 import type { RaceRunInput, RaceRunnerInput } from './race-entry'
 import { RACE_SIM_V3_VERSION } from './race-balance'
 import { simulateRaceV3 } from './race-sim-v3'
+import { RACE_SIM_V4_VERSION, simulateRaceV4 } from './race-sim-v4'
 
 export type RacePhase = 'START' | 'MID' | 'FINAL_CORNER' | 'STRETCH' | 'FINISH'
 export type RaceSample = { tMs: number; runners: { horseId: string; distance: number; lane: number }[] }
@@ -95,8 +96,8 @@ const V2_PROFILE: EngineProfile = {
   steerPerStep: 0.6,
 }
 export const ENGINE_PROFILES: Record<string, EngineProfile> = { [V1_PROFILE.version]: V1_PROFILE, [V2_PROFILE.version]: V2_PROFILE }
-/** New races use the continuous v3 engine. v1/v2 stay here only to replay races that were stored with them. */
-export const SIMULATION_ENGINE_VERSION = RACE_SIM_V3_VERSION
+/** New races use v4; shipped v1/v2/v3 retain their original calculations. */
+export const SIMULATION_ENGINE_VERSION = RACE_SIM_V4_VERSION
 export const LEGACY_ENGINE_VERSIONS = [V1_PROFILE.version, V2_PROFILE.version]
 export const engineProfileFor = (version: string): EngineProfile => {
   const profile = ENGINE_PROFILES[version]
@@ -201,6 +202,9 @@ export function summarizeRaceLog(log: RaceSimulationLog): RaceSimulationSummary 
 }
 
 export function simulateRace(run: RaceRunInput, version: string = SIMULATION_ENGINE_VERSION): RaceSimulationLog {
+  if (version === RACE_SIM_V4_VERSION) {
+    return simulateRaceV4(run)
+  }
   if (version === RACE_SIM_V3_VERSION) return simulateRaceV3(run)
   return simulateWithProfile(run, engineProfileFor(version))
 }

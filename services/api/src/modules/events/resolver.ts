@@ -1,5 +1,7 @@
 import {
   BALANCE,
+  applyTrustEvent,
+  type TrustEventChange,
   deriveCondition,
   statKeys,
   trainings,
@@ -28,10 +30,23 @@ export function changesBetween(before: Values, after: Values): Change[] {
 export function applyImmediateEffects(
   career: Career,
   effects: EventEffect[],
-): { career: Career; modifiers: EventEffect[]; changes: Change[] } {
+): {
+  career: Career
+  modifiers: EventEffect[]
+  changes: Change[]
+  trustChanges?: TrustEventChange[]
+} {
+  let related = career
+  const trustChanges: TrustEventChange[] = []
   const values = { ...career.values }
   const modifiers: EventEffect[] = []
   for (const effect of effects) {
+    if (effect.type === 'jockey_trust') {
+      const resolved = applyTrustEvent(related, effect)
+      related = resolved.career
+      trustChanges.push(resolved.change)
+      continue
+    }
     if (effect.type === 'action_modifier') {
       modifiers.push(effect)
       continue
@@ -59,12 +74,13 @@ export function applyImmediateEffects(
   const changes = changesBetween(career.values, values)
   return {
     career: {
-      ...career,
+      ...related,
       values,
       condition: changes.length ? deriveCondition(values, career.health) : career.condition,
     },
     modifiers,
     changes,
+    ...(trustChanges.length ? { trustChanges } : {}),
   }
 }
 export function modifyActionDeltas(

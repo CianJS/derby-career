@@ -7,14 +7,31 @@ import { PositionHistory } from '@/components/career/race-position-history'
 import { keyMoments } from '@/lib/career/race-feed'
 import { postRaceChanges } from '@/lib/career/post-race'
 import { frameAt } from '@/lib/career/race-simulation'
+import type { Career } from '@/lib/career/model'
+import type { RaceData } from '@/lib/career/race-data-adapter'
+import { TrustChangeValue } from './jockey-trust'
 import { careerStore, useCareer } from '@/lib/career/store'
 
 const won = (value: number) => `₩${value.toLocaleString('ko-KR')}`
 
 export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
-  const { ready, career, busy, error, mode, pending } = useCareer()
+  const snapshot = useCareer()
+  const { ready, busy, error, mode, pending } = snapshot
+  const sourceId = mode === 'server' ? snapshot.workspace?.career?.id : snapshot.localCareerId
+  const live = useRaceData()
+  const [receipt, setReceipt] = useState<{
+    career: Career
+    data: RaceData
+    mode: typeof mode
+    sourceId: typeof sourceId
+  } | null>(null)
+  const held = receipt?.mode === mode && receipt.sourceId === sourceId ? receipt : null
+  const career = held?.career ?? snapshot.career
   const run = career?.raceRun
-  const loaded = useRaceData()
+  const loaded = { ...live, data: held?.data ?? live.data }
+  const confirmed = snapshot.career?.raceRecords.find(
+    (record) => record.raceRunId === run?.raceRunId,
+  )
   const [submitting, setSubmitting] = useState(false)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -80,8 +97,11 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
   const advance = async () => {
     setSubmitting(true)
     try {
-      if (await careerStore.completeRace(run.raceRunId, result)) {
-        onNext()
+      setReceipt({ career, data: loaded.data!, mode, sourceId })
+      if (pending) {
+        await careerStore.refresh()
+      } else {
+        await careerStore.completeRace(run.raceRunId, result)
       }
     } finally {
       setSubmitting(false)
@@ -177,12 +197,14 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
           ))}
         </ul>
         <p className="mt-2 text-sm text-muted-foreground">
-          {run.player.jockeySnapshot.name} · 신뢰도 변화 정보 없음
+          {run.player.jockeySnapshot.name} · <TrustChangeValue change={confirmed?.trustChange} />
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          {mode === 'server'
-            ? '결과를 확정하면 서버에 저장된 상금·전적·건강과 다음 달 상태를 불러옵니다.'
-            : `결과를 확정하면 ${nextMonth}월로 넘어가며 출전 기록이 경주 기록에 추가됩니다.`}
+          {confirmed
+            ? '결과가 저장되었습니다. 신뢰도는 다음 출전부터 적용됩니다.'
+            : mode === 'server'
+              ? '결과를 확정하면 서버에 저장된 상금·전적·건강과 다음 달 상태를 불러옵니다.'
+              : `결과를 확정하면 ${nextMonth}월로 넘어가며 출전 기록이 경주 기록에 추가됩니다.`}
         </p>
       </section>
       <details className="border border-border">
@@ -215,8 +237,17 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
         </p>
       )}
       <div>
-        <Button disabled={busy || pending || submitting} onClick={() => void advance()}>
-          {submitting ? '저장 중…' : '결과 확정 · 다음 달 시작'}
+        <Button
+          disabled={busy || submitting}
+          onClick={() => (confirmed ? onNext() : void advance())}
+        >
+          {submitting
+            ? '저장 중…'
+            : confirmed
+              ? '다음 달 육성으로'
+              : pending
+                ? '완료 요청 다시 확인'
+                : '결과 확정 · 다음 달 시작'}
         </Button>
       </div>
     </div>

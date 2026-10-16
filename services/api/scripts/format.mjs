@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url'
 
 // Keep format and format:check on exactly the same targets.
 const targets = [
+  '../../lib/career/jockey-trust.ts',
+  '../../lib/career/race-sim-v4.ts',
   '../../lib/career/local-recovery.ts',
   '../../tests/local-recovery.test.ts',
   '../../tests/save-response-validation.test.ts',
@@ -12,6 +14,7 @@ const targets = [
   'eslint.config.mjs',
   'package.json',
   'README.md',
+  'docs',
   '../../packages/shared/src',
   '../../packages/shared/README.md',
   '../../app/api/event-catalog',

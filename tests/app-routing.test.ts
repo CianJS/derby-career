@@ -35,6 +35,9 @@ async function harness(
   seed?: () => void,
   raceOptions?: Models['RaceEntryOptions'],
 ) {
+  if (workspace?.career) {
+    workspace.career.state.jockeyTrust ??= {}
+  }
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
     url: 'https://derby.test' + path,
     pretendToBeVisual: true,
@@ -82,6 +85,19 @@ async function harness(
     }
     if (workspace && url.pathname.endsWith('/catalog/horses')) {
       return Response.json({ data: [] })
+    }
+    if (workspace?.career && url.pathname.endsWith('/jockey-relations')) {
+      const current = workspace.career
+      return Response.json({
+        careerId: current.id,
+        ownedHorseId: current.ownedHorseId,
+        revision: current.revision,
+        status: current.status,
+        data: Object.entries(current.state.jockeyTrust ?? {}).map(([jockeyId, row]) => ({
+          jockeyId,
+          ...row,
+        })),
+      })
     }
     if (workspace && url.pathname.endsWith('/race-entries')) {
       const options = raceOptions ?? {
@@ -183,6 +199,9 @@ async function harness(
 test('actual App: server trust agrees across list/detail/entry, jockey selection and reload; read failure hides old values', async () => {
   const workspace = activeServerWorkspace()
   delete workspace.career!.state.raceRun
+  workspace.career!.state.jockeyTrust = Object.fromEntries(
+    contractedJockeys.map((j, i) => [j.id, { starts: i, trust: [0, 72, 100][i] }]),
+  )
   const options: Models['RaceEntryOptions'] = {
     career: workspace.career!,
     defaultEngineVersion: 'race-sim-v3',

@@ -1,7 +1,9 @@
+import { careerJockeyRelations, type JockeyRelations } from './jockey-trust'
 import { labels, statKeys, type Career } from './model'
 import { summarizeRecords } from './records'
 
 export type LifecycleHorse = {
+  jockeyTrust?: JockeyRelations
   id: string
   name: string
   age: string
@@ -93,6 +95,7 @@ export function applyCareer<T extends { activeHorse: LifecycleHorse | null; mont
       health: career.health,
       healthRecovery: career.healthRecovery,
       raceRecords: records,
+      jockeyTrust: careerJockeyRelations(career),
     },
   }
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useCareer } from '@/lib/career/store'
-import { jockeyTrust } from '@/lib/career/jockey-trust'
+import { jockeyTrust } from '@/lib/career/jockey-trust-presentation'
 import { JockeyTrustValue } from './jockey-trust'
 import { jockeyProfiles } from '@/lib/career/race-entry'
 import { summarizeRecords } from '@/lib/career/records'

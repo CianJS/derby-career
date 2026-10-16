@@ -153,7 +153,7 @@ test('Frontend bridge/journal/adapter progresses Month 1–7 with server races i
           jockeyId: draft.jockeyId!,
           tactic: draft.tactic!,
           expectedTurn: month,
-          engineVersion: 'race-sim-v3' as const,
+          engineVersion: 'race-sim-v4' as const,
         },
       }
       assert.ok(validateSaveCommand(command))
@@ -165,7 +165,7 @@ test('Frontend bridge/journal/adapter progresses Month 1–7 with server races i
         throw new Error('Local Save forbidden')
       })
       const data = await adapter.load(state!.workspace!.career!.state, id)
-      assert.equal(data.log.engineVersion, 'race-sim-v3')
+      assert.equal(data.log.engineVersion, 'race-sim-v4')
       c.dispose()
       c = controller()
       assert.equal(await c.refresh(), true) // reload while watching
@@ -214,6 +214,10 @@ test('Frontend bridge/journal/adapter progresses Month 1–7 with server races i
         records.reduce((sum, r) => sum + (r.prizeMoney ?? 0), 0),
         expectedPrize,
       )
+      const relations = await api.getJockeyRelations(id)
+      const selected = relations.data.find(relation => relation.jockeyId === command.body.jockeyId)!
+      assert.deepEqual(state!.workspace!.career!.state.jockeyTrust![command.body.jockeyId], { starts: selected.starts, trust: selected.trust })
+      assert.equal(selected.trust, records.at(-1)!.trustChange!.after)
       const posts = requests.filter(
         (r) =>
           r.path.endsWith('/complete') &&

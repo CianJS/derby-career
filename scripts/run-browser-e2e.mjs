@@ -1,5 +1,5 @@
-import { spawn } from 'node:child_process'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { spawn, spawnSync } from 'node:child_process'
+import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { createWriteStream } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
@@ -18,6 +18,19 @@ if (
 }
 const apiUrl = 'http://127.0.0.1:4000'
 const nextUrl = 'http://127.0.0.1:3000'
+const controlDir = resolve(artifacts, 'control')
+const apiEnv = {
+  ...process.env,
+  NODE_ENV: 'production',
+  AUTH_MODE: 'disabled',
+  LOG_LEVEL: 'silent',
+  HOST: '127.0.0.1',
+  PORT: '4000',
+}
+let api
+let devToken
+let apiStarts = 0
+let controlId = null
 const children = []
 const streams = []
 const startedAt = new Date().toISOString()
@@ -27,6 +40,9 @@ let interrupted = false
 // Only public, anonymous fixture traffic is recorded. Never copy the process environment.
 function sanitize(value) {
   let text = String(value)
+  if (devToken) {
+    text = text.replaceAll(devToken, '[test session redacted]')
+  }
   if (databaseUrl) {
     text = text.replaceAll(databaseUrl, '[database redacted]')
   }
@@ -39,7 +55,7 @@ function start(name, args, cwd, env) {
   const log = createWriteStream(resolve(artifacts, 'logs', `${name}.log`))
   streams.push(log)
   const child = spawn(process.execPath, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
-  const record = { name, child, exited: false, code: null, error: null }
+  const record = { name, child, exited: false, code: null, error: null, expectedExit: false }
   children.push(record)
   for (const stream of [child.stdout, child.stderr]) {
     stream.setEncoding('utf8')
@@ -75,9 +91,64 @@ function assertServers() {
     throw new Error('E2E interrupted')
   }
   for (const server of children.filter((child) => child.name !== 'playwright')) {
-    if (server.exited || server.error) {
+    if (!server.expectedExit && (server.exited || server.error)) {
       throw new Error(`${server.name} exited unexpectedly (${server.code}): ${server.error ?? ''}`)
     }
+  }
+}
+
+function startApi() {
+  api = start(`api-${++apiStarts}`, ['dist/server.js'], resolve(root, 'services/api'), apiEnv)
+}
+
+// A file mailbox shared only with the spawned QA process, never an application endpoint.
+// Only this runner's anonymous fixture API can be stopped; PostgreSQL and original rows stay intact.
+async function controlApi() {
+  let command
+  try {
+    command = JSON.parse(await readFile(resolve(controlDir, 'request.json'), 'utf8'))
+  } catch (error) {
+    if (error.code === 'ENOENT' || error instanceof SyntaxError) {
+      return
+    }
+    throw error
+  }
+  if (command.id === controlId) {
+    return
+  }
+  controlId = command.id
+  try {
+    if (command.action === 'stop') {
+      api.expectedExit = true
+      // Simulate an abrupt outage of this runner's read-only anonymous fixture API.
+      // SIGTERM can wait for pooled keep-alive connections across serial scenarios.
+      api.child.kill('SIGKILL')
+      const deadline = Date.now() + 5000
+      while (!api.exited && Date.now() < deadline) {
+        await delay(50)
+      }
+      if (!api.exited) {
+        throw new Error('QA API did not stop')
+      }
+    } else if (command.action === 'start') {
+      if (!api.exited) {
+        throw new Error('QA API is already running')
+      }
+      startApi()
+      await ready(`${apiUrl}/health/ready`)
+    } else {
+      throw new Error('Unsupported QA control action')
+    }
+    await writeFile(
+      resolve(controlDir, 'response.json'),
+      JSON.stringify({ id: controlId, ok: true }),
+    )
+  } catch (error) {
+    await writeFile(
+      resolve(controlDir, 'response.json'),
+      JSON.stringify({ id: controlId, ok: false, error: sanitize(error.message) }),
+    )
+    throw error
   }
 }
 
@@ -142,16 +213,10 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 }
 
 await mkdir(resolve(artifacts, 'logs'), { recursive: true })
+await mkdir(controlDir, { recursive: true })
 let exitCode = 1
 try {
-  start('api', ['dist/server.js'], resolve(root, 'services/api'), {
-    ...process.env,
-    NODE_ENV: 'production',
-    AUTH_MODE: 'disabled',
-    LOG_LEVEL: 'silent',
-    HOST: '127.0.0.1',
-    PORT: '4000',
-  })
+  startApi()
   await ready(`${apiUrl}/health/ready`)
   await ready(`${apiUrl}/v1/race-schedule?pageSize=1`, 851)
   start(
@@ -165,12 +230,57 @@ try {
     },
   )
   await ready(`${nextUrl}/api/racing-catalog/v1/race-schedule?pageSize=1`, 851)
+  // Separate loopback development services exercise the existing dev-session bridge.
+  // Session stdout stays in memory and is never an artifact or a browser credential.
+  const devEnv = {
+    ...process.env,
+    NODE_ENV: 'development',
+    AUTH_MODE: 'dev-session',
+    LOG_LEVEL: 'silent',
+    HOST: '127.0.0.1',
+    PORT: '4001',
+    EVENT_DIRECTOR_CONFIG: JSON.stringify({
+      version: 'event-director-v1',
+      monthlyProbability: 0,
+      pityAfterMisses: 100,
+      monthStartShare: 1,
+    }),
+  }
+  const session = spawnSync(
+    process.execPath,
+    ['dist/cli.js', 'session-create', 'frontend-browser-qa', '1'],
+    { cwd: resolve(root, 'services/api'), env: devEnv, encoding: 'utf8', timeout: 30000 },
+  )
+  if (session.status !== 0) {
+    throw new Error('Could not prepare isolated development test session')
+  }
+  devToken = JSON.parse(session.stdout).token
+  start('api-dev-save', ['dist/server.js'], resolve(root, 'services/api'), devEnv)
+  await ready('http://127.0.0.1:4001/health/ready')
+  start(
+    'next-dev-save',
+    ['node_modules/next/dist/bin/next', 'dev', '-H', '127.0.0.1', '-p', '3001'],
+    root,
+    {
+      ...process.env,
+      NODE_ENV: 'development',
+      DERBY_SAVE_MODE: 'server',
+      DERBY_SERVER_SAVE_LOCAL: '1',
+      DERBY_API_URL: 'http://127.0.0.1:4001',
+      DERBY_API_DEV_SESSION_TOKEN: devToken,
+    },
+  )
+  await ready('http://127.0.0.1:3001/api/server-save/v1/catalog/horses')
+  await ready('http://127.0.0.1:3001/')
   const test = start('playwright', ['node_modules/@playwright/test/cli.js', 'test'], root, {
     ...process.env,
     E2E_BASE_URL: nextUrl,
+    E2E_SERVER_BASE_URL: 'http://127.0.0.1:3001',
     E2E_API_URL: apiUrl,
+    E2E_API_CONTROL_DIR: controlDir,
   })
   while (!test.exited) {
+    await controlApi()
     assertServers()
     if (test.error) {
       throw new Error(test.error)

@@ -13,7 +13,7 @@ import {
   API_RACE_ENGINE_VERSION,
 } from '../../../packages/shared/src/server-domain'
 
-test('server authority keeps browser fixture events separate and uses the shared v3 race engine', () => {
+test('server authority keeps browser fixture events separate and uses the shared v4 race engine', () => {
   const base = startCareer('DEV_HORSE_SERENE_STEP')
   const local = {
     ...base,
@@ -26,7 +26,7 @@ test('server authority keeps browser fixture events separate and uses the shared
   assert.deepEqual(server.values, expected.values)
   assert.equal(server.event, undefined)
   assert.equal(server.action?.event, undefined)
-  assert.equal(API_RACE_ENGINE_VERSION, 'race-sim-v3')
+  assert.equal(API_RACE_ENGINE_VERSION, 'race-sim-v4')
 })
 
 test('director is deterministic under pool reorder, versioned seed and weighted filtering; unknown source grammar is disabled', async () => {

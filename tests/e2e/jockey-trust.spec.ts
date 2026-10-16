@@ -9,7 +9,7 @@ for (const viewport of [
   { width: 1440, height: 900 },
 ]) {
   for (const theme of ['light', 'dark']) {
-    test(`local trust ${viewport.width} ${theme}: missing relationships remain distinct from zero through list, detail, archive and race replay`, async ({
+    test(`local trust ${viewport.width} ${theme}: actual relationships remain distinct from missing archive data through list, detail, archive and race replay`, async ({
       page,
     }, info) => {
       const racing = buildFixture('playback-12')
@@ -44,14 +44,14 @@ for (const viewport of [
         page.getByRole('button', { name: 'DERBY CAREER', exact: true }).first().click()
       await page.goto('/')
       await page.getByRole('button', { name: /JOCKEYS 기수/ }).click()
-      await expect(page.locator('[data-trust-status="unavailable"]')).toHaveCount(3)
-      await expect(page.locator('[data-trust-status="available"]')).toHaveCount(0)
+      await expect(page.locator('[data-trust-status="available"]')).toHaveCount(3)
+      await expect(page.locator('[data-trust-status="unavailable"]')).toHaveCount(0)
       await expect(page.getByText(/호흡도|chemistry/i)).toHaveCount(0)
       await page.getByRole('button', { name: /한도윤/ }).click()
       await expect(
         page.getByRole('heading', { name: '말과 기수의 신뢰도', exact: true }),
       ).toBeVisible()
-      await expect(page.locator('[data-trust-status]')).toHaveText('정보 없음')
+      await expect(page.locator('[data-trust-status]')).toHaveText('0 / 100')
       await noOverflow()
       await info.attach('jockey-trust-detail', {
         body: await page.screenshot({ fullPage: true }),
@@ -60,17 +60,17 @@ for (const viewport of [
       await page.reload()
       await page.getByRole('button', { name: /JOCKEYS 기수/ }).click()
       await page.getByRole('button', { name: /서지안/ }).click()
-      await expect(page.locator('[data-trust-status]')).toHaveText('정보 없음')
+      await expect(page.locator('[data-trust-status]')).toHaveText('0 / 100')
       await home()
       await page.getByRole('button', { name: /STABLE 마구간/ }).click()
       await page.locator('[data-archive-id]').first().click()
-      await expect(page.getByText(/신뢰도 정보 없음/).first()).toBeVisible()
+      await expect(page.locator('[data-trust-status="unavailable"]').first()).toBeVisible()
       await expect(page.getByText(/Chemistry/)).toHaveCount(0)
       await noOverflow()
       await home()
       await page.getByRole('button', { name: '육성 계속', exact: true }).click()
       await page.getByRole('button', { name: '출전 정보 확인', exact: true }).click()
-      await expect(page.locator('[data-trust-status="unavailable"]')).toHaveCount(4)
+      await expect(page.locator('[data-trust-status="available"]')).toHaveCount(4)
       await noOverflow()
       await info.attach('entry-trust', {
         body: await page.screenshot({ fullPage: true }),

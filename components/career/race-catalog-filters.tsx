@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import {
   applyFilters,
   countries,
@@ -22,6 +22,19 @@ export function RaceCatalogFilters({
   onChange: (query: Query) => void
 }) {
   const [error, setError] = useState<string | null>(null)
+  const form = useRef<HTMLFormElement>(null)
+  const focusName = useRef<string | null>(null)
+  const queryKey = queryParams(query).toString()
+  useLayoutEffect(() => {
+    const name = focusName.current
+    focusName.current = null
+    if (name) {
+      const control = form.current?.elements.namedItem(name)
+      if (control instanceof HTMLElement) {
+        control.focus({ preventScroll: true })
+      }
+    }
+  }, [queryKey])
   const selects = [
     { name: 'country', label: '개최국', options: Object.entries(countries) },
     {
@@ -45,7 +58,8 @@ export function RaceCatalogFilters({
   ] as const
   return (
     <form
-      key={queryParams(query).toString()}
+      key={queryKey}
+      ref={form}
       aria-label="경주 조회 조건"
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
       onSubmit={(event) => {
@@ -57,6 +71,11 @@ export function RaceCatalogFilters({
           }
         })
         try {
+          const active = document.activeElement
+          focusName.current =
+            active instanceof HTMLSelectElement || active instanceof HTMLInputElement
+              ? active.name
+              : null
           onChange(applyFilters(params, query))
           setError(null)
         } catch (error) {

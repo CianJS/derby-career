@@ -380,7 +380,7 @@ export const careerStore = {
               jockeyId: draft.jockeyId,
               tactic: draft.tactic,
               expectedTurn: career.state.careerTurnIndex,
-              engineVersion: 'race-sim-v3',
+              engineVersion: 'race-sim-v4',
             },
           })
         })()

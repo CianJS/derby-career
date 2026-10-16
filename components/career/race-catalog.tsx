@@ -68,8 +68,8 @@ function useLocation() {
     return () => window.removeEventListener('popstate', restore)
   }, [])
   const change = (query: Query) => {
-    history.replaceState(
-      { ...history.state, raceCatalogScroll: 0, raceCatalogFocus: null },
+    history.pushState(
+      { ...history.state, raceCatalogScroll: 0, raceCatalogTableScroll: 0, raceCatalogFocus: null },
       '',
       catalogUrl(window.location.href, query),
     )
@@ -96,6 +96,10 @@ export function Races({ setView }: { setView: (view: View) => void }) {
     const frame = requestAnimationFrame(() => {
       restored.current = true
       const id = history.state?.raceCatalogFocus
+      const table = document.getElementById('race-catalog-table')
+      if (table) {
+        table.scrollLeft = Number(history.state?.raceCatalogTableScroll) || 0
+      }
       if (id) {
         document.getElementById('catalog-' + id)?.focus({ preventScroll: true })
       }
@@ -140,6 +144,8 @@ export function Races({ setView }: { setView: (view: View) => void }) {
                   {
                     ...history.state,
                     raceCatalogScroll: window.scrollY,
+                    raceCatalogTableScroll:
+                      document.getElementById('race-catalog-table')?.scrollLeft ?? 0,
                     raceCatalogFocus: race.id,
                   },
                   '',
@@ -193,6 +199,7 @@ export function RaceCatalogList({
             표를 좌우로 스크롤해 나머지 정보를 확인하세요.
           </p>
           <div
+            id="race-catalog-table"
             className="overflow-x-auto rounded-2xl border border-border bg-card"
             tabIndex={0}
             role="region"

@@ -15,7 +15,11 @@ import {
   type RaceEntryDraft,
 } from '@/lib/career/race-entry'
 import { careerStore, useCareer } from '@/lib/career/store'
-import { jockeyTrust, raceEntryJockeyTrust, type JockeyTrust } from '@/lib/career/jockey-trust'
+import {
+  jockeyTrust,
+  raceEntryJockeyTrust,
+  type JockeyTrust,
+} from '@/lib/career/jockey-trust-presentation'
 import { JockeyTrustValue } from './jockey-trust'
 import { recommendRaceEntry, updateRaceEntryDraft } from '@/lib/career/race-entry-recommendation'
 import { cn } from '@/lib/utils'

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { fixture } from '../services/api/tests/helpers'
 import { createApiClient } from '../packages/shared/src/client'
 import { ServerSaveController, type SaveSnapshot } from '../lib/server-save/controller'
-import { jockeyTrust } from '../lib/career/jockey-trust'
+import { jockeyTrust, readServerRelations } from '../lib/career/jockey-trust-presentation'
 
 // Real Fastify + generated validators + PostgreSQL engine. SQL values below are isolated test
 // data, not a frontend relationship calculation or an application API fallback.
@@ -92,6 +92,19 @@ test('current server relationship values survive controller reconnect, stay owne
       true,
     )
     assert.equal(snapshot!.workspace!.career, null)
+    const retirement = snapshot!.workspace!.retirements[0]
+    const identity = {
+      careerId: id,
+      ownedHorseId: horseId,
+      revision: retirement.snapshot.revision,
+      status: 'retired' as const,
+    }
+    assert.equal((await readServerRelations(api, identity)).SEO_JIAN.trust, 72)
+    assert.equal(
+      (await f.call('GET', `/v1/careers/${id}/jockey-relations`, undefined, f.other.token))
+        .statusCode,
+      404,
+    )
     assert.deepEqual(trust('SEO_JIAN'), { status: 'no-horse' })
     assert.equal(
       await c.send({
@@ -106,6 +119,7 @@ test('current server relationship values survive controller reconnect, stay owne
     assert.notEqual(snapshot!.workspace!.career!.ownedHorseId, horseId)
     assert.deepEqual(trust('SEO_JIAN'), { status: 'available', value: 0 })
     assert.equal(journal, null)
+    assert.equal((await readServerRelations(api, identity)).SEO_JIAN.trust, 72)
     c.dispose()
   } finally {
     await f.close()
