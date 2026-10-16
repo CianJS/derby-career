@@ -242,12 +242,13 @@ for (const viewport of sizes) {
       const list = await catalog.list({ search, pageSize: 100 })
       expect(list.pagination.total).toBe(2)
       expect(list.data[0].duplicateGroup).toBe(list.data[1].duplicateGroup)
-      examples.push(list.data[0])
+      examples.push(...list.data)
     }
     const evidence = []
     for (const race of examples) {
       expect(race).toBeTruthy()
       await page.goto('/?view=races&rc_search=' + encodeURIComponent(race.name))
+      await assertResults(page, { search: race.name })
       const row = page.locator(`#catalog-${race.id}`)
       await expect(row).toBeVisible()
       const response = page.waitForResponse((r) =>

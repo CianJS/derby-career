@@ -116,7 +116,9 @@ async function controlApi() {
   try {
     if (command.action === 'stop') {
       api.expectedExit = true
-      api.child.kill('SIGTERM')
+      // Simulate an abrupt outage of this runner's read-only anonymous fixture API.
+      // SIGTERM can wait for pooled keep-alive connections across serial scenarios.
+      api.child.kill('SIGKILL')
       const deadline = Date.now() + 5000
       while (!api.exited && Date.now() < deadline) {
         await delay(50)
