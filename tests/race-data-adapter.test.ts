@@ -11,7 +11,7 @@ import { simulateRace, summarizeRaceLog } from '../lib/career/race-simulation'
 import { createApiClient } from '../packages/shared/src/client'
 import { handleServerSave } from '../lib/server-save/bridge'
 
-function fixture(version: 'race-sim-v1' | 'race-sim-v2' | 'race-sim-v3') {
+function fixture(version: 'race-sim-v1' | 'race-sim-v2' | 'race-sim-v3' | 'race-sim-v4') {
   const initial = { ...startCareer('DEV_HORSE_SERENE_STEP'), month: 3, careerTurnIndex: 3 }
   const career = lockRaceEntry(initial, recommendRaceEntry(initial))
   const log = simulateRace(career.raceRun!, version)
@@ -19,7 +19,7 @@ function fixture(version: 'race-sim-v1' | 'race-sim-v2' | 'race-sim-v3') {
   return { career, log }
 }
 
-for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
+for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4'] as const) {
   test(`local adapter preserves persisted ${version} without server requests`, async () => {
     const { career, log } = fixture(version)
     const api = createApiClient({
@@ -33,7 +33,7 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
     assert.equal(data.run, career.raceRun)
   })
 }
-for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
+for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4'] as const) {
   test(`server adapter reads ${version} with GET only and never touches local storage`, async () => {
     const { career, log } = fixture(version)
     const calls: string[] = []

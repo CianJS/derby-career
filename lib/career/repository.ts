@@ -112,6 +112,7 @@ function migrateLegacy(): Career | null {
     record: summarizeRecords(legacy.activeHorse.raceRecords).record,
     prize: summarizeRecords(legacy.activeHorse.raceRecords).prize,
     raceRecords: legacy.activeHorse.raceRecords ?? [],
+    ...(old.jockeyTrust ? { jockeyTrust: old.jockeyTrust } : {}),
     action: null,
     recent: [],
   }

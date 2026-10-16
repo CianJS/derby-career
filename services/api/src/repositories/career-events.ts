@@ -4,7 +4,12 @@ import type { Query } from '../db'
 import { ApiError, conflict } from '../errors'
 import { digest } from '../services/identity'
 import { EventRepository } from './events'
-import { conditionsMatch, planDraw, drawEvent } from '../modules/events/director'
+import {
+  conditionsMatch,
+  planDraw,
+  drawEvent,
+  trustChoiceAvailable,
+} from '../modules/events/director'
 import { applyImmediateEffects } from '../modules/events/resolver'
 import {
   isHealthy,
@@ -39,6 +44,7 @@ export class CareerEventRepository {
     const choice = history.definition_snapshot.choices.find((x) => x.id === choiceId)
     if (
       !choice ||
+      !trustChoiceAvailable(choice, row.state) ||
       !conditionsMatch(choice.conditions, {
         career: row.state,
         choice:
@@ -71,6 +77,7 @@ export class CareerEventRepository {
         JSON.stringify(resolved.modifiers),
         JSON.stringify({
           changes: resolved.changes,
+          ...(resolved.trustChanges?.length ? { trustChanges: resolved.trustChanges } : {}),
           ...(selection.risk ? { risk: selection.risk } : {}),
         }),
       ],
@@ -91,7 +98,10 @@ export class CareerEventRepository {
     )
     if (event.automatic) {
       const c = event.choices[0]
-      if (!conditionsMatch(c.conditions, { career: row.state, choice, beforeAction })) {
+      if (
+        !trustChoiceAvailable(c, row.state) ||
+        !conditionsMatch(c.conditions, { career: row.state, choice, beforeAction })
+      ) {
         throw conflict('자동 이벤트 조건이 변경되었습니다.')
       }
       const resolved = applyImmediateEffects(row.state, c.effects)
@@ -104,7 +114,10 @@ export class CareerEventRepository {
           c.id,
           state,
           JSON.stringify(resolved.modifiers),
-          JSON.stringify({ changes: resolved.changes }),
+          JSON.stringify({
+            changes: resolved.changes,
+            ...(resolved.trustChanges?.length ? { trustChanges: resolved.trustChanges } : {}),
+          }),
         ],
       )
     }
@@ -132,7 +145,11 @@ export class CareerEventRepository {
           { career: row.state },
         ) &&
         (e.timing !== 'month_start' ||
-          e.choices.some((c) => conditionsMatch(c.conditions, { career: row.state })))
+          e.choices.some(
+            (c) =>
+              conditionsMatch(c.conditions, { career: row.state }) &&
+              trustChoiceAvailable(c, row.state),
+          ))
       )
     })
     const seed = digest({ seed: row.seed, turn: row.turn, version: this.director.version })

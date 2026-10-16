@@ -1,3 +1,4 @@
+import type { TrustEventEffect } from '../jockey-trust'
 import type { Stat } from '../model'
 
 export type EventKind = 'focus' | 'breakthrough' | 'discovery' | 'recovery' | 'life'
@@ -15,7 +16,7 @@ export type EventScope = 'immediate' | 'training' | 'rest' | Stat
  * the base gain on top, `flat` adds points. `fatigue` and `bodyLoad` are signed deltas of the action's cost
  * (positive adds load, negative lightens it). All of them are optional and combine additively.
  */
-export type EventEffect = { scope: EventScope; growth?: { multiplier?: number; ratio?: number; flat?: number }; fatigue?: number; bodyLoad?: number }
+export type EventEffect = { trust?: TrustEventEffect; scope: EventScope; growth?: { multiplier?: number; ratio?: number; flat?: number }; fatigue?: number; bodyLoad?: number }
 export type EventChoiceId = 'A' | 'B'
 export type EventChoice = { id: EventChoiceId; effects: EventEffect[] }
 /** `trainingStat` needs that training to be possible (month-start) or performed (training-result). `action: 'rest'` needs a rest action. */

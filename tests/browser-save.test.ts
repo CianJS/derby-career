@@ -582,3 +582,20 @@ test('save validation rejects unsafe data shapes rather than crashing presentati
     assert.deepEqual(readBrowserSave(), before)
   }
 })
+
+test('trust survives durable Local reload and retirement without leaking into a new career', () => {
+  browserStorage()
+  const career = {
+    ...base(),
+    jockeyTrust: { SEO_JIAN: { starts: 3, trust: 40 }, HAN_DOYUN: { starts: 1, trust: 15 } },
+  }
+  writeCareer(career)
+  assert.deepEqual(readCareer()?.jockeyTrust, career.jockeyTrust)
+  const archived = retireLocalCareer(readCareer()!)
+  assert.deepEqual(archived.archive[0].jockeyTrust, career.jockeyTrust)
+  assert.deepEqual(readBrowserSave().lifecycle?.archive?.[0].jockeyTrust, career.jockeyTrust)
+  assert.equal(readCareer(), null)
+  writeCareer(startLocalCareer(career.horse.id, null))
+  assert.deepEqual(readCareer()?.jockeyTrust ?? {}, {})
+  assert.deepEqual(readBrowserSave().lifecycle?.archive?.[0].jockeyTrust, career.jockeyTrust)
+})

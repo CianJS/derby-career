@@ -240,7 +240,7 @@ test('locked v1/v2/v3 logs determine results; completion cannot duplicate payout
             [completed.json().career.ownedHorseId, entry.jockeyId],
           )
         ).rows,
-        [{ chemistry: 0, starts: 1 }],
+        [{ chemistry: completed.json().career.state.raceRecords[0].trustChange.after, starts: 1 }],
       )
       assert.equal((await f.call('GET', `/v1/careers/${id}/records`)).json().data.length, 1)
       assert.equal(

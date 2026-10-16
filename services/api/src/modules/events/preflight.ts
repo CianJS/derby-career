@@ -212,7 +212,7 @@ export function inspectEventCatalog(value: unknown) {
         )
         checkTypes(
           choice.effects,
-          ['value_delta', 'action_modifier', 'resolved_growth_bonus'],
+          ['value_delta', 'action_modifier', 'resolved_growth_bonus', 'jockey_trust'],
           'EFFECT_TYPE',
           `events.${index}.choices.${choiceIndex}.effects`,
         )

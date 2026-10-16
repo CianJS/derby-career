@@ -1,3 +1,10 @@
+import {
+  careerJockeyRelations,
+  raceTrustChange,
+  applyTrustEvent,
+  assertJockeyRelations,
+  type JockeyRelations,
+} from './jockey-trust'
 import { assertRaceRun, type RaceRunInput } from './race-entry'
 import { BALANCE } from './balance'
 import { deriveCondition, isHealthy, rollsInjury } from './status'
@@ -163,6 +170,14 @@ export function applyRaceResult(
   if (expected && (expected.placing !== placing || expected.prizeMoney !== prizeMoney)) {
     throw new Error('저장된 시뮬레이션 결과와 일치하지 않습니다.')
   }
+  const trustChange = raceTrustChange(run, placing)
+  const jockeyId = run.player.jockeySnapshot.id
+  const relations = careerJockeyRelations(career)
+  const previous = relations[jockeyId] ?? { starts: 0, trust: 0 }
+  const jockeyRelations = {
+    ...relations,
+    [jockeyId]: { starts: previous.starts + 1, trust: trustChange.after },
+  }
   const raceRecords = [
     ...career.raceRecords,
     {
@@ -175,6 +190,7 @@ export function applyRaceResult(
       prizeMoney,
       jockeyId: run.player.jockeySnapshot.id,
       jockeyName: run.player.jockeySnapshot.name,
+      trustChange,
       distance: run.raceDefinitionSnapshot.distance,
       grade: run.raceDefinitionSnapshot.raceClass,
     },
@@ -192,6 +208,7 @@ export function applyRaceResult(
     health: after.health.health,
     healthRecovery: after.health.recovery,
     raceRecords,
+    jockeyTrust: jockeyRelations,
     ...summarizeRecords(raceRecords),
   }
 }
@@ -232,6 +249,8 @@ function nextTime(
 /** `event`, `eventLog` and `eventMisses` are absent on saves from before events: `undefined` means "not enrolled yet", `null` means "no event this month". */
 export type Career = {
   version: 1
+  /** Absent on legacy saves; no retroactive trust growth is inferred. */
+  jockeyTrust?: JockeyRelations
   event?: CareerEvent | null
   eventLog?: EventLogEntry[]
   eventMisses?: number
@@ -387,6 +406,12 @@ export function resolveAction(
       result.push({ key, before, after })
     }
   }
+  let related = state
+  for (const effect of plan.effects) {
+    if (effect.trust) {
+      related = applyTrustEvent(related, effect.trust).career
+    }
+  }
   const health = healthState.health
   const condition = deriveCondition(values, health)
   const statusChanges: StatusChange[] = []
@@ -409,6 +434,7 @@ export function resolveAction(
     health,
     healthRecovery: healthState.recovery,
     condition,
+    ...(related.jockeyTrust ? { jockeyTrust: related.jockeyTrust } : {}),
     ...(plan.event !== undefined ? { event: plan.event } : {}),
     action: { ...action, result, statusChanges, ...(appliedEvent ? { event: appliedEvent } : {}) },
   }
@@ -434,6 +460,9 @@ export function chooseEvent(
   if (!choice) {
     throw new Error('선택할 수 없는 이벤트 항목입니다.')
   }
+  if (choice.effects.some((effect) => effect.trust && effect.scope !== 'immediate')) {
+    throw new Error('선택지의 신뢰도 효과는 즉시 적용으로 선언해야 합니다.')
+  }
   const chosen: CareerEvent = { ...event, choice: choiceId }
   const immediate = immediateEffects(choice.effects)
   const values = { ...state.values }
@@ -446,12 +475,19 @@ export function chooseEvent(
     )
     spent[key] = values[key] - before
   }
+  let related = state
+  for (const effect of immediate) {
+    if (effect.trust) {
+      related = applyTrustEvent(related, effect.trust).career
+    }
+  }
   const definition = catalog.find(eventId)!
   const status = pendingEffects(definition, chosen).length ? 'chosen' : 'applied'
   return {
     ...state,
     values,
     condition: deriveCondition(values, state.health),
+    ...(related.jockeyTrust ? { jockeyTrust: related.jockeyTrust } : {}),
     event: { ...chosen, status, ...(immediate.length ? { immediate: spent } : {}) },
   }
 }
@@ -560,6 +596,9 @@ export function assertCareer(value: unknown): asserts value is Career {
     throw new Error('저장된 육성 데이터를 읽을 수 없습니다. 기존 저장은 유지됩니다.')
   }
   assertRaceRecords(state.raceRecords)
+  if (state.jockeyTrust !== undefined) {
+    assertJockeyRelations(state.jockeyTrust)
+  }
   if (
     !state.horse.stats ||
     statKeys.some((key) => !Number.isFinite(state.horse.stats[key]) || state.horse.stats[key] < 0)

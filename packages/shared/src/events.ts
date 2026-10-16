@@ -1,3 +1,4 @@
+import type { TrustEventAmount } from '../../../lib/career/jockey-trust'
 import type { Choice, Stat } from './domain'
 
 export const eventCategories = ['common', 'normal', 'special', 'accident', 'hidden'] as const
@@ -30,6 +31,7 @@ export type EventCondition =
   | { type: 'value_range'; key: Stat | 'fatigue' | 'bodyLoad'; min?: number; max?: number }
   | { type: 'turn_range'; min?: number; max?: number }
 export type EventEffect =
+  | { type: 'jockey_trust'; jockeyId: string; amount: TrustEventAmount }
   | { type: 'value_delta'; key: Stat | 'fatigue' | 'bodyLoad'; amount: number }
   | {
       type: 'action_modifier'

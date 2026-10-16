@@ -30,7 +30,7 @@ test('local recovery leaves an empty save empty and persists a locked action exa
   assert.equal(storage.data.get(BROWSER_SAVE_KEY), persisted)
 })
 
-for (const engine of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3']) {
+for (const engine of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4']) {
   test(`local recovery restores a missing ${engine} cache from its locked Seed and digest`, () => {
     const storage = browserStorage()
     const career = raceCareer()

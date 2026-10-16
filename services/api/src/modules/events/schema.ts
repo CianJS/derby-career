@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { TRUST_EVENT_AMOUNTS } from '../../../../../packages/shared/src/domain'
 import { eventCategories, eventTimings } from '../../../../../packages/shared/src/events'
 import { effectSemanticIssues, unreachableTrainingResult } from './semantics'
 const stat = z.enum(['speed', 'stamina', 'power', 'guts', 'intelligence'])
@@ -65,6 +66,13 @@ export const conditionSchema = z.discriminatedUnion('type', [
     .strict(),
 ])
 export const effectSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('jockey_trust'),
+      jockeyId: z.string().min(1).max(100),
+      amount: z.union(TRUST_EVENT_AMOUNTS.map((n) => z.literal(n))),
+    })
+    .strict(),
   z
     .object({
       type: z.literal('value_delta'),

@@ -45,6 +45,12 @@ export function createApiClient(options: ApiClientOptions) {
         body,
         true,
       ),
+    getJockeyRelations: (id: string) =>
+      request<Models['JockeyRelationsResponse']>(
+        careerPath(id) + '/jockey-relations',
+        undefined,
+        true,
+      ),
     getRaceEntryOptions: (id: string) =>
       request<Models['RaceEntryOptions']>(careerPath(id) + '/race-entries', undefined, true),
     enterRace: (id: string, body: Models['EnterRace']) =>

@@ -1,3 +1,4 @@
+import { assertJockeyRelations } from './jockey-trust'
 import type { LifecycleHorse } from './lifecycle'
 import type { HorseRaceRecord } from './records'
 
@@ -73,6 +74,9 @@ function horse(value: unknown) {
       ))
   ) {
     throw invalid()
+  }
+  if (value.jockeyTrust !== undefined) {
+    assertJockeyRelations(value.jockeyTrust)
   }
   for (const key of [
     'sex',
