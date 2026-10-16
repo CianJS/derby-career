@@ -254,7 +254,14 @@ try {
   if (session.status !== 0) {
     throw new Error('Could not prepare isolated development test session')
   }
-  devToken = JSON.parse(session.stdout).token
+  try {
+    devToken = JSON.parse(session.stdout).token
+    if (typeof devToken !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(devToken)) {
+      throw new Error()
+    }
+  } catch {
+    throw new Error('Could not read isolated development test session')
+  }
   start('api-dev-save', ['dist/server.js'], resolve(root, 'services/api'), devEnv)
   await ready('http://127.0.0.1:4001/health/ready')
   start(

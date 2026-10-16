@@ -1,4 +1,5 @@
-import type { useCareer } from './store'
+import type { Career } from './model'
+import type { SaveWorkspace } from '../server-save/workspace'
 import { jockeyTrust as currentLocalTrust, type JockeyRelations } from './jockey-trust'
 import type { components } from '../../packages/shared/src/generated/api'
 import type { DerbyApiClient } from '../../packages/shared/src/client'
@@ -7,10 +8,16 @@ import { validateJockeyRelationsResponse } from '../../packages/shared/src/gener
 export type JockeyTrust =
   | { status: 'available'; value: number }
   | { status: 'loading' | 'error' | 'unavailable' | 'no-horse' }
-type TrustSnapshot = Pick<
-  ReturnType<typeof useCareer>,
-  'ready' | 'busy' | 'pending' | 'error' | 'mode' | 'career' | 'workspace' | 'raceOptions'
->
+type TrustSnapshot = {
+  ready: boolean
+  busy: boolean
+  pending: boolean
+  error: string | null
+  mode: 'local' | 'server' | null
+  career: Career | null
+  workspace: SaveWorkspace | null
+  raceOptions: components['schemas']['RaceEntryOptions'] | null
+}
 export function storedTrust(relations: JockeyRelations | undefined, id: string): JockeyTrust {
   const value = relations?.[id]?.trust
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100

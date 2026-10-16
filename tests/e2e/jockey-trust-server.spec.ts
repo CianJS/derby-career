@@ -47,7 +47,7 @@ test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt,
     }
     await page
       .getByRole('group', { name: '월간 행동 선택' })
-      .getByRole('button', { name: /^경주 출전/ })
+      .getByRole('button', { name: /^경주 / })
       .click()
     await page.getByRole('button', { name: '경주 출전 준비', exact: true }).click()
     await expect(

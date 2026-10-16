@@ -80,6 +80,7 @@ export class ServerSaveController {
       if (
         !validateRaceEntryOptions(options) ||
         options.career.id !== current.career.id ||
+        options.career.ownedHorseId !== current.career.ownedHorseId ||
         options.career.revision !== current.career.revision
       ) {
         throw new Error('출전 조건이 변경되었습니다. 최신 서버 기록을 다시 불러와 주세요.')

@@ -314,7 +314,7 @@ function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
               >
                 <span className="tabular-nums text-muted-foreground">{r.date}</span>
                 <span className="font-serif">
-                  {r.race}
+                  <span>{r.race}</span>
                   <span className="mt-1 block text-xs">
                     <TrustChangeValue change={r.trustChange} />
                   </span>
