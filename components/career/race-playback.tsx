@@ -90,7 +90,7 @@ export function PhaseMarker({ phaseIndex }: { phaseIndex: number }) {
           aria-current={index === phaseIndex ? 'step' : undefined}
           className={index === phaseIndex ? 'active' : index < phaseIndex ? 'passed' : ''}
         >
-          {phase.replace('_', ' ')}
+          <span className="race-phase-label">{phase.replace('_', ' ')}</span>
         </li>
       ))}
     </ol>
@@ -492,12 +492,16 @@ function Stage({
           )}
         </div>
       </header>
-      <PhaseMarker phaseIndex={phaseIndex} />
-      <p className="mb-2 text-xs text-muted-foreground">
-        원 안 숫자는 마번 · 가로는 주행 거리(오른쪽이 결승선) · 세로는 진로를 바탕으로 겹침을 조정한
-        위치이며 고정 차선이나 순위 행이 아닙니다. 현재 순위는 FOCUS와 POSITION BOARD에서
-        확인하세요.
-      </p>
+      <div className="race-spectate-guide">
+        <PhaseMarker phaseIndex={phaseIndex} />
+        <p className="race-strip-guide">
+          <span>원 안 숫자는 마번입니다. 현재 순위는 FOCUS와 POSITION BOARD에서 확인하세요.</span>
+          <span>
+            가로는 주행 거리(오른쪽이 결승선), 세로는 진로를 바탕으로 겹침을 조정한 위치이며 고정
+            차선이나 순위 행이 아닙니다.
+          </span>
+        </p>
+      </div>
       <div className="race-stage-row">
         <RaceStrip
           frame={frame}
