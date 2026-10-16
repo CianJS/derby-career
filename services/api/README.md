@@ -116,11 +116,13 @@ API `actionId`는 UUID이며 `career.state.action.actionId`의 기존 도메인 
 
 ## 서버 레이스
 
-신규 출전은 기존 공유 `simulateRace`를 통해 `lib/career/race-sim-v3.ts`를 사용한다. 엔진을 생략하면 **v3**이며, `engineVersion: 'race-sim-v1'` 또는 `'race-sim-v2'`도 계속 지원한다. 적용 전 `npm run db:migrate`로 **004 migration**을 실행한다. `/health/ready`는 현재 최신 006 migration까지 요구하며, 기존 001~003의 체크섬과 저장 기록은 변경하지 않는다.
+신규 출전은 공유 `simulateRace`의 **race-sim-v4**를 기본 사용한다. 기존 v1/v2/v3 지정 요청과 저장 로그는 원래 계산으로 유지한다. v4는 기존 v3 코어에 잠긴 신뢰도의 execution 보정만 더한다. 적용 전 `npm run db:migrate`로 **007_jockey_trust.sql**까지 실행한다. readiness도 007을 요구하며 기존 migration과 저장 로그/결과는 변경하지 않는다.
+
+[신뢰도 규칙·출전 전 전력 평가·DB/Local 이행·Frontend 계약](docs/jockey-trust.md)을 확인한다. 기존 내부 chemistry 필드는 신뢰도를 뜻하며 새 조회는 `GET /v1/careers/{careerId}/jockey-relations` / `getJockeyRelations`다. 현역/은퇴 관계의 trust·starts와 Career ID/revision을 소유자 범위로 제공한다. 실제 이벤트 1,000개에는 신뢰도 효과를 임의로 추가하지 않았다.
 
 | 메서드와 경로                                                | 공유 클라이언트       | 반환 데이터                                                                                             |
 | ------------------------------------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------- |
-| `GET /v1/careers/{careerId}/race-entries`                    | `getRaceEntryOptions` | 현재 Career, 기본 엔진, 현재 월 DB 경주별 `eligible`/`restrictionReason`, 계약 기수의 현재 호흡도, 전술 |
+| `GET /v1/careers/{careerId}/race-entries`                    | `getRaceEntryOptions` | 현재 Career, 기본 엔진, 현재 월 DB 경주별 `eligible`/`restrictionReason`, 계약 기수의 현재 신뢰도, 전술 |
 | `POST /v1/careers/{careerId}/race-entries`                   | `enterRace`           | 잠긴 `raceRunId`와 Career                                                                               |
 | `GET /v1/careers/{careerId}/race-runs/{raceRunId}`           | `getRaceRun`          | RaceRun, 출전 당시 건강, 엔진·digest·로그 크기 metadata                                                 |
 | `GET /v1/careers/{careerId}/race-runs/{raceRunId}/log`       | `getRaceLog`          | 원본 Simulation Log와 최종 결과                                                                         |
@@ -132,7 +134,7 @@ Run의 `engineVersion: 'entry-contract-v1'`은 **입력 계약 버전**이다. �
 
 완료 본문은 `{ commandId }`다. 완료는 저장된 결과로 전적·상금·건강 변화·기승 횟수를 한 번 반영하고 **다음 월까지 진행**한다. 이후 `months/advance`를 추가 호출하지 않는다. 같은 완료 ID는 최초 receipt를 반환하고, 새 완료 ID로 이미 끝난 경주를 요청하면 저장 결과와 현재 Career를 반환한다. 예전 출전·완료 receipt의 Career는 당시 상태이므로 화면 복원에는 최신 `getCareerWorkspace`를 사용한다. 재시도는 ID와 본문을 그대로 유지하며, 과거에 엔진을 생략한 요청에는 새 엔진 필드를 추가하지 않는다.
 
-Frontend의 서버 저장 controller/journal, Next bridge의 경주 경로 및 Playback의 서버 Log 로딩은 Frontend Work에서 연결해야 한다. 이 PR은 기존 `ServerSaveCommand`의 종류나 브라우저 저장을 바꾸지 않는다. 유료 출전, 호흡도 성장 및 정식 경주/후보 데이터는 기존 제한을 유지한다.
+서버 저장 controller/journal, Next bridge 및 Playback은 저장된 Log를 읽는 기존 흐름을 유지한다. 신규 신뢰도 조회도 bridge에서 검증하며 기존 명령 종류는 유지한다. 신뢰도 표시와 기수 화면 연결은 Frontend Work에서 새 계약을 사용해야 한다. 유료 출전과 정식 경주/후보 출전 활성화 제한은 유지한다.
 
 ## 서버 은퇴
 
@@ -154,9 +156,9 @@ Career의 `state`는 기존 순수 도메인이 사용하는 authoritative aggre
 
 `packages/shared/src/domain.ts`는 `lib/career`의 기존 순수 함수만 재내보낸다. `server-domain.ts`는 이 함수들을 사용하면서 브라우저 fixture 이벤트를 등록하지 않는다. 서버 이벤트의 행동 보정도 이 순수 함수의 0/1000 제한 전에 적용하며, 제한된 결과에서 기본 성장·회복량을 역산하지 않는다. 서버 이벤트는 별도 envelope/DB로만 관리하고, 성장·치료·회복·기본 이벤트 성장/비용 계산은 최신 공유 함수로 처리한다. 서버용 계산 사본이나 새로운 v3 엔진을 작성하지 않았다.
 
-API와 Frontend의 신규 경주는 기존 공유 **`race-sim-v3`**를 사용한다. v1/v2 계산 및 로그도 유지하며, 엔진의 밸런스 수치와 계산식은 변경하지 않는다. 로그는 모든 버전에서 **원본 JSON 문자열과 JSONB**를 함께 저장하고 원본 필드 순서로 반환한다. 새로고침·재요청·완료와 DB 카탈로그 변경에서 저장 결과를 재시뮬레이션하지 않는다.
+API와 Local Save의 신규 경주는 공유 **`race-sim-v4`**를 사용한다. v1/v2/v3 계산 및 로그를 보존하며 기존 v3 밸런스는 변경하지 않는다. v4의 유일한 엔진 보정은 신뢰도에 따른 bounded execution 증가다. 로그는 모든 버전에서 **원본 JSON 문자열과 JSONB**를 함께 저장하고 원본 필드 순서로 반환한다. 새로고침·재요청·완료와 DB 카탈로그 변경에서 저장 결과를 재시뮬레이션하지 않는다.
 
-건강은 공유 `health.ts`의 정상·경상·중등도 부상 및 기존 별칭을 지원하고 중상·중증을 차단한다. 실제 건강과 `healthRecovery`를 Snapshot 및 응답에 보존한다. 최신 v0의 회복·경주 후 건강 규칙은 공유 `BALANCE.health`와 순수 함수를 사용하며 서버가 별도 부상 배율·악화 확률을 추가하지 않는다. v1.4 문서와 현재 playable의 세부 수치 차이는 별도 밸런스 조율이 필요하다. 유료 등록비 출전 제한, 후보 fixture, age 갱신 방식, 운영 후보 생성은 후속 공유 도메인 작업이다. 경주 상금은 저장된 Log 그대로 마방/말 기록에 한 번만 반영하며 호흡도 성장 규칙을 임의로 추가하지 않는다.
+건강은 공유 `health.ts`의 정상·경상·중등도 부상 및 기존 별칭을 지원하고 중상·중증을 차단한다. 실제 건강과 `healthRecovery`를 Snapshot 및 응답에 보존한다. 최신 v0의 회복·경주 후 건강 규칙은 공유 `BALANCE.health`와 순수 함수를 사용하며 서버가 별도 부상 배율·악화 확률을 추가하지 않는다. v1.4 문서와 현재 playable의 세부 수치 차이는 별도 밸런스 조율이 필요하다. 유료 등록비 출전 제한, 후보 fixture, age 갱신 방식, 운영 후보 생성은 후속 공유 도메인 작업이다. 경주 상금은 저장된 Log 그대로 마방/말 기록에 한 번만 반영하며 승인된 신뢰도 변화와 기승 횟수도 같은 완료 트랜잭션에 저장한다.
 
 ## 검증
 
@@ -229,7 +231,7 @@ Frontend 계약은 기존 `GET /v1/events`, 상세 조회, `GET /v1/careers/{id}
 
 ## 실존 경마장·경주 일정 참조 카탈로그
 
-`006_racing_reference_catalog.sql`은 `racecourses`, `racecourse_courses`, `race_schedules`를 추가한다. 기존 `race_definitions` 17개, Career/RaceRun/결과/ledger/저장 로그와 분리되어 있으며 `db:seed`와 서버 시작은 실존 카탈로그를 가져오지 않는다. `/health/ready`는 006까지 적용되어야 성공한다. 운영 DB에는 이번 작업에서 적용하지 않았다.
+`006_racing_reference_catalog.sql`은 `racecourses`, `racecourse_courses`, `race_schedules`를 추가한다. 기존 `race_definitions` 17개, Career/RaceRun/결과/ledger/저장 로그와 분리되어 있으며 `db:seed`와 서버 시작은 실존 카탈로그를 가져오지 않는다. `/health/ready`는 현재 최신 007까지 적용되어야 성공한다. 운영 DB에는 이번 작업에서 적용하지 않았다.
 
 2026-10-15 Notion의 필터 없는 기본 뷰를 끝까지 조회한 속성 snapshot을 `seeds/racing.notion.source.json`에 보존했다. 경마장 **90**, 코스 **101**, 경주 원본 **851행**이다. 비공개 Notion 페이지 식별자는 제거하고 관계는 원본의 안정 ID로 바꿨다. 공식 외부 출처·메모·원본 제원은 보존한다. 변환 결과는 `seeds/racing.catalog.json`, 검토 목록은 `reports/racing-catalog.json`이다. 이 수치는 서로 다른 851개 대회 또는 실행 가능한 경주 수가 아니다.
 

@@ -61,6 +61,7 @@ async function advanceToRaceMonth(f: Fixture, id: string) {
 }
 
 const entryBody = (): Models['EnterRace'] => ({
+  engineVersion: 'race-sim-v3',
   raceRunId: randomUUID(),
   raceDefinitionId: 'DEV_M3_MILE_1600',
   jockeyId: 'SEO_JIAN',
@@ -120,7 +121,7 @@ test('fixed v3 input reproduces the same persisted JSON and digest when raw samp
   assert.equal(JSON.stringify(simulateRaceV3(run)), json)
 })
 
-test('default v3 API data validates and fits playback types; restart and catalogue changes reuse the exact saved log', async () => {
+test('explicit v3 API data validates and fits playback types; restart and catalogue changes reuse the exact saved log', async () => {
   const f = await fixture()
   try {
     await f.db.query("UPDATE event_definitions SET enabled=(id='COM-0034')")
@@ -129,7 +130,7 @@ test('default v3 API data validates and fits playback types; restart and catalog
     const api = clientFor(f)
     const options = await api.getRaceEntryOptions(id)
     assert.ok(validateRaceEntryOptions(options))
-    assert.equal(options.defaultEngineVersion, 'race-sim-v3')
+    assert.equal(options.defaultEngineVersion, 'race-sim-v4')
     assert.equal(options.restrictionReason, null)
     assert.equal(options.races.filter((race) => race.eligible).length, 3)
     assert.deepEqual(await api.getRaceEntryOptions(id), options)
@@ -146,9 +147,9 @@ test('default v3 API data validates and fits playback types; restart and catalog
     const stored = await api.getRaceLog(id, body.raceRunId)
     assert.ok(validateRaceRunResponse(details))
     assert.ok(validateRaceLogResponse(stored))
-    assert.equal(validateEnterRace({ ...body, engineVersion: 'race-sim-v4' }), false)
+    assert.equal(validateEnterRace({ ...body, engineVersion: 'race-sim-v5' }), false)
     assert.equal(
-      validateRaceLogResponse({ log: { ...stored.log, engineVersion: 'race-sim-v4' } }),
+      validateRaceLogResponse({ log: { ...stored.log, engineVersion: 'race-sim-v5' } }),
       false,
     )
     const badPair = structuredClone(details)
@@ -535,6 +536,7 @@ test('004 upgrades the v1/v2 database in place, preserves logs and receipts, and
       '004_race_sim_v3.sql',
       '005_event_activation_guards.sql',
       '006_racing_reference_catalog.sql',
+      '007_jockey_trust.sql',
     ])
     assert.deepEqual(await migrate(f.db), [])
     assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 200)

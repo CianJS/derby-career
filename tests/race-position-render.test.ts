@@ -28,7 +28,7 @@ function markerAttributes(html: string, horseId: string): string {
   return tag.split('>')[0]
 }
 
-for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
+for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4'] as const) {
   test(`${version}: strip, zoom and board show the same playback frame, including non-leading player positions`, () => {
     const log = simulateRace(run, version)
     const frozen = JSON.stringify(log)

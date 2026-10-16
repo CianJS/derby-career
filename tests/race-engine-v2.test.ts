@@ -12,10 +12,10 @@ const make = (seed: string, tactic: typeof tactics[number] = '선입') => {
   return createRaceRun(base, raceDefinitions[1], contractedJockeys[1], tactic, () => (n++ === 0 ? `run-${seed}` : `seed-${seed}`))
 }
 
-test('new races use race-sim-v3 while v1 and v2 stay replayable and deterministic', () => {
-  assert.equal(SIMULATION_ENGINE_VERSION, 'race-sim-v3')
+test('new races use race-sim-v4 while v1 and v2 stay replayable and deterministic', () => {
+  assert.equal(SIMULATION_ENGINE_VERSION, 'race-sim-v4')
   const run = make('v')
-  assert.equal(simulateRace(run).engineVersion, 'race-sim-v3')
+  assert.equal(simulateRace(run).engineVersion, 'race-sim-v4')
   assert.equal(simulateRace(run, 'race-sim-v2').engineVersion, 'race-sim-v2')
   assert.equal(raceLogDigest(simulateRace(run, 'race-sim-v2')), raceLogDigest(simulateRace(run, 'race-sim-v2')))
   const old = { ...run, runners: [run.runners[0], ...legacyFieldV1(run.raceDefinitionSnapshot)] }

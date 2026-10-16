@@ -15,6 +15,7 @@ export declare function validateRetireCareerResponse(value: unknown): value is c
 export declare function validateEnterRace(value: unknown): value is components['schemas']['EnterRace']
 export declare function validateCompleteRace(value: unknown): value is components['schemas']['CompleteRace']
 export declare function validateRaceEntryOptions(value: unknown): value is components['schemas']['RaceEntryOptions']
+export declare function validateJockeyRelationsResponse(value: unknown): value is components['schemas']['JockeyRelationsResponse']
 export declare function validateRaceEntryResponse(value: unknown): value is components['schemas']['RaceEntryResponse']
 export declare function validateRaceRunResponse(value: unknown): value is components['schemas']['RaceRunResponse']
 export declare function validateRaceLogResponse(value: unknown): value is components['schemas']['RaceLogResponse']

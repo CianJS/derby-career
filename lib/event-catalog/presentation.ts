@@ -71,6 +71,8 @@ export function conditionText(condition: Models['EventCondition']): string {
 
 export function effectText(effect: Models['EventEffect']): string {
   switch (effect.type) {
+    case 'jockey_trust':
+      return `지정 기수 신뢰도 ${signed(effect.amount)}`
     case 'value_delta':
       return `${valueLabels[effect.key]} ${signed(effect.amount)}`
     case 'resolved_growth_bonus':

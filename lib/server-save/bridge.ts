@@ -2,6 +2,7 @@ import { validateSaveResponse } from '../../packages/shared/src/save-response-va
 import { validateSaveCommand, type SaveCommand } from './commands'
 import {
   validateRaceEntryOptions,
+  validateJockeyRelationsResponse,
   validateRaceRunResponse,
   validateRaceLogResponse,
   validateCareerWorkspace,
@@ -137,7 +138,9 @@ export async function handleServerSave(
     if (
       path !== '/v1/careers/workspace' &&
       path !== '/v1/catalog/horses' &&
-      !new RegExp(`^/v1/careers/(${uuid})/(race-entries|race-runs/(${uuid})(/log)?)$`).test(path)
+      !new RegExp(
+        `^/v1/careers/(${uuid})/(jockey-relations|race-entries|race-runs/(${uuid})(/log)?)$`,
+      ).test(path)
     ) {
       return reply(404, '지원하지 않는 저장 경로입니다.')
     }
@@ -197,11 +200,13 @@ export async function handleServerSave(
           ? validateCareerWorkspace(result)
           : path === '/v1/catalog/horses'
             ? validateHorseCatalog(result)
-            : path.endsWith('/race-entries')
-              ? validateRaceEntryOptions(result)
-              : path.endsWith('/log')
-                ? validateRaceLogResponse(result)
-                : validateRaceRunResponse(result)
+            : path.endsWith('/jockey-relations')
+              ? validateJockeyRelationsResponse(result)
+              : path.endsWith('/race-entries')
+                ? validateRaceEntryOptions(result)
+                : path.endsWith('/log')
+                  ? validateRaceLogResponse(result)
+                  : validateRaceRunResponse(result)
         : validateSaveResponse(command?.kind ?? 'create', result)
     if (!valid) {
       return reply(502, '서버 저장 응답이 계약과 다릅니다. 같은 요청으로 다시 확인해 주세요.')

@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
+import { raceTrustChange } from '../../../packages/shared/src/domain'
+import { importEvents } from '../src/modules/events/import'
+import { digest } from '../src/services/identity'
+import type { EventDefinition } from '../../../packages/shared/src/events'
 import { postgresDatabase } from '../src/db'
 import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
 import { fixture } from './helpers'
@@ -83,7 +87,7 @@ test('real PostgreSQL row locks serialize concurrent monthly actions and race pa
       assert.deepEqual(r.json(), entered[0].json())
     }
     const run = await f.call('GET', `/v1/careers/${id}/race-runs/${entry.raceRunId}`)
-    assert.equal(run.json().metadata.engineVersion, 'race-sim-v3')
+    assert.equal(run.json().metadata.engineVersion, 'race-sim-v4')
     const completed = await Promise.all(
       Array.from({ length: 8 }, () =>
         f.call('POST', `/v1/careers/${id}/race-runs/${entry.raceRunId}/complete`, {
@@ -105,12 +109,20 @@ test('real PostgreSQL row locks serialize concurrent monthly actions and race pa
       assert.deepEqual(response.json().career, completed[0].json().career)
     }
     const relation = (
-      await f.db.query('SELECT starts FROM jockey_chemistry WHERE horse_id=$1 AND jockey_id=$2', [
-        completed[0].json().career.ownedHorseId,
-        entry.jockeyId,
-      ])
+      await f.db.query(
+        'SELECT starts,chemistry FROM jockey_chemistry WHERE horse_id=$1 AND jockey_id=$2',
+        [completed[0].json().career.ownedHorseId, entry.jockeyId],
+      )
     ).rows[0]
     assert.equal(relation.starts, 1)
+    const expectedTrust = raceTrustChange(
+      run.json().raceRun,
+      run.json().raceRun.simulation.result.placing,
+    ).after
+    assert.equal(relation.chemistry, expectedTrust)
+    assert.ok(
+      completed.every((r) => r.json().career.state.jockeyTrust.SEO_JIAN.trust === expectedTrust),
+    )
     assert.equal(
       Number(
         (
@@ -331,6 +343,77 @@ test('real PostgreSQL serializes reference catalog imports without touching play
           .rows[0].n,
       ),
       41,
+    )
+  } finally {
+    await f.close()
+  }
+})
+
+test('real PostgreSQL serializes explicit trust event choices and new command retries exactly once', async () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('Dedicated test database required')
+  }
+  const f = await fixture({ db: postgresDatabase(url), probability: 1 })
+  try {
+    const source = (await f.call('GET', '/v1/events/COM-0001')).json<EventDefinition>()
+    const { revision: _revision, ...base } = source
+    const definition = {
+      ...base,
+      id: 'COM-TRUST-PG-TEST',
+      timing: 'month_start' as const,
+      automatic: false,
+      enabled: true,
+      status: 'ready' as const,
+      conditions: [{ type: 'always' as const }],
+      choices: [
+        {
+          id: 'A',
+          label: 'test only',
+          conditions: [],
+          effects: [{ type: 'jockey_trust' as const, jockeyId: 'SEO_JIAN', amount: 8 as const }],
+        },
+      ],
+    }
+    await importEvents(f.db, {
+      schemaVersion: 1,
+      events: [{ ...definition, revision: digest(definition) }],
+    })
+    await f.db.query("UPDATE event_definitions SET enabled=(id='COM-TRUST-PG-TEST')")
+    const { id, response } = await f.create()
+    const path = `/v1/careers/${id}/events/${response.career.event.id}/choice`
+    const command = { commandId: randomUUID(), choiceId: 'A', expectedTurn: 1 }
+    for (const sameId of [true, false]) {
+      const replies = await Promise.all(
+        Array.from({ length: 8 }, () =>
+          f.call('POST', path, {
+            ...command,
+            commandId: sameId ? command.commandId : randomUUID(),
+          }),
+        ),
+      )
+      assert.ok(
+        replies.every((reply) => reply.statusCode === 200),
+        replies.map((reply) => reply.body).join('\n'),
+      )
+      assert.ok(
+        replies.every((reply) => reply.json().career.state.jockeyTrust.SEO_JIAN.trust === 8),
+      )
+    }
+    const relations = (await f.call('GET', `/v1/careers/${id}/jockey-relations`)).json()
+    assert.deepEqual(
+      relations.data.find((r: { jockeyId: string }) => r.jockeyId === 'SEO_JIAN'),
+      { jockeyId: 'SEO_JIAN', starts: 0, trust: 8 },
+    )
+    assert.equal(
+      (await f.db.query('SELECT count(*)::int AS n FROM monthly_actions WHERE career_id=$1', [id]))
+        .rows[0].n,
+      0,
+    )
+    assert.equal(
+      (await f.db.query('SELECT count(*)::int AS n FROM event_draws WHERE career_id=$1', [id]))
+        .rows[0].n,
+      1,
     )
   } finally {
     await f.close()
