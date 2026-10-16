@@ -355,6 +355,11 @@ test('real PostgreSQL serializes explicit trust event choices and new command re
     throw new Error('Dedicated test database required')
   }
   const f = await fixture({ db: postgresDatabase(url), probability: 1 })
+  const enabledBefore = (
+    await f.db.query<{ id: string; enabled: boolean }>(
+      'SELECT id,enabled FROM event_definitions ORDER BY id',
+    )
+  ).rows
   try {
     const source = (await f.call('GET', '/v1/events/COM-0001')).json<EventDefinition>()
     const { revision: _revision, ...base } = source
@@ -416,6 +421,17 @@ test('real PostgreSQL serializes explicit trust event choices and new command re
       1,
     )
   } finally {
-    await f.close()
+    try {
+      // The native suite shares its catalog with the compiled HTTP smoke. Restore its exact activation flags.
+      await f.db.transaction(async (tx) => {
+        await tx.query("UPDATE event_definitions SET enabled=false WHERE id='COM-TRUST-PG-TEST'")
+        await tx.query(
+          'UPDATE event_definitions d SET enabled=b.enabled FROM jsonb_to_recordset($1::jsonb) AS b(id text,enabled boolean) WHERE d.id=b.id',
+          [JSON.stringify(enabledBefore)],
+        )
+      })
+    } finally {
+      await f.close()
+    }
   }
 })
