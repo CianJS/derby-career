@@ -11,7 +11,7 @@ import { applyCareer } from '@/lib/career/lifecycle';
 import { serverLifecycle } from '@/lib/server-save/lifecycle';
 import { INJURY_NOTICE, isHealthy, isStrained } from "@/lib/career/status";
 import { readLifecycleSave } from "@/lib/career/lifecycle-repository";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Coffee } from 'lucide-react'
 import type { View, CareerHorse, LifecycleState } from './career/legacy-types'
 import { Section, FocusShell } from './career/presentation'
 import { Header, Sidebar } from './career/navigation'
@@ -299,6 +299,24 @@ function Home({
               </p>
             </button>
           ))}
+        </div>
+        <div className="group relative mx-auto mt-6 w-fit">
+          <button
+            type="button"
+            aria-label="개발자에게 커피 쏘기 · 후원 링크 준비 중"
+            aria-disabled="true"
+            aria-describedby="coffee-support-status"
+            className="flex size-11 cursor-default items-center justify-center rounded-full border border-border/70 text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+          >
+            <Coffee size={18} aria-hidden="true" />
+          </button>
+          <p
+            id="coffee-support-status"
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-1/2 mb-2 w-max max-w-[calc(100vw-3rem)] -translate-x-1/2 rounded-lg border border-border bg-popover px-3 py-2 text-xs text-popover-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+          >
+            개발자에게 커피 쏘기 · 후원 링크 준비 중
+          </p>
         </div>
       </div>
     </div>
