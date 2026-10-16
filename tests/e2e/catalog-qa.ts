@@ -1,4 +1,5 @@
 import { test as base, expect, type Page, type TestInfo } from '@playwright/test'
+import { control } from './catalog-control'
 import { createCatalogClient } from '../../lib/race-catalog/client'
 import type { Query } from '../../lib/race-catalog/model'
 export { expect }
@@ -10,6 +11,10 @@ export const sizes = [
 export const test = base.extend<{ diagnostics: void }>({
   diagnostics: [
     async ({ page, browser }, use, info) => {
+      // Each serial scenario gets a fresh anonymous API process/rate-limit bucket.
+      // The same PostgreSQL fixture data is retained; production limits remain unchanged.
+      await control('stop')
+      await control('start')
       const network: { status: number; path: string; query: string }[] = []
       const errors: string[] = []
       page.on('pageerror', (error) => errors.push(error.message))
