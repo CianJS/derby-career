@@ -478,7 +478,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
     const previous = observedServerRace.current
     if (ready && !busy && !pending && previous?.careerId === current.id && current.state.raceRecords.some(record => record.raceRunId === previous.runId)) {
       observedServerRace.current = null
-      if (['entry', 'raceplay', 'raceexperimental', 'result'].includes(view)) setView('training')
+      if (['entry', 'raceplay', 'raceexperimental'].includes(view)) setView('training')
     }
   }, [saveMode, workspace, ready, busy, pending, view])
   const [restoredServerView, setRestoredServerView] = useState(false)

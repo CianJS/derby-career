@@ -5,6 +5,9 @@ import { summarizeRecords } from '@/lib/career/records'
 import type { View, CareerHorse } from './legacy-types'
 import { Meter, Section, FocusShell } from './presentation'
 import { Management } from './management'
+import { useArchivedRelations } from '@/lib/career/use-jockey-relations'
+import { storedTrust, jockeyTrust } from '@/lib/career/jockey-trust-presentation'
+import { JockeyTrustValue, TrustChangeValue } from './jockey-trust'
 import { jockeys } from './legacy-catalog'
 
 export function Horse({
@@ -16,7 +19,8 @@ export function Horse({
   onRetire: () => void
   horse: CareerHorse
 }) {
-  const { career } = useCareer()
+  const snapshot = useCareer()
+  const { career } = snapshot
   const summary = summarizeRecords(horse.raceRecords)
   const stats = horse.stats
   const apt = horse.aptitude
@@ -84,6 +88,14 @@ export function Horse({
           </div>
         </Section>
         <Section eyebrow="RACE RECORD" title="주요 경주 기록">
+          <ul aria-label="확정된 경주 신뢰도 변화" className="space-y-2 text-sm">
+            {horse.raceRecords?.map((record, index) => (
+              <li key={record.raceRunId ?? index}>
+                {record.race} · {record.jockeyName ?? record.jockeyId} ·{' '}
+                <TrustChangeValue change={record.trustChange} />
+              </li>
+            ))}
+          </ul>
           <div className="overflow-x-auto">
             <div className="grid min-w-[680px] grid-cols-[100px_1.5fr_70px_80px_110px_70px_120px] border-b border-border px-3 pb-2 text-[10px] text-muted-foreground">
               <span>날짜</span>
@@ -133,7 +145,8 @@ export function Horse({
                     horse.raceRecords?.find((r) => r.jockeyId === relation.jockeyId)
                       ?.jockeyName}{' '}
                   · {relation.starts}전 {relation.wins}승 ·{' '}
-                  {career?.contractedJockeyIds.includes(relation.jockeyId) ? '계약 중' : '미계약'}
+                  {career?.contractedJockeyIds.includes(relation.jockeyId) ? '계약 중' : '미계약'} ·
+                  신뢰도 <JockeyTrustValue trust={jockeyTrust(snapshot, relation.jockeyId)} />
                 </p>
               ))
             )}
@@ -247,6 +260,7 @@ export function ArchivedHorseRecord({
 }
 
 function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
+  const trust = useArchivedRelations(horse.id, horse.jockeyTrust)
   const records = horse.raceRecords ?? []
   const relations = Array.from(
     records.reduce((map, r) => {
@@ -260,6 +274,18 @@ function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
       return map.set(r.jockeyId, entry)
     }, new Map<string, { name: string; starts: number; best: number }>()),
   )
+  for (const id of Object.keys(trust.data ?? {})) {
+    if (!relations.some(([key]) => key === id)) {
+      relations.push([
+        id,
+        {
+          name: jockeys.find((j) => j.id === id)?.name ?? id,
+          starts: trust.data![id].starts,
+          best: 99,
+        },
+      ])
+    }
+  }
   const timeline = [
     ['육성 시작', '육성을 시작했습니다'],
     ...records.slice(0, 4).map((r) => [r.date, `${r.race} ${r.result}`]),
@@ -287,7 +313,12 @@ function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
                 className="grid min-w-[680px] grid-cols-[80px_1.4fr_60px_70px_1fr_60px_1fr] gap-2 border-b border-border px-3 py-2.5 text-xs"
               >
                 <span className="tabular-nums text-muted-foreground">{r.date}</span>
-                <span className="font-serif">{r.race}</span>
+                <span className="font-serif">
+                  <span>{r.race}</span>
+                  <span className="mt-1 block text-xs">
+                    <TrustChangeValue change={r.trustChange} />
+                  </span>
+                </span>
                 <span>{r.grade ?? '—'}</span>
                 <span className="tabular-nums">{r.distance ? `${r.distance}m` : '—'}</span>
                 <span>{r.jockeyName ?? '—'}</span>
@@ -301,6 +332,12 @@ function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
         )}
       </Section>
       <Section eyebrow="JOCKEY RELATIONSHIPS" title="함께한 기수">
+        {trust.status === 'loading' && <p role="status">신뢰도 불러오는 중…</p>}
+        {trust.status === 'error' && (
+          <button onClick={trust.retry} className="text-sm text-primary underline">
+            신뢰도 다시 조회
+          </button>
+        )}
         {relations.length === 0 ? (
           <p className="py-4 text-sm text-muted-foreground">함께한 기수 기록이 없습니다.</p>
         ) : (
@@ -308,12 +345,19 @@ function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
             {relations.map(([id, r]) => (
               <div
                 key={id}
-                className="flex items-center justify-between border-b border-border py-2.5 text-xs"
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2.5 text-xs"
               >
                 <b className="font-serif text-sm">{r.name}</b>
                 <span className="text-muted-foreground">
-                  {r.starts}전 · Chemistry {jockeys.find((j) => j.id === id)?.chem ?? '—'} · 최고{' '}
-                  {r.best === 99 ? '—' : `${r.best}착`}
+                  {r.starts}전 · 신뢰도{' '}
+                  <JockeyTrustValue
+                    trust={
+                      trust.status === 'loading' || trust.status === 'error'
+                        ? { status: trust.status }
+                        : storedTrust(trust.data, id)
+                    }
+                  />{' '}
+                  · 최고 {r.best === 99 ? '—' : `${r.best}착`}
                 </span>
               </div>
             ))}

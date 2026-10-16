@@ -2,6 +2,7 @@
 
 import { careerStore, useCareer } from '@/lib/career/store'
 import { conditionText, effectText, timingLabels } from '@/lib/event-catalog/presentation'
+import { EventTrustChanges } from './jockey-trust'
 import { Button } from '@/components/ui/button'
 
 export function ServerMonthEvent({ busy }: { busy: boolean }) {
@@ -51,6 +52,7 @@ export function ServerMonthEvent({ busy }: { busy: boolean }) {
               : '서버에 저장된 상태에 효과가 반영되었습니다.'}
         </p>
       )}
+      <EventTrustChanges changes={event.result?.trustChanges} />
     </section>
   )
 }

@@ -212,7 +212,7 @@ for (const viewport of [
   })
 }
 
-for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3'] as const) {
+for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4'] as const) {
   test(`stored ${version}: marker centres, rank panels, both remaining distances and feed agree`, async ({
     page,
   }, info) => {

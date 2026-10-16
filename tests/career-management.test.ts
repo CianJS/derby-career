@@ -78,7 +78,8 @@ test('race catalog waits for public API and jockey catalog retains its entries',
   assert.doesNotMatch(races, /한신 컵|사츠키상|NHK 마일컵|오사카배/)
   const jockeys = renderToStaticMarkup(createElement(Jockeys, { setView, onSelect: () => {} }))
   assert.match(jockeys, /계약 기수 3 \/ 3/)
-  assert.match(jockeys, /현재 육성마 없음/)
+  assert.match(jockeys, /data-trust-status="loading"/)
+  assert.doesNotMatch(jockeys, /0 \/ 100|현재 육성마 없음/)
 })
 
 test('archive detail keeps the stable navigation item selected', () => {

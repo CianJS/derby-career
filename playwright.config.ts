@@ -9,7 +9,7 @@ export default defineConfig({
   testMatch: '**/*.spec.ts',
   timeout: 45_000,
   // Full catalog filter/detail/history/outage matrices plus the existing game regressions.
-  globalTimeout: 360_000,
+  globalTimeout: 540_000,
   expect: { timeout: 10_000 },
   workers: 1,
   retries: 0,

@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { createWriteStream } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -28,6 +28,7 @@ const apiEnv = {
   PORT: '4000',
 }
 let api
+let devToken
 let apiStarts = 0
 let controlId = null
 const children = []
@@ -39,6 +40,9 @@ let interrupted = false
 // Only public, anonymous fixture traffic is recorded. Never copy the process environment.
 function sanitize(value) {
   let text = String(value)
+  if (devToken) {
+    text = text.replaceAll(devToken, '[test session redacted]')
+  }
   if (databaseUrl) {
     text = text.replaceAll(databaseUrl, '[database redacted]')
   }
@@ -226,9 +230,59 @@ try {
     },
   )
   await ready(`${nextUrl}/api/racing-catalog/v1/race-schedule?pageSize=1`, 851)
+  // Separate loopback development services exercise the existing dev-session bridge.
+  // Session stdout stays in memory and is never an artifact or a browser credential.
+  const devEnv = {
+    ...process.env,
+    NODE_ENV: 'development',
+    AUTH_MODE: 'dev-session',
+    LOG_LEVEL: 'silent',
+    HOST: '127.0.0.1',
+    PORT: '4001',
+    EVENT_DIRECTOR_CONFIG: JSON.stringify({
+      version: 'event-director-v1',
+      monthlyProbability: 0,
+      pityAfterMisses: 100,
+      monthStartShare: 1,
+    }),
+  }
+  const session = spawnSync(
+    process.execPath,
+    ['dist/cli.js', 'session-create', 'frontend-browser-qa', '1'],
+    { cwd: resolve(root, 'services/api'), env: devEnv, encoding: 'utf8', timeout: 30000 },
+  )
+  if (session.status !== 0) {
+    throw new Error('Could not prepare isolated development test session')
+  }
+  try {
+    devToken = JSON.parse(session.stdout).token
+    if (typeof devToken !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(devToken)) {
+      throw new Error()
+    }
+  } catch {
+    throw new Error('Could not read isolated development test session')
+  }
+  start('api-dev-save', ['dist/server.js'], resolve(root, 'services/api'), devEnv)
+  await ready('http://127.0.0.1:4001/health/ready')
+  start(
+    'next-dev-save',
+    ['node_modules/next/dist/bin/next', 'dev', '-H', '127.0.0.1', '-p', '3001'],
+    root,
+    {
+      ...process.env,
+      NODE_ENV: 'development',
+      DERBY_SAVE_MODE: 'server',
+      DERBY_SERVER_SAVE_LOCAL: '1',
+      DERBY_API_URL: 'http://127.0.0.1:4001',
+      DERBY_API_DEV_SESSION_TOKEN: devToken,
+    },
+  )
+  await ready('http://127.0.0.1:3001/api/server-save/v1/catalog/horses')
+  await ready('http://127.0.0.1:3001/')
   const test = start('playwright', ['node_modules/@playwright/test/cli.js', 'test'], root, {
     ...process.env,
     E2E_BASE_URL: nextUrl,
+    E2E_SERVER_BASE_URL: 'http://127.0.0.1:3001',
     E2E_API_URL: apiUrl,
     E2E_API_CONTROL_DIR: controlDir,
   })

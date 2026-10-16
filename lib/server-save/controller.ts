@@ -8,6 +8,7 @@ import {
 } from '../../packages/shared/src/generated/save-validation.mjs'
 import { executeSaveCommand } from './execute-command'
 import { parseSaveWorkspace, type SaveWorkspace } from './workspace'
+import { readServerRelations } from './jockey-relations'
 export type { SaveWorkspace } from './workspace'
 export type SaveSnapshot = {
   ready: boolean
@@ -79,11 +80,28 @@ export class ServerSaveController {
       if (
         !validateRaceEntryOptions(options) ||
         options.career.id !== current.career.id ||
+        options.career.ownedHorseId !== current.career.ownedHorseId ||
         options.career.revision !== current.career.revision
       ) {
         throw new Error('출전 조건이 변경되었습니다. 최신 서버 기록을 다시 불러와 주세요.')
       }
       raceOptions = options
+      const relations = await readServerRelations(this.api, {
+        careerId: current.career.id,
+        ownedHorseId: current.career.ownedHorseId,
+        revision: current.career.revision,
+        status: 'active',
+      })
+      const saved = current.career.state.jockeyTrust
+      if (
+        !saved ||
+        Object.keys(saved).length !== Object.keys(relations).length ||
+        Object.entries(relations).some(
+          ([id, row]) => saved[id]?.trust !== row.trust || saved[id]?.starts !== row.starts,
+        )
+      ) {
+        throw new Error('신뢰도가 변경되었습니다. 최신 서버 기록을 다시 불러와 주세요.')
+      }
     }
     if (this.disposed) {
       return

@@ -1,3 +1,4 @@
+import type { JockeyRelations } from '@/lib/career/jockey-trust'
 import type { HorseRaceRecord } from '@/lib/career/records'
 
 export type View =
@@ -21,6 +22,7 @@ export type View =
   | 'jockey'
 
 export type CareerHorse = {
+  jockeyTrust?: JockeyRelations
   id: string
   name: string
   age: string
