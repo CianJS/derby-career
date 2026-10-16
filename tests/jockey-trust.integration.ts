@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto'
 import { fixture } from '../services/api/tests/helpers'
 import { createApiClient } from '../packages/shared/src/client'
 import { ServerSaveController, type SaveSnapshot } from '../lib/server-save/controller'
-import { jockeyTrust, readServerRelations } from '../lib/career/jockey-trust-presentation'
+import { jockeyTrust } from '../lib/career/jockey-trust-presentation'
+import { readServerRelations } from '../lib/server-save/jockey-relations'
 
 // Real Fastify + generated validators + PostgreSQL engine. SQL values below are isolated test
 // data, not a frontend relationship calculation or an application API fallback.

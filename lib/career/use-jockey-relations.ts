@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createApiClient } from '../../packages/shared/src/client'
-import { readServerRelations, type RelationIdentity } from './jockey-trust-presentation'
+import { readServerRelations, type RelationIdentity } from '../server-save/jockey-relations'
 import type { JockeyRelations } from './jockey-trust'
 import { useCareer } from './store'
 

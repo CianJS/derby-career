@@ -8,7 +8,7 @@ import {
 } from '../../packages/shared/src/generated/save-validation.mjs'
 import { executeSaveCommand } from './execute-command'
 import { parseSaveWorkspace, type SaveWorkspace } from './workspace'
-import { readServerRelations } from '../career/jockey-trust-presentation'
+import { readServerRelations } from './jockey-relations'
 export type { SaveWorkspace } from './workspace'
 export type SaveSnapshot = {
   ready: boolean

@@ -157,7 +157,7 @@ test('confirmed race/event changes display growth, decline and explicit zero wit
 })
 
 test('relation endpoint validates identity, owner-scoped errors, revision, status and duplicate IDs', async () => {
-  const { readServerRelations } = await import('../lib/career/jockey-trust-presentation')
+  const { readServerRelations } = await import('../lib/server-save/jockey-relations')
   const { createApiClient } = await import('../packages/shared/src/client')
   const identity = {
     careerId: randomUUID(),

@@ -1,6 +1,6 @@
 # 기수 신뢰도 Frontend 연동
 
-기준은 Backend PR #34와 카탈로그 QA PR #35가 반영된 develop이다. 공유 `lib/career/jockey-trust.ts`는 Backend 구현을 그대로 유지한다. 이전 FE 조회 함수는 `jockey-trust-presentation.ts`로 분리했다.
+기준은 Backend PR #34와 카탈로그 QA PR #35가 반영된 develop이다. 공유 `lib/career/jockey-trust.ts`는 Backend 구현을 그대로 유지한다. 이전 FE 표시 함수는 `jockey-trust-presentation.ts`로 분리하고, API DTO 조회/생성 검증기는 `lib/server-save/jockey-relations.ts`에 두어 서버 저장 그래프가 UI store·React에 의존하지 않게 했다.
 
 ## 조회와 저장 경계
 
