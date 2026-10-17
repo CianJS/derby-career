@@ -265,15 +265,15 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
             (a, b) =>
               (a.raceDate ?? '9999').localeCompare(b.raceDate ?? '9999') || (a.id < b.id ? -1 : 1),
           )
-          .filter((race, index, rows) =>
-            !race.duplicateGroup ||
-            rows.findIndex((candidate) => candidate.duplicateGroup === race.duplicateGroup) === index,
+          .filter(
+            (race, index, rows) =>
+              !race.duplicateGroup ||
+              rows.findIndex((candidate) => candidate.duplicateGroup === race.duplicateGroup) ===
+                index,
           )
           .map((r) => r.id)
         assert.deepEqual(ids, expected)
-        const duplicateGroups = normalizeRacingCatalog(input).races.filter(
-          (r) => r.duplicateGroup,
-        )
+        const duplicateGroups = normalizeRacingCatalog(input).races.filter((r) => r.duplicateGroup)
         assert.equal(duplicateGroups.length, 6)
         assert.equal(new Set(ids.filter((id) => duplicateGroups.some((r) => r.id === id))).size, 3)
       },
