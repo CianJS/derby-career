@@ -271,7 +271,9 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
           )
           .map((r) => r.id)
         assert.deepEqual(ids, expected)
-        const duplicateGroups = normalizeRacingCatalog(input).races.filter((r) => r.duplicateGroup)
+        const duplicateGroups = normalizeRacingCatalog(input).races.filter(
+          (r) => r.duplicateGroup,
+        )
         assert.equal(duplicateGroups.length, 6)
         assert.equal(new Set(ids.filter((id) => duplicateGroups.some((r) => r.id === id))).size, 3)
       },
