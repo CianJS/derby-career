@@ -245,7 +245,27 @@ test('public proxy restricts paths and filters, protects credentials and returns
       },
     })
     assert.equal(response.status, status === 500 ? 502 : status)
+    if (status === 500) {
+      assert.equal(response.headers.get('X-Derby-Catalog-Failure'), 'upstream_http')
+      assert.equal(response.headers.get('X-Derby-Catalog-Upstream-Status'), '500')
+    }
     assert.doesNotMatch(await response.text(), /upstream private detail/)
+  }
+  for (const [name, perform, phase, upstreamStatus] of [
+    [
+      'upstream login HTML',
+      async () => new Response('<html>protected</html>', { status: 401, headers: { 'Content-Type': 'text/html' } }),
+      'invalid_json',
+      '401',
+    ],
+    ['response mismatch', async () => Response.json({ unexpected: 'private detail' }), 'response_contract', null],
+    ['network failure', async () => { throw new Error('secret internal detail') }, 'network', null],
+  ] as const) {
+    const result = await handleCatalog(request(), path, { baseUrl: 'http://api', fetch: perform })
+    assert.equal(result.status, 502, name)
+    assert.equal(result.headers.get('X-Derby-Catalog-Failure'), phase, name)
+    assert.equal(result.headers.get('X-Derby-Catalog-Upstream-Status'), upstreamStatus, name)
+    assert.doesNotMatch(await result.text(), /private detail|secret internal detail|protected/)
   }
   const response = await handleCatalog(request(), path, {
     baseUrl: 'http://api',
