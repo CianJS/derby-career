@@ -247,8 +247,16 @@ for (const viewport of sizes) {
     const evidence = []
     for (const race of examples) {
       expect(race).toBeTruthy()
-      await page.goto('/?view=races&rc_search=' + encodeURIComponent(race.name))
-      await assertResults(page, { search: race.name })
+      const query: Query = { search: race.name }
+      if (race.scheduleStatus !== 'dated') {
+        query.scheduleStatus = race.scheduleStatus
+      }
+      const params = new URLSearchParams({ view: 'races', rc_search: race.name })
+      if (query.scheduleStatus) {
+        params.set('rc_scheduleStatus', query.scheduleStatus)
+      }
+      await page.goto('/?' + params)
+      await assertResults(page, query)
       const row = page.locator(`#catalog-${race.id}`)
       await expect(row).toBeVisible()
       const response = page.waitForResponse((r) =>
