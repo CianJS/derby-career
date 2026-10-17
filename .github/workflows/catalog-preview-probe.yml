@@ -1,0 +1,48 @@
+name: Preview Catalog Bridge Probe
+
+on:
+  push:
+    branches:
+      - fix/catalog-proxy-vercel-oidc
+
+permissions:
+  contents: read
+
+jobs:
+  remote-preview-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Probe deployed frontend to protected backend
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          import { setTimeout as delay } from 'node:timers/promises'
+          const url = 'https://derby-career-git-fix-catalog-proxy-vercel-oidc-cianjs-projects.vercel.app/api/racing-catalog/v1/race-schedule?page=1&pageSize=2'
+          let last = ''
+          for (let attempt = 1; attempt <= 18; attempt++) {
+            try {
+              const response = await fetch(url, {
+                headers: { Accept: 'application/json' },
+                signal: AbortSignal.timeout(10000),
+                redirect: 'manual',
+              })
+              const failure = response.headers.get('x-derby-catalog-failure')
+              const upstream = response.headers.get('x-derby-catalog-upstream-status')
+              const value = await response.json().catch(() => null)
+              last = 'HTTP ' + response.status + ' phase=' + (failure || '-') +
+                ' upstream=' + (upstream || '-') + ' total=' + (value?.pagination?.total ?? '-')
+              console.log('attempt ' + attempt + ': ' + last)
+              if (response.status === 200 && value?.pagination?.total === 851 &&
+                  value?.data?.length === 2 && value.data.every(r => typeof r.id === 'string')) {
+                console.log('PASS: frontend preview reached real protected backend catalog')
+                process.exit(0)
+              }
+            } catch (error) {
+              last = error?.name || 'network_error'
+              console.log('attempt ' + attempt + ': ' + last)
+            }
+            await delay(8000)
+          }
+          throw new Error('Preview catalog did not become healthy: ' + last)
+          NODE
