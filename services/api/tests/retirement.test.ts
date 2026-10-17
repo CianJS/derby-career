@@ -287,7 +287,7 @@ test('retirement waits for a locked race to complete and preserves its result an
     assert.equal(
       (await f.db.query('SELECT * FROM stable_ledger WHERE race_run_id=$1', [raceRunId])).rows
         .length,
-      1,
+      2,
     )
   } finally {
     await f.close()

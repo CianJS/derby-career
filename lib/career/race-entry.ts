@@ -72,10 +72,16 @@ export const contractedRoster = (career: Career) =>
     .map(j => ({ ...j, chemistry: jockeyTrust(career, j.id) }))
 export const winCount = (career: Career) => summarizeRecords(career.raceRecords).wins
 export const maiden = (career: Career) => winCount(career) === 0
-export function raceEligibility(career: Career, race: RaceDefinitionSnapshot): string | null {
+export function raceEligibility(career: Career, race: RaceDefinitionSnapshot, availableFunds?: number): string | null {
   const wins = winCount(career)
   if (race.maxWins !== undefined && wins > race.maxWins) return '미승리 경주마만 출전할 수 있습니다.'
   if (race.minWins !== undefined && wins < race.minWins) return `${race.minWins}승 이상 경주마만 출전할 수 있습니다.`
+  // Only the transactional server path supplies authoritative funds; Local Save keeps its existing gate.
+  if (availableFunds !== undefined) {
+    if (!Number.isSafeInteger(race.entryFee) || race.entryFee < 0 || !Number.isSafeInteger(availableFunds) || availableFunds < 0) return '등록비 또는 잔액을 확인할 수 없습니다.'
+    if (race.entryFee > availableFunds) return '마방 자금이 부족하여 등록비를 낼 수 없습니다.'
+    return null
+  }
   if (race.entryFee > 0) return `등록비 ₩${race.entryFee.toLocaleString('ko-KR')} 정산은 후속 Economy 단계에서 지원됩니다. 지금은 유료 경주에 출전할 수 없습니다.`
   return null
 }

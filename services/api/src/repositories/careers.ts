@@ -4,6 +4,7 @@ import {
   readJockeyRelations,
 } from './jockey-relations'
 import { readRaceData, readSimulationLog, writeSimulationLog } from './race-logs'
+import { assertMoney, stableFunds, settleRaceMoney } from './race-economy'
 import { executeCareerCommand } from './career-commands'
 import { CareerEventRepository } from './career-events'
 import {
@@ -492,6 +493,7 @@ export class CareerRepository {
           [row.horse_id, row.state.contractedJockeyIds],
         )
       ).rows.map(({ payload, chemistry }) => ({ ...payload, chemistry }))
+      const funds = await stableFunds(tx, row.stable_id)
       const restrictionReason =
         this.raceEntryRestriction(row, history)?.message ??
         (!definitions.length
@@ -504,7 +506,7 @@ export class CareerRepository {
         defaultEngineVersion: API_RACE_ENGINE_VERSION,
         restrictionReason,
         races: definitions.map(({ payload, source_kind }) => {
-          const reason = restrictionReason ?? raceEligibility(row.state, payload)
+          const reason = restrictionReason ?? raceEligibility(row.state, payload, funds)
           return {
             definition: payload,
             sourceKind: source_kind,
@@ -546,7 +548,10 @@ export class CareerRepository {
         if (!race || race.month !== row.turn) {
           throw new ApiError(422, 'RACE_RESTRICTED', '현재 월에 출전할 수 있는 경주가 아닙니다.')
         }
-        const reason = raceEligibility(row.state, race)
+        assertMoney(race.entryFee)
+        assertMoney(race.prize)
+        const funds = await stableFunds(tx, row.stable_id, true)
+        const reason = raceEligibility(row.state, race, funds)
         if (reason) {
           throw new ApiError(422, 'RACE_RESTRICTED', reason)
         }
@@ -578,6 +583,7 @@ export class CareerRepository {
         })
         run.trustContext = createTrustContext(run)
         const log = simulateRace(run, body.engineVersion ?? API_RACE_ENGINE_VERSION)
+        assertMoney(log.result.prizeMoney)
         run.simulation = summarizeRaceLog(log)
         row.state = { ...row.state, raceRun: run }
         await tx.query(
@@ -598,6 +604,7 @@ export class CareerRepository {
             row.state.health,
           ],
         )
+        await settleRaceMoney(tx, row.stable_id, body.raceRunId, 'entry_fee', race.entryFee)
         await writeSimulationLog(tx, body.raceRunId, log)
         await this.save(tx, row)
         return { raceRunId: body.raceRunId, career: await this.dto(tx, row) }
@@ -632,6 +639,16 @@ export class CareerRepository {
         }
         const exactLog = await readSimulationLog(tx, runId, run.engine_version)
         const result = exactLog.result
+        assertMoney(result.prizeMoney)
+        let horsePrize = result.prizeMoney
+        for (const record of row.state.raceRecords) {
+          const prize = record.prizeMoney ?? 0
+          assertMoney(prize)
+          if (prize > Number.MAX_SAFE_INTEGER - horsePrize) {
+            throw new ApiError(422, 'ECONOMY_LIMIT', '말의 누적 상금 범위를 벗어났습니다.')
+          }
+          horsePrize += prize
+        }
         row.state = completeServerRace(row.state, runId, result.placing, result.prizeMoney)
         const record = row.state.raceRecords.find((x) => x.raceRunId === runId)!
         await tx.query(
@@ -645,14 +662,7 @@ export class CareerRepository {
             JSON.stringify(record),
           ],
         )
-        await tx.query(
-          "INSERT INTO stable_ledger(id,stable_id,race_run_id,kind,amount) VALUES($1,$2,$3,'prize',$4)",
-          [randomUUID(), row.stable_id, runId, result.prizeMoney],
-        )
-        await tx.query('UPDATE stables SET funds=funds+$2 WHERE id=$1', [
-          row.stable_id,
-          result.prizeMoney,
-        ])
+        await settleRaceMoney(tx, row.stable_id, runId, 'prize', result.prizeMoney)
         await tx.query('UPDATE monthly_actions SET resolved_at=now(),result=$2 WHERE id=$1', [
           run.action_id,
           JSON.stringify(result),
