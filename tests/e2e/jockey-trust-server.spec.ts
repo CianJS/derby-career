@@ -31,6 +31,7 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
   await page.getByRole('button', { name: '새 육성마 시작', exact: true }).click()
   await page.getByRole('heading', { name: '레드 코멧', exact: true }).click()
   await page.getByRole('button', { name: '이 말로 육성 시작', exact: true }).click()
+  await expect(page.getByRole('group', { name: '월간 행동 선택' })).toBeVisible()
   await expect.poll(async () => (await get()).career?.state.careerTurnIndex).toBe(1)
   let funds = (await get()).stable.funds
   expect(funds).toBe(20_000_000)
@@ -66,6 +67,9 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
     ).toBeVisible()
     if (month === 3) {
       await page.locator('input[value="DEV_M3_SPRINT_1400"]').check()
+      await expect(
+        page.locator('label').filter({ has: page.locator('input[value="DEV_M3_SPRINT_1400"]') }),
+      ).toContainText('등록비 ₩500,000')
     }
     await page.getByRole('button', { name: '출전 확정', exact: true }).click()
     await expect(page.getByText('출전 정보 저장 완료 · 선택 잠김', { exact: true })).toBeVisible()
@@ -185,6 +189,7 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
   await page.getByRole('button', { name: '새 육성마 시작', exact: true }).click()
   await page.getByRole('heading', { name: '레드 코멧', exact: true }).click()
   await page.getByRole('button', { name: '이 말로 육성 시작', exact: true }).click()
+  await expect(page.getByRole('group', { name: '월간 행동 선택' })).toBeVisible()
   await expect(headerFunds()).toHaveText(`₩${funds.toLocaleString('ko-KR')}`)
   expect((await get()).career.state.raceRecords).toHaveLength(0)
   expect(await page.evaluate((key) => localStorage.getItem(key), BROWSER_SAVE_KEY)).toBeNull()

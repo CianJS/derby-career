@@ -62,6 +62,8 @@ test('legacy money migrates once without replaying old records; invalid amounts 
   for (const fundsKRW of [-1, 0.1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, null]) {
     assert.throws(() => assertEconomy({ fundsKRW }), /자금/)
   }
+  assert.throws(() => assertEconomy({ fundsKRW: 20_000_000 }), /원장/)
+  assert.throws(() => assertEconomy({ economyLedger: [] }), /원장/)
   for (const ledger of [
     [{ raceRunId: 'r', kind: 'entry_fee', amount: 1 }],
     [{ raceRunId: 'r', kind: 'prize', amount: -1 }],
@@ -242,4 +244,15 @@ test('a prize beyond the stable safe-integer cap leaves the entire locked result
   assert.equal(await careerStore.completeRace(run.raceRunId, result), false)
   assert.deepEqual(readBrowserSave(), saved)
   assert.ok(readRaceLog(run.raceRunId))
+})
+
+test('identical lifecycle projections do not create a storage-event feedback loop between tabs', async () => {
+  await setup()
+  const lifecycle = readBrowserSave().lifecycle!
+  writeLifecycleSave(structuredClone(lifecycle))
+  const before = readBrowserSave()
+  for (let tab = 0; tab < 4; tab++) {
+    writeLifecycleSave(structuredClone(before.lifecycle!))
+  }
+  assert.deepEqual(readBrowserSave(), before)
 })

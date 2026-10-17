@@ -77,5 +77,8 @@ export function writeLifecycleSave(value: unknown): void {
           year: saved.lifecycle?.year ?? next.year,
         }
   }
-  writeBrowserSave({ lifecycle: next })
+  // Projection effects in two tabs must not bounce identical writes back and forth.
+  if (JSON.stringify(next) !== JSON.stringify(saved.lifecycle)) {
+    writeBrowserSave({ lifecycle: next })
+  }
 }

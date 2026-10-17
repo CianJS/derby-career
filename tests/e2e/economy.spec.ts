@@ -152,6 +152,7 @@ for (const width of [390, 1440]) {
     await page.getByRole('button', { name: '새 육성마 시작', exact: true }).click()
     await page.getByRole('heading', { name: '레드 코멧', exact: true }).click()
     await page.getByRole('button', { name: '이 말로 육성 시작', exact: true }).click()
+    await expect(page.getByRole('group', { name: '월간 행동 선택' })).toBeVisible()
     await expect(funds()).toHaveText(text)
     const next = await read()
     expect(next.lifecycle.economyLedger).toEqual(completed.lifecycle.economyLedger)

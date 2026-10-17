@@ -4,7 +4,7 @@ Issue #45, Backend PR #44의 기존 경제 계약을 사용한다. Backend API·
 
 ## Local Save
 
-기존 `derby-career-browser-save-v1` 문서와 version 1을 유지하고 lifecycle에 선택적 필드를 추가한다.
+기존 `derby-career-browser-save-v1` 문서와 version 1을 유지하고 lifecycle에 경제 필드 쌍을 추가한다. 구 저장에서는 둘 다 없어도 되며, 새 저장에서는 잔액과 원장을 함께 보존한다. 한쪽만 남은 불완전한 경제 데이터는 손상으로 거부한다.
 
 ```ts
 fundsKRW: number // 0..Number.MAX_SAFE_INTEGER의 정수
@@ -42,6 +42,6 @@ economyLedger: {
 - `tests/local-economy.test.ts`: 초기화/legacy 이전, 과거 경주 비소급, 손상 금액/원장, 한 달 중복·동시 명령, 저장 실패/재시도, 로그 보존, 금액 상한, 은퇴 및 새 말 승계.
 - 기존 app-routing/browser-save/신뢰도/추천/관전/은퇴 테스트를 유지한다.
 - `tests/e2e/economy.spec.ts`: 실제 Chromium 390px/1440px, 서로 다른 두 탭의 유료 출전 경합, reload, 완료 저장 실패/재시도, 지급/잔액/은퇴·차기 육성, 무료 0원·승수·부상·손상 저장 UI. 기존 스타일의 light/dark를 사용한다.
-- 기존 실제 서버 브라우저 흐름에 등록비/상금/서버 잔액 일치, 응답 유실 후 재시도, 중복 완료, 은퇴 및 새 말 승계를 추가한다. `prepare-browser-e2e.mjs`는 이름이 `_test`로 끝나는 격리 DB에만 Month 3 스프린트의 500,000원 등록비/2두 조건을 설정해 실제 서버 정산과 양수 상금을 검증한다. 원본 seed/서비스 코드/운영 DB는 변경하지 않는다.
+- 기존 실제 서버 브라우저 흐름에 등록비/상금/서버 잔액 일치, 응답 유실 후 재시도, 중복 완료, 은퇴 및 새 말 승계를 추가한다. `prepare-browser-e2e.mjs`는 이름이 `_test`로 끝나는 격리 DB에만 Month 3 스프린트의 500,000원 등록비를 설정해 실제 서버 정산과 저장된 상금 결과를 검증한다. 출전두수는 기존 공유 검증과 일치하게 유지하며 원본 seed/서비스 코드/운영 DB는 변경하지 않는다.
 
 실행 결과 숫자, CI 및 Chromium 증거 링크는 PR의 최종 검증 기록을 따른다. Vercel Preview나 main 배포는 검증에 사용하지 않는다.

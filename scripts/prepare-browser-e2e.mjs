@@ -80,7 +80,7 @@ if (changed.length) {
   console.log(`Protected fixture check: ${before.size} files unchanged (SHA-256)`)
 }
 
-// Isolated test DB only: exercise the server's actual paid-entry transaction and a positive prize.
+// Isolated test DB only: exercise paid entry with the normal runner count and saved simulation result.
 const databaseUrl = new URL(process.env.DATABASE_URL ?? '')
 if (!databaseUrl.pathname.endsWith('_test')) {
   throw new Error('Browser economy fixtures require an isolated _test database')
@@ -91,13 +91,13 @@ try {
   await database.connect()
   const changed = await database.query(
     'UPDATE race_definitions SET payload=payload || $2::jsonb WHERE id=$1',
-    ['DEV_M3_SPRINT_1400', JSON.stringify({ entryFee: 500000, runners: 2 })],
+    ['DEV_M3_SPRINT_1400', JSON.stringify({ entryFee: 500000 })],
   )
   if (changed.rowCount !== 1) {
     throw new Error('Paid-entry browser fixture is missing')
   }
   console.log(
-    'Isolated server economy fixture: entry fee 500000, two runners; source files unchanged',
+    'Isolated server economy fixture: entry fee 500000; original runners and source files unchanged',
   )
 } finally {
   await database.end()

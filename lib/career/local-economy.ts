@@ -19,6 +19,9 @@ export function assertEconomy(value: { fundsKRW?: unknown; economyLedger?: unkno
     assertMoney(value.fundsKRW)
   }
   if (value.economyLedger === undefined) {
+    if (value.fundsKRW !== undefined) {
+      throw invalid()
+    }
     return
   }
   if (value.fundsKRW === undefined || !Array.isArray(value.economyLedger)) {
@@ -48,9 +51,7 @@ export function assertEconomy(value: { fundsKRW?: unknown; economyLedger?: unkno
 export function migrateEconomy(saved: LifecycleSave): LifecycleSave & LocalEconomy {
   assertEconomy(saved)
   if (saved.fundsKRW !== undefined) {
-    return saved.economyLedger
-      ? (saved as LifecycleSave & LocalEconomy)
-      : ({ ...saved, economyLedger: [] } as LifecycleSave & LocalEconomy)
+    return saved as LifecycleSave & LocalEconomy
   }
   const legacy = saved.funds?.trim() ?? ''
   let fundsKRW = INITIAL_FUNDS_KRW
