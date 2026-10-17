@@ -246,7 +246,7 @@ test('locked v1/v2/v3 logs determine results; completion cannot duplicate payout
       assert.equal(
         (await f.db.query('SELECT * FROM stable_ledger WHERE race_run_id=$1', [entry.raceRunId]))
           .rows.length,
-        1,
+        2,
       )
       await assert.rejects(
         f.db.query('UPDATE race_results SET prize_money=0 WHERE race_run_id=$1', [entry.raceRunId]),

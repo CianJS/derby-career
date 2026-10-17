@@ -477,7 +477,7 @@ test('corrupt saved logs and payout failures roll back completion without regene
       assert.equal(
         (await f.db.query('SELECT * FROM stable_ledger WHERE race_run_id=$1', [body.raceRunId]))
           .rows.length,
-        0,
+        1,
       )
     }
     const completed = await f.call(

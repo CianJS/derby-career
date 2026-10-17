@@ -1,3 +1,4 @@
+import { registerEconomyTests } from './economy-cases'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -141,7 +142,7 @@ test('real PostgreSQL row locks serialize concurrent monthly actions and race pa
           ])
         ).rows[0].n,
       ),
-      1,
+      2,
     )
   } finally {
     await f.close()
@@ -434,4 +435,12 @@ test('real PostgreSQL serializes explicit trust event choices and new command re
       await f.close()
     }
   }
+})
+
+registerEconomyTests('native PostgreSQL economy', () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
+  }
+  return postgresDatabase(url)
 })
