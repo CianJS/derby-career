@@ -218,7 +218,7 @@ let exitCode = 1
 try {
   startApi()
   await ready(`${apiUrl}/health/ready`)
-  await ready(`${apiUrl}/v1/race-schedule?pageSize=1`, 851)
+  await ready(`${apiUrl}/v1/race-schedule?pageSize=1`, 848)
   start(
     'next',
     ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', '3000'],
@@ -229,7 +229,7 @@ try {
       DERBY_API_URL: apiUrl,
     },
   )
-  await ready(`${nextUrl}/api/racing-catalog/v1/race-schedule?pageSize=1`, 851)
+  await ready(`${nextUrl}/api/racing-catalog/v1/race-schedule?pageSize=1`, 848)
   // Separate loopback development services exercise the existing dev-session bridge.
   // Session stdout stays in memory and is never an artifact or a browser credential.
   const devEnv = {
