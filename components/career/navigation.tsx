@@ -31,7 +31,7 @@ export function Header({
             {funds === null
               ? saveMode === 'server'
                 ? '자금 정보 없음'
-                : '자금 미구현'
+                : '자금 확인 중'
               : `₩${funds.toLocaleString('ko-KR')}`}
           </span>
           <NoticeCenter />

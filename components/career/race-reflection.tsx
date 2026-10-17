@@ -10,13 +10,14 @@ import { frameAt } from '@/lib/career/race-simulation'
 import type { Career } from '@/lib/career/model'
 import type { RaceData } from '@/lib/career/race-data-adapter'
 import { TrustChangeValue } from './jockey-trust'
-import { careerStore, useCareer } from '@/lib/career/store'
+import { careerStore, useCareer, stableFunds } from '@/lib/career/store'
 
 const won = (value: number) => `₩${value.toLocaleString('ko-KR')}`
 
 export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const snapshot = useCareer()
   const { ready, busy, error, mode, pending } = snapshot
+  const funds = stableFunds(snapshot)
   const sourceId = mode === 'server' ? snapshot.workspace?.career?.id : snapshot.localCareerId
   const live = useRaceData()
   const [receipt, setReceipt] = useState<{
@@ -131,9 +132,30 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
           </p>
         </div>
         <div>
-          <span className="ui-metadata">획득 상금</span>
+          <span className="ui-metadata">{confirmed ? '획득 상금' : '확정 후 지급 상금'}</span>
           <p className="mt-2 text-sm font-medium tabular-nums text-primary">
             {won(result.prizeMoney)}
+          </p>
+        </div>
+      </section>
+      <section
+        aria-label="경주 정산"
+        className="grid gap-3 border-y border-border py-4 text-sm sm:grid-cols-3"
+      >
+        <div>
+          <p className="ui-metadata">확정 등록비</p>
+          <p className="mt-2 tabular-nums">{won(race.entryFee)}</p>
+        </div>
+        <div>
+          <p className="ui-metadata">{confirmed ? '상금 지급 완료' : '확정 후 지급 상금'}</p>
+          <p className="mt-2 tabular-nums" data-settlement-prize>
+            {won(confirmed?.prizeMoney ?? result.prizeMoney)}
+          </p>
+        </div>
+        <div>
+          <p className="ui-metadata">{confirmed ? '정산 후 마방 잔액' : '현재 마방 잔액'}</p>
+          <p className="mt-2 tabular-nums" data-settlement-balance>
+            {funds === null ? '확인 중' : won(funds)}
           </p>
         </div>
       </section>
