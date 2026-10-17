@@ -253,20 +253,27 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
         const dates: (string | null)[] = []
         for (let page = 1; page <= 9; page++) {
           const result = (await f.call('GET', `/v1/race-schedule?pageSize=100&page=${page}`)).json()
-          assert.equal(result.pagination.total, 851)
+          assert.equal(result.pagination.total, 848)
           ids.push(...result.data.map((r: { id: string }) => r.id))
           dates.push(...result.data.map((r: { raceDate: string | null }) => r.raceDate))
         }
-        assert.equal(new Set(ids).size, 851)
-        assert.ok(dates.slice(0, 810).every(Boolean))
-        assert.ok(dates.slice(810).every((d) => d === null))
+        assert.equal(new Set(ids).size, 848)
+        assert.ok(dates.slice(0, 807).every(Boolean))
+        assert.ok(dates.slice(807).every((d) => d === null))
         const expected = normalizeRacingCatalog(input)
           .races.sort(
             (a, b) =>
               (a.raceDate ?? '9999').localeCompare(b.raceDate ?? '9999') || (a.id < b.id ? -1 : 1),
           )
+          .filter((race, index, rows) =>
+            !race.duplicateGroup ||
+            rows.findIndex((candidate) => candidate.duplicateGroup === race.duplicateGroup) === index,
+          )
           .map((r) => r.id)
         assert.deepEqual(ids, expected)
+        const duplicateGroups = normalizeRacingCatalog(input).races.filter((r) => r.duplicateGroup)
+        assert.equal(duplicateGroups.length, 6)
+        assert.equal(new Set(ids.filter((id) => duplicateGroups.some((r) => r.id === id))).size, 3)
       },
     )
     await t.test('invalid queries and missing IDs have explicit errors', async () => {
