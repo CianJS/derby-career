@@ -6,8 +6,13 @@ import {
   validateRacecourseDetail,
 } from '../../packages/shared/src/generated/save-validation.mjs'
 import type { Query, VenueQuery } from './model'
+export class CatalogResponseValidationError extends Error {
+  constructor() {
+    super('경주 카탈로그 응답이 계약과 일치하지 않습니다.')
+  }
+}
 function invalid(): never {
-  throw new Error('경주 카탈로그 응답이 계약과 일치하지 않습니다.')
+  throw new CatalogResponseValidationError()
 }
 export function createCatalogClient(
   baseUrl = '/api/racing-catalog',
