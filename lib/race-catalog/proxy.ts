@@ -1,10 +1,27 @@
 import { DerbyApiError } from '../../packages/shared/src/client'
-import { createCatalogClient } from './client'
+import { CatalogResponseValidationError, createCatalogClient } from './client'
 import { idPattern, readQuery } from './model'
 const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 const failure = (status: number, code: string, message: string) =>
   json({ error: { code, message } }, status)
+
+// Non-secret diagnostics for the same-origin bridge: no upstream body, URL, tokens or stack traces.
+function upstreamFailure(
+  phase: 'upstream_http' | 'invalid_json' | 'response_contract' | 'network',
+  status?: number,
+) {
+  const response = failure(
+    502,
+    'CATALOG_UNAVAILABLE',
+    '경주 조회 서버에 연결할 수 없거나 응답을 확인하지 못했습니다.',
+  )
+  response.headers.set('X-Derby-Catalog-Failure', phase)
+  if (status !== undefined) {
+    response.headers.set('X-Derby-Catalog-Upstream-Status', String(status))
+  }
+  return response
+}
 /** Public reads only. No incoming credentials, arbitrary paths or playable data are forwarded. */
 export async function handleCatalog(
   request: Request,
@@ -79,10 +96,12 @@ export async function handleCatalog(
           : '조회 조건을 확인하거나 잠시 후 다시 시도해 주세요.',
       )
     }
-    return failure(
-      502,
-      'CATALOG_UNAVAILABLE',
-      '경주 조회 서버에 연결할 수 없거나 응답을 확인하지 못했습니다.',
-    )
+    if (error instanceof DerbyApiError) {
+      return upstreamFailure(error.code === 'INVALID_RESPONSE' || error.code === 'HTTP_ERROR' ? 'invalid_json' : 'upstream_http', error.status)
+    }
+    if (error instanceof CatalogResponseValidationError) {
+      return upstreamFailure('response_contract')
+    }
+    return upstreamFailure('network')
   }
 }
