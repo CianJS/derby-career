@@ -26,7 +26,7 @@ function upstreamFailure(
 export async function handleCatalog(
   request: Request,
   path: string[],
-  options: { baseUrl?: string; fetch?: typeof fetch; timeoutMs?: number },
+  options: { baseUrl?: string; fetch?: typeof fetch; timeoutMs?: number; trustedOidcToken?: string },
 ) {
   if (
     request.method !== 'GET' ||
@@ -71,7 +71,19 @@ export async function handleCatalog(
   const timeout = AbortSignal.timeout(options.timeoutMs ?? 5000)
   const signal = AbortSignal.any([request.signal, timeout])
   const client = createCatalogClient(base.href.replace(/\/+$/, ''), (url, init) =>
-    (options.fetch ?? globalThis.fetch)(url, { ...init, signal, redirect: 'error' }),
+    (options.fetch ?? globalThis.fetch)(url, {
+      ...init,
+      signal,
+      redirect: 'error',
+      ...(options.trustedOidcToken
+        ? {
+            headers: {
+              ...init?.headers,
+              'x-vercel-trusted-oidc-idp-token': options.trustedOidcToken,
+            },
+          }
+        : {}),
+    }),
   )
   try {
     const data =
