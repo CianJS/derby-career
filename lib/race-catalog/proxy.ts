@@ -70,21 +70,13 @@ export async function handleCatalog(
   }
   const timeout = AbortSignal.timeout(options.timeoutMs ?? 5000)
   const signal = AbortSignal.any([request.signal, timeout])
-  const client = createCatalogClient(base.href.replace(/\/+$/, ''), (url, init) =>
-    (options.fetch ?? globalThis.fetch)(url, {
-      ...init,
-      signal,
-      redirect: 'error',
-      ...(options.trustedOidcToken
-        ? {
-            headers: {
-              ...init?.headers,
-              'x-vercel-trusted-oidc-idp-token': options.trustedOidcToken,
-            },
-          }
-        : {}),
-    }),
-  )
+  const client = createCatalogClient(base.href.replace(/\/+$/, ''), (url, init) => {
+    const headers = new Headers(init?.headers)
+    if (options.trustedOidcToken) {
+      headers.set('x-vercel-trusted-oidc-idp-token', options.trustedOidcToken)
+    }
+    return (options.fetch ?? globalThis.fetch)(url, { ...init, headers, signal, redirect: 'error' })
+  })
   try {
     const data =
       path[1] === 'race-schedule'
