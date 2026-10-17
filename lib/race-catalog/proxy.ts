@@ -26,7 +26,7 @@ function upstreamFailure(
 export async function handleCatalog(
   request: Request,
   path: string[],
-  options: { baseUrl?: string; fetch?: typeof fetch; timeoutMs?: number; trustedOidcToken?: string },
+  options: { baseUrl?: string; fetch?: typeof fetch; timeoutMs?: number; trustedOidcToken?: string; bypassToken?: string },
 ) {
   if (
     request.method !== 'GET' ||
@@ -68,12 +68,19 @@ export async function handleCatalog(
   } catch {
     return failure(503, 'API_NOT_CONFIGURED', '경주 조회 서버가 아직 연결되지 않았습니다.')
   }
+  // Never send a deployment-bypass credential over plaintext HTTP.
+  if (options.bypassToken && base.protocol !== 'https:') {
+    return failure(503, 'API_NOT_CONFIGURED', '경주 조회 서버 보안 설정을 확인해 주세요.')
+  }
   const timeout = AbortSignal.timeout(options.timeoutMs ?? 5000)
   const signal = AbortSignal.any([request.signal, timeout])
   const client = createCatalogClient(base.href.replace(/\/+$/, ''), (url, init) => {
     const headers = new Headers(init?.headers)
     if (options.trustedOidcToken) {
       headers.set('x-vercel-trusted-oidc-idp-token', options.trustedOidcToken)
+    }
+    if (options.bypassToken) {
+      headers.set('x-vercel-protection-bypass', options.bypassToken)
     }
     return (options.fetch ?? globalThis.fetch)(url, { ...init, headers, signal, redirect: 'error' })
   })
