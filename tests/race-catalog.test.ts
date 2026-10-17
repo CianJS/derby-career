@@ -84,7 +84,7 @@ test('851 source rows preserve null dates, 3 duplicate pairs, national grade and
   }
   assert.equal(prizeText({ ...seed.races[0], prizeMoney: null }), '미확인')
 })
-test('shared client requests nine bounded pages and the selected ID, rejecting oversized/invalid/mismatched responses', async () => {
+test('shared client accepts bounded raw-source fixture pages and the selected ID, rejecting oversized/invalid/mismatched responses', async () => {
   const seen: string[] = []
   const client = createCatalogClient(
     'https://example.test/api/racing-catalog',
@@ -126,7 +126,7 @@ test('shared client requests nine bounded pages and the selected ID, rejecting o
 test('rendered table/detail expose API totals and currencies without fabricated details; accessible states/filters remain usable', () => {
   const page = {
     data: seed.races.slice(0, 100),
-    pagination: { page: 1, pageSize: 100, total: 851, totalPages: 9 },
+    pagination: { page: 1, pageSize: 100, total: 848, totalPages: 9 },
   }
   const markup = renderToStaticMarkup(
     createElement(RaceCatalogList, {
@@ -136,7 +136,7 @@ test('rendered table/detail expose API totals and currencies without fabricated 
       onPage: () => {},
     }),
   )
-  assert.match(markup, /참고 원본 851행/)
+  assert.match(markup, /참고 원본 848행/)
   assert.match(markup, /scope="col"/)
   assert.match(markup, /overflow-x-auto/)
   assert.equal((markup.match(/scope="row"/g) ?? []).length, 100)
@@ -216,6 +216,63 @@ test('late response cannot replace newer selection even when abort ignored, and 
   await flush()
   assert.deepEqual(seen.at(-1), { status: 'ready', data: 'retry succeeded' })
 })
+test('protected upstream credentials stay server-side on success and failure without forwarding browser headers or redirects', async () => {
+  const bypassToken = 'test-server-only-bypass'
+  const trustedOidcToken = 'test-server-only-oidc'
+  const headers = {
+    'x-vercel-protection-bypass': bypassToken,
+    'x-vercel-trusted-oidc-idp-token': trustedOidcToken,
+    'set-cookie': `private=${bypassToken}`,
+    location: `https://other.example.test/${trustedOidcToken}`,
+  }
+  for (const status of [200, 401, 500]) {
+    const response = await handleCatalog(
+      new Request('https://frontend.test/api/racing-catalog/v1/race-schedule?pageSize=1', {
+        headers: {
+          cookie: 'browser-cookie',
+          authorization: 'Bearer browser-session',
+          'x-vercel-protection-bypass': 'browser-bypass',
+          'x-vercel-trusted-oidc-idp-token': 'browser-identity',
+        },
+      }),
+      ['v1', 'race-schedule'],
+      {
+        baseUrl: 'https://api.example.test',
+        bypassToken,
+        trustedOidcToken,
+        fetch: async (_url, init) => {
+          const actual = new Headers(init?.headers)
+          assert.equal(actual.get('x-vercel-protection-bypass'), bypassToken)
+          assert.equal(actual.get('x-vercel-trusted-oidc-idp-token'), trustedOidcToken)
+          assert.equal(actual.has('authorization'), false)
+          assert.equal(actual.has('cookie'), false)
+          assert.equal(init?.credentials, 'omit')
+          assert.equal(init?.redirect, 'error')
+          return Response.json(
+            status === 200
+              ? {
+                  data: [seed.races[0]],
+                  pagination: { page: 1, pageSize: 1, total: 848, totalPages: 848 },
+                }
+              : { error: { code: 'PROTECTED', message: `${bypassToken} ${trustedOidcToken}` } },
+            { status, headers },
+          )
+        },
+      },
+    )
+    assert.equal(response.status, status === 200 ? 200 : 502)
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    for (const name of Object.keys(headers)) {
+      assert.equal(response.headers.has(name), false)
+    }
+    const body = await response.text()
+    assert.ok(!body.includes(bypassToken))
+    assert.ok(!body.includes(trustedOidcToken))
+    if (status === 200) {
+      assert.equal(JSON.parse(body).pagination.total, 848)
+    }
+  }
+})
 test('public proxy restricts paths and filters, protects credentials and returns honest error/not configured/timeout states', async () => {
   const request = (query = '') =>
     new Request('http://frontend/api/racing-catalog/v1/race-schedule' + query, {
@@ -242,15 +299,27 @@ test('public proxy restricts paths and filters, protects credentials and returns
       assert.equal(headers.has('authorization'), false)
       assert.equal(headers.has('cookie'), false)
       assert.equal(init?.credentials, 'omit')
-      return Response.json({ error: { code: 'FAIL', message: 'upstream private detail' } }, { status: 500 })
+      return Response.json(
+        { error: { code: 'FAIL', message: 'upstream private detail' } },
+        { status: 500 },
+      )
     },
   })
   assert.equal(trusted.status, 502)
-  assert.equal(
-    (await handleCatalog(request(), path, { baseUrl: 'http://api', bypassToken: 'secret' }))
-      .status,
-    503,
-  )
+  for (const credentials of [{ bypassToken: 'secret' }, { trustedOidcToken: 'secret' }]) {
+    assert.equal(
+      (
+        await handleCatalog(request(), path, {
+          baseUrl: 'http://api',
+          ...credentials,
+          fetch: async () => {
+            assert.fail('Server credentials must not be sent over plaintext HTTP')
+          },
+        })
+      ).status,
+      503,
+    )
+  }
   for (const status of [404, 429, 500]) {
     const response = await handleCatalog(request(), [...path, 'RACE_NOT_FOUND'], {
       baseUrl: 'http://api',
@@ -274,12 +343,28 @@ test('public proxy restricts paths and filters, protects credentials and returns
   for (const [name, perform, phase, upstreamStatus] of [
     [
       'upstream login HTML',
-      async () => new Response('<html>protected</html>', { status: 401, headers: { 'Content-Type': 'text/html' } }),
+      async () =>
+        new Response('<html>protected</html>', {
+          status: 401,
+          headers: { 'Content-Type': 'text/html' },
+        }),
       'invalid_json',
       '401',
     ],
-    ['response mismatch', async () => Response.json({ unexpected: 'private detail' }), 'response_contract', null],
-    ['network failure', async () => { throw new Error('secret internal detail') }, 'network', null],
+    [
+      'response mismatch',
+      async () => Response.json({ unexpected: 'private detail' }),
+      'response_contract',
+      null,
+    ],
+    [
+      'network failure',
+      async () => {
+        throw new Error('secret internal detail')
+      },
+      'network',
+      null,
+    ],
   ] as const) {
     const result = await handleCatalog(request(), path, { baseUrl: 'http://api', fetch: perform })
     assert.equal(result.status, 502, name)

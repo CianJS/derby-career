@@ -66,7 +66,7 @@ async function assertDetail(page: Page) {
   return { raceId: race.id, title: race.name, venue: venue.racecourse.name, url: page.url() }
 }
 
-test('real catalog: 851 source rows, 90 venues and 51 matching DOM rows on page nine', async ({
+test('real catalog: 848 distinct races, 90 venues and 48 matching DOM rows on page nine', async ({
   page,
   browser,
 }, testInfo) => {
@@ -85,26 +85,26 @@ test('real catalog: 851 source rows, 90 venues and 51 matching DOM rows on page 
   expect((await venueResponse).status()).toBe(200)
   const list = await (await listResponse).json()
   const venues = await (await venueResponse).json()
-  expect(list.pagination.total).toBe(851)
+  expect(list.pagination.total).toBe(848)
   expect(venues.pagination.total).toBe(90)
   expect(venues.data).toHaveLength(90)
   await expect(
     page.getByRole('combobox', { name: '경마장', exact: true }).locator('option'),
   ).toHaveCount(91)
   const results = page.getByRole('region', { name: '경주 조회 결과', exact: true })
-  await expect(results.getByRole('status')).toContainText('851행 · 1 / 9페이지')
+  await expect(results.getByRole('status')).toContainText('848행 · 1 / 9페이지')
   await expect(results.locator('tbody tr')).toHaveCount(100)
 
   const lastPage = await catalog.list({ page: 9, pageSize: 100 })
-  expect(lastPage.pagination.total).toBe(851)
-  expect(lastPage.data).toHaveLength(51)
+  expect(lastPage.pagination.total).toBe(848)
+  expect(lastPage.data).toHaveLength(48)
   await page.getByRole('spinbutton', { name: '경주 목록 페이지 이동' }).fill('9')
   await page
     .getByRole('navigation', { name: '경주 목록 페이지' })
     .getByRole('button', { name: '이동', exact: true })
     .click()
-  await expect(results.getByRole('status')).toContainText('851행 · 9 / 9페이지')
-  await expect(results.locator('tbody tr')).toHaveCount(51)
+  await expect(results.getByRole('status')).toContainText('848행 · 9 / 9페이지')
+  await expect(results.locator('tbody tr')).toHaveCount(48)
   const renderedIds = await results
     .locator('tbody button[id^="catalog-"]')
     .evaluateAll((buttons) => buttons.map((button) => button.id.slice('catalog-'.length)))

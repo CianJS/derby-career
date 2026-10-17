@@ -20,7 +20,7 @@ for (const viewport of sizes) {
     for (const [country, total] of [
       ['KOR', 51],
       ['JPN', 176],
-      ['USA', 624],
+      ['USA', 621],
     ] as const) {
       await page.getByRole('combobox', { name: '개최국', exact: true }).selectOption(country)
       const data = await assertResults(page, { country }, total)
@@ -146,13 +146,13 @@ for (const viewport of sizes) {
     const country = page.getByRole('combobox', { name: '개최국', exact: true })
     await country.focus()
     await country.selectOption('USA')
-    await assertResults(page, { country: 'USA' }, 624)
+    await assertResults(page, { country: 'USA' }, 621)
     await expect(country).toBeFocused()
     await page.getByLabel('경주명 검색', { exact: true }).focus()
     await page.keyboard.press('Tab')
     await expect(page.getByRole('button', { name: '조건 적용 / 검색', exact: true })).toBeFocused()
     await page.keyboard.press('Enter')
-    await assertResults(page, { country: 'USA' }, 624)
+    await assertResults(page, { country: 'USA' }, 621)
     await capture(page, info, 'keyboard-filter')
   })
 
@@ -240,15 +240,23 @@ for (const viewport of sizes) {
     )
     for (const search of ['EDDIE LOGAN', 'ROBERT J. FRANKEL', 'FIFTH SEASON']) {
       const list = await catalog.list({ search, pageSize: 100 })
-      expect(list.pagination.total).toBe(2)
-      expect(list.data[0].duplicateGroup).toBe(list.data[1].duplicateGroup)
+      expect(list.pagination.total).toBe(1)
+      expect(list.data[0].duplicateGroup).toBeTruthy()
       examples.push(...list.data)
     }
     const evidence = []
     for (const race of examples) {
       expect(race).toBeTruthy()
-      await page.goto('/?view=races&rc_search=' + encodeURIComponent(race.name))
-      await assertResults(page, { search: race.name })
+      const query: Query = { search: race.name }
+      if (race.scheduleStatus !== 'dated') {
+        query.scheduleStatus = race.scheduleStatus
+      }
+      const params = new URLSearchParams({ view: 'races', rc_search: race.name })
+      if (query.scheduleStatus) {
+        params.set('rc_scheduleStatus', query.scheduleStatus)
+      }
+      await page.goto('/?' + params)
+      await assertResults(page, query)
       const row = page.locator(`#catalog-${race.id}`)
       await expect(row).toBeVisible()
       const response = page.waitForResponse((r) =>
@@ -334,7 +342,7 @@ for (const viewport of sizes) {
         return
       }
       const response = await route.fetch()
-      expect((await response.json()).pagination.total).toBe(624)
+      expect((await response.json()).pagination.total).toBe(621)
       held()
       await gated
       await route.fulfill({ response })
