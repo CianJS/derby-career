@@ -39,15 +39,15 @@ export async function verifyPublicCatalog(baseUrl, fetcher = fetch) {
       200,
       validateRaceScheduleList,
     )
-    assert.equal(result.pagination.total, 851)
+    assert.equal(result.pagination.total, 848)
     assert.equal(result.pagination.page, page)
-    assert.equal(result.data.length, page === 9 ? 51 : 100)
+    assert.equal(result.data.length, page === 9 ? 48 : 100)
     races.push(...result.data)
   }
-  assert.equal(new Set(races.map((r) => r.id)).size, 851)
+  assert.equal(new Set(races.map((r) => r.id)).size, 848)
   assert.ok(races.every((r) => !r.gameEnabled && r.entryEligibility === 'not_evaluated'))
-  assert.equal(races.filter((r) => r.raceDate === null).length, 41)
-  const countries = { KOR: 51, JPN: 176, USA: 624 }
+  assert.equal(races.filter((r) => r.raceDate === null).length, 39)
+  const countries = { KOR: 51, JPN: 176, USA: 621 }
   for (const [country, count] of Object.entries(countries)) {
     const result = await get(
       `/v1/race-schedule?country=${country}&year=2026&pageSize=100`,

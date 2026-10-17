@@ -8,7 +8,7 @@ import { createCatalogClient } from '../lib/race-catalog/client'
 import { dateText, prizeText } from '../lib/race-catalog/model'
 
 // Run from services/api after pnpm build. Actual Next HTTP -> Fastify HTTP -> migrated PGlite DB.
-test('public catalog HTTP flow uses Next route and real server/DB for 851 rows, nine pages, filters/details and empty DB', async () => {
+test('public catalog HTTP flow uses Next route and real server/DB for 848 distinct rows, nine pages, filters/details and empty DB', async () => {
   const f = await fixture()
   const upstream = await f.app.listen({ port: 0, host: '127.0.0.1' })
   const trace: { path: string; status: number }[] = []
@@ -75,8 +75,8 @@ test('public catalog HTTP flow uses Next route and real server/DB for 851 rows, 
       cancelled = 0
     for (let page = 1; page <= 9; page++) {
       const result = await client.list({ page, pageSize: 100 })
-      assert.equal(result.pagination.total, 851)
-      assert.equal(result.data.length, page === 9 ? 51 : 100)
+      assert.equal(result.pagination.total, 848)
+      assert.equal(result.data.length, page === 9 ? 48 : 100)
       for (const race of result.data) {
         assert.ok(!ids.has(race.id))
         ids.add(race.id)
@@ -91,13 +91,13 @@ test('public catalog HTTP flow uses Next route and real server/DB for 851 rows, 
         }
       }
     }
-    assert.equal(ids.size, 851)
-    assert.equal(unconfirmed, 23)
+    assert.equal(ids.size, 848)
+    assert.equal(unconfirmed, 21)
     assert.equal(cancelled, 18)
     for (const [country, total, currency] of [
       ['KOR', 51, 'KRW'],
       ['JPN', 176, 'JPY'],
-      ['USA', 624, 'USD'],
+      ['USA', 621, 'USD'],
     ] as const) {
       const list = await client.list({ country, pageSize: 100 })
       assert.equal(list.pagination.total, total)

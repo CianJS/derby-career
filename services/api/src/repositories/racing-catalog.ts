@@ -68,10 +68,19 @@ export class RacingCatalogRepository {
       }
     }
     const where = filters.length ? ' WHERE ' + filters.join(' AND ') : ''
+    // Hide explicitly flagged duplicate groups without deleting imported source rows.
+    // Filtering happens first so a group's matching member is not discarded.
+    const source =
+      table === 'race_schedules'
+        ? `(SELECT DISTINCT ON (COALESCE(NULLIF(payload->>'duplicateGroup', ''), id))
+              id, race_date, payload FROM race_schedules${where}
+            ORDER BY COALESCE(NULLIF(payload->>'duplicateGroup', ''), id),
+              (race_date IS NULL) ASC, race_date ASC NULLS LAST, id COLLATE "C" ASC) AS catalog_rows`
+        : `${table}${where}`
     return this.db.transaction(async (tx) => {
       await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
       const total = Number(
-        (await tx.query(`SELECT count(*) AS n FROM ${table}${where}`, values)).rows[0].n,
+        (await tx.query(`SELECT count(*) AS n FROM ${source}`, values)).rows[0].n,
       )
       const order =
         table === 'race_schedules'
@@ -79,7 +88,7 @@ export class RacingCatalogRepository {
           : 'id COLLATE "C" ASC'
       const data = (
         await tx.query(
-          `SELECT payload FROM ${table}${where} ORDER BY ${order} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+          `SELECT payload FROM ${source} ORDER BY ${order} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
           [...values, query.pageSize, (query.page - 1) * query.pageSize],
         )
       ).rows.map((r) => r.payload as T)

@@ -86,7 +86,7 @@ test(
             }
           })
         })
-        assert.equal((await verifyPublicCatalog(`http://127.0.0.1:${port}`)).races, 851)
+        assert.equal((await verifyPublicCatalog(`http://127.0.0.1:${port}`)).races, 848)
       } finally {
         if (child.exitCode === null && child.signalCode === null) {
           const exited = new Promise<void>((resolveExit) => child.once('exit', () => resolveExit()))
