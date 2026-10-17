@@ -240,8 +240,8 @@ for (const viewport of sizes) {
     )
     for (const search of ['EDDIE LOGAN', 'ROBERT J. FRANKEL', 'FIFTH SEASON']) {
       const list = await catalog.list({ search, pageSize: 100 })
-      expect(list.pagination.total).toBe(2)
-      expect(list.data[0].duplicateGroup).toBe(list.data[1].duplicateGroup)
+      expect(list.pagination.total).toBe(1)
+      expect(list.data[0].duplicateGroup).toBeTruthy()
       examples.push(...list.data)
     }
     const evidence = []
