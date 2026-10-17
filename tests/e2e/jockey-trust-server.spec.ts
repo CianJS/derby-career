@@ -2,7 +2,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { test, expect } from '@playwright/test'
 import { BROWSER_SAVE_KEY } from '../../lib/career/browser-save'
 
-test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt, duplicate completion and retirement', async ({
+test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion receipt, duplicate completion and retirement', async ({
   page,
 }, info) => {
   test.setTimeout(180_000)
@@ -32,6 +32,10 @@ test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt,
   await page.getByRole('heading', { name: '레드 코멧', exact: true }).click()
   await page.getByRole('button', { name: '이 말로 육성 시작', exact: true }).click()
   await expect.poll(async () => (await get()).career?.state.careerTurnIndex).toBe(1)
+  let funds = (await get()).stable.funds
+  expect(funds).toBe(20_000_000)
+  const headerFunds = () => page.getByLabel('마방 자금', { exact: true })
+  await expect(headerFunds()).toHaveText('₩20,000,000')
   for (let month = 1; month <= 6; month++) {
     if (month === 4) {
       // Six months of accelerated clicks plus development StrictMode reads can exceed
@@ -60,10 +64,19 @@ test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt,
     await expect(
       page.locator('[aria-label="출전 요약"] [data-trust-status="available"]'),
     ).toBeVisible()
+    if (month === 3) {
+      await page.locator('input[value="DEV_M3_SPRINT_1400"]').check()
+    }
     await page.getByRole('button', { name: '출전 확정', exact: true }).click()
     await expect(page.getByText('출전 정보 저장 완료 · 선택 잠김', { exact: true })).toBeVisible()
     const before = await get()
     const run = before.career.state.raceRun
+    const fee = run.raceDefinitionSnapshot.entryFee
+    expect(fee).toBe(month === 3 ? 500_000 : 0)
+    funds -= fee
+    expect(before.stable.funds).toBe(funds)
+    expect(before.career.funds).toBe(funds)
+    await expect(headerFunds()).toHaveText(`₩${funds.toLocaleString('ko-KR')}`)
     expect(run.simulation.engineVersion).toBe('race-sim-v4')
     await page.reload()
     await expect(
@@ -101,6 +114,15 @@ test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt,
     const record = after.career.state.raceRecords.find(
       (r: { raceRunId: string }) => r.raceRunId === run.raceRunId,
     )
+    funds += record.prizeMoney
+    expect(record.prizeMoney).toBe(run.simulation.result.prizeMoney)
+    expect(after.stable.funds).toBe(funds)
+    expect(after.career.funds).toBe(funds)
+    await expect(headerFunds()).toHaveText(`₩${funds.toLocaleString('ko-KR')}`)
+    await expect(page.locator('[data-settlement-balance]')).toHaveText(
+      `₩${funds.toLocaleString('ko-KR')}`,
+    )
+    await expect(page.getByText('상금 지급 완료', { exact: true })).toBeVisible()
     const change = record.trustChange
     expect(after.career.state.jockeyTrust[record.jockeyId].trust).toBe(change.after)
     expect(change.before).toBe(run.player.jockeySnapshot.chemistry)
@@ -133,7 +155,10 @@ test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt,
     await page.getByRole('button', { name: '다음 달 육성으로', exact: true }).click()
     await page.reload()
     await page.getByRole('button', { name: '육성 계속', exact: true }).click()
-    expect((await get()).career.state.jockeyTrust).toEqual(after.career.state.jockeyTrust)
+    const restored = await get()
+    expect(restored.career.state.jockeyTrust).toEqual(after.career.state.jockeyTrust)
+    expect(restored.stable.funds).toBe(funds)
+    await expect(headerFunds()).toHaveText(`₩${funds.toLocaleString('ko-KR')}`)
   }
   const final = await get()
   expect(final.career.state.careerTurnIndex).toBe(7)
@@ -150,8 +175,17 @@ test('real server trust: Month 1–7, v4 replay/reload, lost completion receipt,
   expect(retired.retirements[0].snapshot.state.jockeyTrust).toEqual(final.career.state.jockeyTrust)
   expect(await page.evaluate((key) => localStorage.getItem(key), BROWSER_SAVE_KEY)).toBeNull()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(retired.stable.funds).toBe(funds)
+  expect(retired.retirements[0].snapshot.funds).toBe(funds)
   await info.attach('server-retired-trust', {
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
   })
+  await home()
+  await page.getByRole('button', { name: '새 육성마 시작', exact: true }).click()
+  await page.getByRole('heading', { name: '레드 코멧', exact: true }).click()
+  await page.getByRole('button', { name: '이 말로 육성 시작', exact: true }).click()
+  await expect(headerFunds()).toHaveText(`₩${funds.toLocaleString('ko-KR')}`)
+  expect((await get()).career.state.raceRecords).toHaveLength(0)
+  expect(await page.evaluate((key) => localStorage.getItem(key), BROWSER_SAVE_KEY)).toBeNull()
 })

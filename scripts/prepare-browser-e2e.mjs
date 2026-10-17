@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 import { mkdirSync, appendFileSync, readdirSync, readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
@@ -77,4 +78,27 @@ if (changed.length) {
   process.exitCode = 1
 } else {
   console.log(`Protected fixture check: ${before.size} files unchanged (SHA-256)`)
+}
+
+// Isolated test DB only: exercise the server's actual paid-entry transaction and a positive prize.
+const databaseUrl = new URL(process.env.DATABASE_URL ?? '')
+if (!databaseUrl.pathname.endsWith('_test')) {
+  throw new Error('Browser economy fixtures require an isolated _test database')
+}
+const { Client } = createRequire(import.meta.url)('../services/api/node_modules/pg')
+const database = new Client({ connectionString: databaseUrl.href })
+try {
+  await database.connect()
+  const changed = await database.query(
+    'UPDATE race_definitions SET payload=payload || $2::jsonb WHERE id=$1',
+    ['DEV_M3_SPRINT_1400', JSON.stringify({ entryFee: 500000, runners: 2 })],
+  )
+  if (changed.rowCount !== 1) {
+    throw new Error('Paid-entry browser fixture is missing')
+  }
+  console.log(
+    'Isolated server economy fixture: entry fee 500000, two runners; source files unchanged',
+  )
+} finally {
+  await database.end()
 }

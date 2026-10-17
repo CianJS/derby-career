@@ -302,7 +302,7 @@ test('actual App: settings preserves active career and duplicate-name archives; 
     assert.doesNotMatch(h.container.textContent!, /마방 생성|최초 등록/)
     assert.equal(
       h.container.querySelector('[aria-label="마방 자금"]')?.textContent?.trim(),
-      '자금 미구현',
+      '₩42,800,000',
     )
     assert.deepEqual(readBrowserSave().career, before.career)
     assert.deepEqual(readBrowserSave().lifecycle?.archive, before.lifecycle?.archive)
