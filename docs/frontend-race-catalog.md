@@ -60,3 +60,12 @@ node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/*.integratio
 - 두 저장 모드에서 9페이지 목록 → 선택 ID 상세 → 실제 History Back/Forward → 명시적 홈 이동을 검증한다. 홈 이동 때에만 공개 view/ID를 제거하고 목록 조건은 보존한다.
 - 서버 active RaceRun의 최초/재마운트 관전 복원과, 이미 로드된 서버 workspace가 공개 상세를 덮지 않는 경우를 검증한다.
 - 상세 관전 복원 테스트의 로그 조회는 실패 응답으로 격리해 라우팅만 검사한다. 실제 레이스 진행/완료 검증은 기존 `server-race-flow.integration.ts`가 담당한다.
+
+
+## Vercel 보호된 API Preview 연결 (2026-10-17)
+
+- Next 서버의 `DERBY_API_URL`은 배포된 `derby-career-api`의 HTTPS origin으로 설정한다. 브라우저는 여전히 Next의 동일 출처 `/api/racing-catalog/*`만 호출한다.
+- Backend의 Vercel Authentication은 유지한다. 전용 서버 간 요청용 `DERBY_CATALOG_UPSTREAM_BYPASS_TOKEN`을 **Next 서버 전용 Sensitive 환경변수**로 설정한다. 원본 토큰을 저장소, `NEXT_PUBLIC_` 변수, 로그, 브라우저 헤더에 절대 넣지 않는다.
+- Next 프록시가 Vercel Backend로 요청할 때만 `x-vercel-protection-bypass` 헤더를 붙인다. HTTP upstream에는 이 토큰을 전달하지 않는다. 브라우저의 Cookie/Authorization은 전달하지 않는다.
+- 해당 토큰은 프로젝트 전반의 배포 보호를 우회할 수 있으므로 서버 용도로만 보관하고, 불필요해지면 철회한다. 장기적으로 Vercel Trusted Sources가 지원되면 Preview→Preview OIDC 접근 규칙을 사용하고 우회 토큰을 폐기한다.
+- 환경변수 변경 후 **새 Preview 배포**가 필요하다. 실제 검증은 FE 경주 목록 API가 200과 계약에 맞는 JSON을 반환하는지 확인하고, 실패하면 `X-Derby-Catalog-Failure`/상위 HTTP 상태를 확인한다.
