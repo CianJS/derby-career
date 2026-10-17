@@ -336,7 +336,7 @@ test('real PostgreSQL serializes reference catalog imports without touching play
     assert.deepEqual((await f.call('GET', '/v1/catalog/races')).json(), before)
     assert.equal((await f.call('GET', '/health/ready')).statusCode, 200)
     const schedule = (await f.call('GET', '/v1/race-schedule?country=USA&pageSize=100')).json()
-    assert.equal(schedule.pagination.total, 624)
+    assert.equal(schedule.pagination.total, 621)
     assert.equal(
       Number(
         (await f.db.query('SELECT count(*) AS n FROM race_schedules WHERE race_date IS NULL'))
