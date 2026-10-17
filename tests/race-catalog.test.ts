@@ -232,11 +232,13 @@ test('public proxy restricts paths and filters, protects credentials and returns
     400,
   )
   const trusted = await handleCatalog(request(), path, {
-    baseUrl: 'http://api',
+    baseUrl: 'https://api.example.test',
     trustedOidcToken: 'vercel-test-identity',
+    bypassToken: 'vercel-test-bypass',
     fetch: async (_url, init) => {
       const headers = new Headers(init?.headers)
       assert.equal(headers.get('x-vercel-trusted-oidc-idp-token'), 'vercel-test-identity')
+      assert.equal(headers.get('x-vercel-protection-bypass'), 'vercel-test-bypass')
       assert.equal(headers.has('authorization'), false)
       assert.equal(headers.has('cookie'), false)
       assert.equal(init?.credentials, 'omit')
@@ -244,6 +246,11 @@ test('public proxy restricts paths and filters, protects credentials and returns
     },
   })
   assert.equal(trusted.status, 502)
+  assert.equal(
+    (await handleCatalog(request(), path, { baseUrl: 'http://api', bypassToken: 'secret' }))
+      .status,
+    503,
+  )
   for (const status of [404, 429, 500]) {
     const response = await handleCatalog(request(), [...path, 'RACE_NOT_FOUND'], {
       baseUrl: 'http://api',
