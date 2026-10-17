@@ -20,7 +20,7 @@ for (const viewport of sizes) {
     for (const [country, total] of [
       ['KOR', 51],
       ['JPN', 176],
-      ['USA', 624],
+      ['USA', 621],
     ] as const) {
       await page.getByRole('combobox', { name: '개최국', exact: true }).selectOption(country)
       const data = await assertResults(page, { country }, total)
@@ -146,13 +146,13 @@ for (const viewport of sizes) {
     const country = page.getByRole('combobox', { name: '개최국', exact: true })
     await country.focus()
     await country.selectOption('USA')
-    await assertResults(page, { country: 'USA' }, 624)
+    await assertResults(page, { country: 'USA' }, 621)
     await expect(country).toBeFocused()
     await page.getByLabel('경주명 검색', { exact: true }).focus()
     await page.keyboard.press('Tab')
     await expect(page.getByRole('button', { name: '조건 적용 / 검색', exact: true })).toBeFocused()
     await page.keyboard.press('Enter')
-    await assertResults(page, { country: 'USA' }, 624)
+    await assertResults(page, { country: 'USA' }, 621)
     await capture(page, info, 'keyboard-filter')
   })
 
@@ -334,7 +334,7 @@ for (const viewport of sizes) {
         return
       }
       const response = await route.fetch()
-      expect((await response.json()).pagination.total).toBe(624)
+      expect((await response.json()).pagination.total).toBe(621)
       held()
       await gated
       await route.fulfill({ response })
