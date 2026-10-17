@@ -76,7 +76,7 @@ test('cold start errors fail closed without leaking secrets and later initializa
   }
 })
 
-test('production function serves 851/90 with one warm app, no fixtures and idempotent reference import', async () => {
+test('production function serves 848 distinct races/90 venues with one warm app, no fixtures and idempotent reference import', async () => {
   const db = await embeddedDatabase()
   await migrate(db)
   const source = await readRacingSource(['seeds/racing.notion.source.json'])
@@ -101,8 +101,8 @@ test('production function serves 851/90 with one warm app, no fixtures and idemp
     assert.ok(concurrent.every((r) => r.status === 200))
     assert.equal(bootCount, 1)
     assert.deepEqual(await verifyPublicCatalog(server.base), {
-      races: 851,
-      countries: { KOR: 51, JPN: 176, USA: 624 },
+      races: 848,
+      countries: { KOR: 51, JPN: 176, USA: 621 },
       racecourses: 90,
       privateApi: 'disabled',
     })
