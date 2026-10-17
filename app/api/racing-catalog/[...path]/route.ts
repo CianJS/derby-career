@@ -4,6 +4,8 @@ export async function GET(request: Request, context: { params: Promise<{ path: s
   return handleCatalog(request, path, {
     baseUrl: process.env.DERBY_API_URL,
     // Vercel issues this per-function token; never forward browser credentials.
-    trustedOidcToken: process.env.VERCEL ? (request.headers.get('x-vercel-oidc-token') ?? undefined) : undefined,
+    trustedOidcToken: process.env.VERCEL
+      ? (request.headers.get('x-vercel-oidc-token') ?? undefined)
+      : undefined,
   })
 }
