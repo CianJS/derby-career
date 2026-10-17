@@ -247,7 +247,7 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
       assert.ok(unraced.data.every((r: { raceDate: unknown }) => r.raceDate === null))
     })
     await t.test(
-      'date/id ordering is stable across all pages, with all 41 undated records last',
+      'date/id ordering is stable across all pages, with 39 undated distinct records last',
       async () => {
         const ids: string[] = []
         const dates: (string | null)[] = []
@@ -258,8 +258,8 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
           dates.push(...result.data.map((r: { raceDate: string | null }) => r.raceDate))
         }
         assert.equal(new Set(ids).size, 848)
-        assert.ok(dates.slice(0, 807).every(Boolean))
-        assert.ok(dates.slice(807).every((d) => d === null))
+        assert.ok(dates.slice(0, 809).every(Boolean))
+        assert.ok(dates.slice(809).every((d) => d === null))
         const expected = normalizeRacingCatalog(input)
           .races.sort(
             (a, b) =>
