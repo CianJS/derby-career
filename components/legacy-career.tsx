@@ -1,5 +1,6 @@
 'use client'
 
+import { ExpeditionPanel } from './career/expedition-panel'
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CareerCheckpoint } from "@/components/career/checkpoint";
 import { RetirementConfirm } from '@/components/career/retirement-confirm';
@@ -170,7 +171,7 @@ function StableSetup({
               <option>대한민국</option>
               <option>일본</option>
               <option>미국</option>
-              <option>영국</option>
+
             </select>
           </label>
         </div>
@@ -669,6 +670,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
                   raceEntry={<RaceAction onOpen={() => setView("entry")} />}
                 />
           )}{" "}
+          {['training', 'entry', 'stable', 'settings'].includes(view) && <ExpeditionPanel readOnly={view === 'stable' || view === 'settings'} />}
           {view === "entry" && <RaceEntry setView={setView} />}{" "}
           {(view === "raceplay" || view === "raceexperimental") && (
             <FocusShell setView={setView} backLabel="육성으로 돌아가기">

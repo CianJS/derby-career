@@ -21,7 +21,7 @@ export function StableSettings({
       <dl className="grid gap-4 rounded-xl border border-border p-5 text-sm sm:grid-cols-3">
         {[
           ['마방명', stableName || '등록된 이름 없음'],
-          ['본거지', mode === 'local' ? country : '정보 미제공'],
+          ['본거지', country],
           ['저장 방식', mode === 'local' ? '이 브라우저에 저장' : '개발용 서버에 저장'],
         ].map(([label, value]) => (
           <div key={label}>

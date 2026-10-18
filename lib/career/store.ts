@@ -1,5 +1,13 @@
 'use client'
 
+import {
+  migrateTravel,
+  supportedCountry,
+  closeLocalTravel,
+  type StableTravel,
+  type SupportedCountry,
+} from './local-travel'
+import { localRacesForTurn } from './race-entry'
 import { useSyncExternalStore } from 'react'
 import { createApiClient } from '../../packages/shared/src/client'
 import {
@@ -150,11 +158,18 @@ async function locked<T>(operation: () => T): Promise<T> {
 function localEconomy(): LifecycleSave & LocalEconomy {
   const saved = readLifecycleSave() ?? {}
   assertLifecycleSave(saved)
-  const migrated = migrateEconomy(saved)
+  const migrated = migrateTravel(migrateEconomy(saved)) as LifecycleSave & LocalEconomy
   if (migrated !== saved) {
     writeBrowserSave({ lifecycle: migrated })
   }
   return migrated
+}
+export function stableTravel(state: Snapshot): StableTravel | null {
+  return state.mode === 'server'
+    ? (state.workspace?.stable?.travel ?? null)
+    : state.mode === 'local'
+      ? (state.lifecycle?.travel ?? null)
+      : null
 }
 export function stableFunds(state: ReturnType<typeof useCareer>): number | null {
   return state.mode === 'server'
@@ -271,7 +286,7 @@ async function mutate(
             next,
           )
         : settled
-      if (next && next !== saved) {
+      if ((next && next !== saved) || settled !== lifecycle) {
         writeBrowserSave({ career: next, lifecycle: projected })
       }
       return {
@@ -319,6 +334,111 @@ export const careerStore = {
           }
         })
       : Promise.resolve()
+  },
+  startExpedition: (
+    targetCountry: SupportedCountry,
+    revision: number,
+    raceDefinitionId?: string,
+  ) => {
+    if (snapshot.mode === 'server') {
+      const career = activeServer()
+      return serverCommand({
+        kind: 'expedition-start',
+        careerId: career.id,
+        body: {
+          commandId: crypto.randomUUID(),
+          targetCountry,
+          expectedTravelRevision: revision,
+          ...(raceDefinitionId ? { raceDefinitionId } : {}),
+        },
+      })
+    }
+    return mutate(
+      (saved) => saved,
+      (saved, _next, lifecycle) => {
+        if (!saved) {
+          throw new Error('육성마를 먼저 선택해 주세요.')
+        }
+        const travel = migrateTravel(lifecycle).travel
+        if (!supportedCountry(travel.homeCountry) || !supportedCountry(targetCountry)) {
+          throw new Error('지원하지 않는 국가입니다.')
+        }
+        if (travel.revision !== revision) {
+          throw new Error('원정 상태가 변경되었습니다. 다시 불러와 주세요.')
+        }
+        if (saved.raceRun) {
+          throw new Error('확정한 경주를 완료한 뒤 원정을 변경해 주세요.')
+        }
+        if (travel.activeExpedition) {
+          if (travel.activeExpedition.targetCountry === targetCountry) {
+            return lifecycle
+          }
+          throw new Error('기존 원정을 먼저 귀국해 주세요.')
+        }
+        if (targetCountry === travel.homeCountry) {
+          throw new Error('소속 국가로는 원정을 신청할 수 없습니다.')
+        }
+        if (raceDefinitionId) {
+          const race = localRacesForTurn(saved.careerTurnIndex).find(
+            (r) => r.id === raceDefinitionId,
+          )
+          if (!race || race.countryCode !== targetCountry) {
+            throw new Error('현재 월의 원정 경주를 선택해 주세요.')
+          }
+        }
+        return {
+          ...lifecycle,
+          travel: {
+            ...travel,
+            locationCountry: targetCountry,
+            revision: travel.revision + 1,
+            activeExpedition: {
+              id: crypto.randomUUID(),
+              careerId: snapshot.localCareerId!,
+              targetCountry,
+              targetRaceDefinitionId: raceDefinitionId ?? null,
+              status: 'active',
+              startedRevision: travel.revision + 1,
+              startedTurn: saved.careerTurnIndex,
+              endedTurn: null,
+              endReason: null,
+              createdAt: new Date().toISOString(),
+              endedAt: null,
+            },
+          },
+        }
+      },
+    )
+  },
+  returnExpedition: (expeditionId: string, revision: number) => {
+    if (snapshot.mode === 'server') {
+      const career = activeServer()
+      return serverCommand({
+        kind: 'expedition-return',
+        careerId: career.id,
+        expeditionId,
+        body: { commandId: crypto.randomUUID(), expectedTravelRevision: revision },
+      })
+    }
+    return mutate(
+      (saved) => saved,
+      (saved, _next, lifecycle) => {
+        if (!saved) {
+          throw new Error('육성마를 먼저 선택해 주세요.')
+        }
+        const travel = migrateTravel(lifecycle).travel
+        if (!travel.activeExpedition && travel.revision === revision + 1) {
+          return lifecycle
+        }
+        if (travel.revision !== revision || travel.activeExpedition?.id !== expeditionId) {
+          throw new Error('원정 상태가 변경되었습니다. 다시 불러와 주세요.')
+        }
+        if (saved.raceRun) {
+          throw new Error('확정한 경주를 완료한 뒤 귀국해 주세요.')
+        }
+        return { ...lifecycle, travel: closeLocalTravel(travel) }
+      },
+    )
   },
   loadMoreRetirements: () => server?.loadMore(),
   chooseServerEvent: (choiceId: string) => {
@@ -497,6 +617,7 @@ export const careerStore = {
               draft,
               undefined,
               lifecycle.fundsKRW,
+              migrateTravel(lifecycle).travel,
             )
             if (log) {
               writeRaceLog(log, false)
@@ -510,18 +631,35 @@ export const careerStore = {
             if (lifecycle.economyLedger.some((row) => row.raceRunId === next.raceRun!.raceRunId)) {
               throw new Error('이미 정산된 경주 식별자입니다. 기존 기록은 유지됩니다.')
             }
-            return settleLocal(lifecycle, {
+            const settled = settleLocal(lifecycle, {
               raceRunId: next.raceRun.raceRunId,
               kind: 'entry_fee',
               amount: -next.raceRun.raceDefinitionSnapshot.entryFee,
             })
+            const travel = migrateTravel(settled).travel
+            return travel.activeExpedition
+              ? {
+                  ...settled,
+                  travel: {
+                    ...travel,
+                    activeExpedition: {
+                      ...travel.activeExpedition,
+                      targetRaceDefinitionId: next.raceRun.raceDefinitionSnapshot.id,
+                    },
+                  },
+                }
+              : settled
           },
         ),
-  select: (horseId: string) =>
+  select: (horseId: string, homeCountry?: SupportedCountry) =>
     snapshot.mode === 'server'
       ? serverCommand({
           kind: 'create',
-          body: { careerId: crypto.randomUUID(), horseDefinitionId: horseId },
+          body: {
+            careerId: crypto.randomUUID(),
+            horseDefinitionId: horseId,
+            ...(!snapshot.workspace?.stable && homeCountry ? { homeCountry } : {}),
+          },
         })
       : mutate((saved) => {
           return withMonthEvent(startLocalCareer(horseId, saved))

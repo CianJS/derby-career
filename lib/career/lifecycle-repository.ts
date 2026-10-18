@@ -1,6 +1,7 @@
 import { readBrowserSave, writeBrowserSave, legacyCookie } from './browser-save'
 import { assertLifecycleSave } from './lifecycle-save'
 import { applyCareer } from './lifecycle'
+import { migrateTravel } from './local-travel'
 import { migrateEconomy } from './local-economy'
 
 const key = 'derby-career-lifecycle-v2'
@@ -59,6 +60,11 @@ export function writeLifecycleSave(value: unknown): void {
   // A stale tab may update presentation metadata, but cannot erase an immutable archive.
   let next = {
     ...value,
+    travel:
+      saved.lifecycle?.stableName || saved.career
+        ? migrateTravel(saved.lifecycle ?? value).travel
+        : migrateTravel({ ...value, travel: undefined }).travel,
+    country: saved.lifecycle?.stableName ? saved.lifecycle.country : value.country,
     fundsKRW: economy.fundsKRW,
     economyLedger: economy.economyLedger,
     ...(saved.lifecycle?.archive ? { archive: saved.lifecycle.archive } : {}),

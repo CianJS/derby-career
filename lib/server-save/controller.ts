@@ -5,6 +5,7 @@ import type { components } from '../../packages/shared/src/generated/api'
 import {
   validateRaceEntryOptions,
   validateHorseCatalog,
+  validateExpeditionResponse,
 } from '../../packages/shared/src/generated/save-validation.mjs'
 import { executeSaveCommand } from './execute-command'
 import { parseSaveWorkspace, type SaveWorkspace } from './workspace'
@@ -65,7 +66,7 @@ export class ServerSaveController {
     }
     return value
   }
-  private async readWorkspace() {
+  private async readWorkspace(checkTravel = false) {
     const [saved, catalog] = await Promise.all([
       this.api.getCareerWorkspace({ page: 1, pageSize: 20 }),
       this.api.listHorses(),
@@ -76,6 +77,15 @@ export class ServerSaveController {
     }
     let raceOptions: Models['RaceEntryOptions'] | null = null
     if (current.career) {
+      if (current.stable?.travel && (checkTravel || !this.state.workspace)) {
+        const expedition = await this.api.getExpedition(current.career.id)
+        if (
+          !validateExpeditionResponse(expedition) ||
+          JSON.stringify(expedition.travel) !== JSON.stringify(current.stable?.travel)
+        ) {
+          throw new Error('원정 상태가 변경되었습니다. 최신 서버 기록을 다시 불러와 주세요.')
+        }
+      }
       const options = await this.api.getRaceEntryOptions(current.career.id)
       if (
         !validateRaceEntryOptions(options) ||
@@ -165,7 +175,9 @@ export class ServerSaveController {
       if (this.disposed) {
         return false
       }
-      await this.readWorkspace()
+      await this.readWorkspace(
+        pending?.kind === 'expedition-start' || pending?.kind === 'expedition-return',
+      )
       if (this.disposed) {
         return false
       }

@@ -1,5 +1,6 @@
 'use client'
 
+import { countryName, supportedCountries, type SupportedCountry } from '@/lib/career/local-travel'
 import { useState } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,8 +9,9 @@ import { careerStore, useCareer } from '@/lib/career/store'
 import { cn } from '@/lib/utils'
 
 export function HorseSelection({ busy }: { busy: boolean }) {
-  const { mode, candidates } = useCareer()
+  const { mode, candidates, workspace } = useCareer()
   const options = mode === 'server' ? candidates.map(h => h.definition) : horses
+  const [homeCountry, setHomeCountry] = useState<SupportedCountry>('KOR')
   const [selected, setSelected] = useState<string | null>(null)
   return <>
     <div className="mb-7">
@@ -17,6 +19,7 @@ export function HorseSelection({ busy }: { busy: boolean }) {
       <h1 className="mt-3 text-3xl font-semibold tracking-tight">첫 육성마를 선택하세요</h1>
       <p className="mt-3 text-sm text-muted-foreground">서로 다른 세 가지 가능성. 능력과 적성을 비교하고, 함께할 한 마리를 선택하세요.</p>
     </div>
+    {mode === 'server' && !workspace?.stable && <label className="mb-5 block text-sm">마방 소속 국가<select aria-label="마방 소속 국가" disabled={busy} value={homeCountry} onChange={e => setHomeCountry(e.target.value as SupportedCountry)} className="ml-3 min-h-11 rounded border border-border bg-background px-3">{supportedCountries.map(c => <option key={c} value={c}>{countryName(c)}</option>)}</select></label>}
     <fieldset disabled={busy}>
       <legend className="sr-only">육성마 후보 비교</legend>
       <div className="grid gap-4 md:grid-cols-3">
@@ -34,7 +37,7 @@ export function HorseSelection({ busy }: { busy: boolean }) {
     </fieldset>
     <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5">
       <p className="text-xs text-muted-foreground">{selected ? `${options.find(h => h.id === selected)!.name} 선택됨 · 확정 후 Month 1이 시작됩니다.` : '후보를 선택하면 육성을 시작할 수 있습니다.'}</p>
-      <Button size="lg" disabled={!selected || busy} onClick={() => selected && void careerStore.select(selected)}>{busy ? '저장 중…' : '이 말로 육성 시작'}<ArrowRight data-icon="inline-end" aria-hidden /></Button>
+      <Button size="lg" disabled={!selected || busy} onClick={() => selected && void careerStore.select(selected, homeCountry)}>{busy ? '저장 중…' : '이 말로 육성 시작'}<ArrowRight data-icon="inline-end" aria-hidden /></Button>
     </div>
   </>
 }
