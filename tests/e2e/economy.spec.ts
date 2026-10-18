@@ -127,7 +127,9 @@ for (const width of [390, 1440]) {
     expect(completed.career.raceRecords).toHaveLength(career.raceRecords.length + 1)
     expect(completed.lifecycle.activeHorse.raceRecords).toEqual(completed.career.raceRecords)
     expect(completed.lifecycle.activeHorse.jockeyTrust).toEqual(completed.career.jockeyTrust)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect(
+      await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= innerWidth),
+    ).toBe(true)
     await info.attach('paid-settlement-' + width, {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',
@@ -226,6 +228,18 @@ for (const width of [390, 1440]) {
     await expect(
       page.locator('label').filter({ has: page.locator(`input[value="${paidDraft.raceId}"]`) }),
     ).toContainText('1승 이상')
+    document.lifecycle.fundsKRW = Number.MAX_SAFE_INTEGER
+    await page.evaluate(
+      ({ key, document }) => localStorage.setItem(key, JSON.stringify(document)),
+      { key: BROWSER_SAVE_KEY, document },
+    )
+    await page.reload()
+    await expect(page.getByLabel('마방 자금', { exact: true })).toHaveText(
+      `₩${Number.MAX_SAFE_INTEGER.toLocaleString('ko-KR')}`,
+    )
+    expect(
+      await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= innerWidth),
+    ).toBe(true)
     document.lifecycle.fundsKRW = -1
     await page.evaluate(
       ({ key, document }) => localStorage.setItem(key, JSON.stringify(document)),

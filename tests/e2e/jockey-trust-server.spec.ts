@@ -70,6 +70,15 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
       await expect(
         page.locator('label').filter({ has: page.locator('input[value="DEV_M3_SPRINT_1400"]') }),
       ).toContainText('등록비 ₩500,000')
+    } else {
+      // Recommendation may select the paid Listed race after a win. Explicitly
+      // exercise a free, eligible Month 6 entry for either saved race outcome.
+      await page
+        .locator(
+          'input[value="DEV_M6_ONE_WIN_1800"]:enabled, input[value="DEV_M6_MAIDEN_MILE_1600"]:enabled',
+        )
+        .first()
+        .check()
     }
     await page.getByRole('button', { name: '출전 확정', exact: true }).click()
     await expect(page.getByText('출전 정보 저장 완료 · 선택 잠김', { exact: true })).toBeVisible()
