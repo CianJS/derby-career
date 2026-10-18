@@ -6,7 +6,7 @@ import { RetirementConfirm } from '@/components/career/retirement-confirm';
 import { RaceAction, RaceEntryWorkspace } from "@/components/career/race-entry-workspace";
 import { RacePlayback } from "@/components/career/race-playback";
 import { RaceReflection } from "@/components/career/race-reflection";
-import { careerStore, useCareer } from "@/lib/career/store";
+import { careerStore, useCareer, stableFunds } from "@/lib/career/store";
 import { applyCareer } from '@/lib/career/lifecycle';
 import { serverLifecycle } from '@/lib/server-save/lifecycle';
 import { INJURY_NOTICE, isHealthy, isStrained } from "@/lib/career/status";
@@ -451,7 +451,11 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
     window.addEventListener('popstate', restore)
     return () => window.removeEventListener('popstate', restore)
   }, []);
-  const { career, workspace, ready, busy, pending, error } = useCareer();
+  const snapshot = useCareer();
+  const compatibleMode = snapshot.mode === saveMode;
+  const career = compatibleMode ? snapshot.career : null;
+  const workspace = compatibleMode ? snapshot.workspace : null;
+  const { ready, busy, pending, error } = snapshot;
   const state: LifecycleState = saveMode === 'server' && workspace
     ? { ...localState, stableName: '서버 마방', ...serverLifecycle(workspace) }
     : localState
@@ -510,7 +514,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
     if (saveMode === 'local' && hydrated && career) setState((current) => applyCareer(current, career));
   }, [career, hydrated, saveMode]);
   useEffect(() => {
-    if (saveMode !== 'local' || !hydrated) return
+    if (saveMode !== 'local' || !hydrated || !compatibleMode) return
     let current = true
     void careerStore.saveLifecycle(state).then(() => {
       if (current) setSaveError(null)
@@ -518,7 +522,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
       if (current) setSaveError(error instanceof Error ? error.message : '마방 기록을 저장하지 못했습니다.')
     })
     return () => { current = false }
-  }, [state, hydrated, saveMode]);
+  }, [state, hydrated, saveMode, compatibleMode]);
   const canCreateStable = saveMode === 'local' && hydrated && ready && !busy && !pending && !error && !saveError &&
     !state.stableName && !state.activeHorse && !career && state.archive.length === 0;
   const createStable = (name: string, country: string) => {
@@ -586,7 +590,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   ].includes(view);
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Header setView={setView} saveMode={saveMode} funds={saveMode === 'server' ? workspace?.stable?.funds ?? null : null} />
+      <Header setView={setView} saveMode={saveMode} funds={compatibleMode ? stableFunds(snapshot) : null} />
       <div className="flex min-h-[calc(100vh-57px)]">
         {management && <Sidebar view={view} setView={setView} />}
         <main className="min-w-0 flex-1">
@@ -598,10 +602,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               <button disabled={busy} onClick={() => void careerStore.refresh()} className="mt-2 text-xs underline">{pending ? '같은 요청으로 다시 확인' : '서버 기록 새로고침'}</button>
             </div>
           )}
-          {(saveMode === 'local' || workspace) && <>
-          {saveError && (
+          {compatibleMode && (saveMode === 'local' || workspace) && <>
+          {(saveError || (saveMode === 'local' && !snapshot.lifecycle && error)) && (
             <p role="alert" className="ui-error-state m-4">
-              {saveError}
+              {saveError ?? error}
               <a href="/" target="_blank" rel="noreferrer" className="ml-3 underline">새 탭에서 열기</a>
             </p>
           )}

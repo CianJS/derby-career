@@ -26,12 +26,15 @@ export function Header({
         <button className="lab-brand flex items-center" onClick={() => setView('home')}>
           DERBY CAREER
         </button>
-        <div className="ml-auto flex items-center gap-2 text-muted-foreground">
-          <span className="text-xs" aria-label="마방 자금">
+        <div className="ml-auto flex min-w-0 items-center gap-2 text-muted-foreground">
+          <span
+            className="min-w-0 break-all text-right text-xs leading-tight tabular-nums"
+            aria-label="마방 자금"
+          >
             {funds === null
               ? saveMode === 'server'
                 ? '자금 정보 없음'
-                : '자금 미구현'
+                : '자금 확인 중'
               : `₩${funds.toLocaleString('ko-KR')}`}
           </span>
           <NoticeCenter />

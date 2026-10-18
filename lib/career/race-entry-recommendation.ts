@@ -23,6 +23,7 @@ export function recommendRaceEntry(
   career: Career,
   raceId?: string,
   options?: components['schemas']['RaceEntryOptions'],
+  availableFunds?: number,
 ): RaceEntryDraft {
   if (career.raceRun) {
     return {
@@ -31,12 +32,14 @@ export function recommendRaceEntry(
       tactic: career.raceRun.player.tactic,
     }
   }
-  if (options ? options.restrictionReason : entryRestriction(career)) {
+  if (options ? options.restrictionReason : entryRestriction(career, availableFunds)) {
     return emptyDraft()
   }
   const eligible = options
     ? options.races.filter((row) => row.eligible).map((row) => row.definition)
-    : racesForTurn(career.careerTurnIndex).filter((race) => !raceEligibility(career, race))
+    : racesForTurn(career.careerTurnIndex).filter(
+        (race) => !raceEligibility(career, race, availableFunds),
+      )
   if (!eligible.length) {
     return emptyDraft()
   }
@@ -85,12 +88,15 @@ export function updateRaceEntryDraft(
   current: RaceEntryDraft,
   patch: Partial<RaceEntryDraft>,
   options?: components['schemas']['RaceEntryOptions'],
+  availableFunds?: number,
 ): RaceEntryDraft {
   if (career.raceRun) {
-    return recommendRaceEntry(career, undefined, options)
+    return recommendRaceEntry(career, undefined, options, availableFunds)
   }
   if (patch.raceId !== undefined && patch.raceId !== current.raceId) {
-    return patch.raceId === null ? emptyDraft() : recommendRaceEntry(career, patch.raceId, options)
+    return patch.raceId === null
+      ? emptyDraft()
+      : recommendRaceEntry(career, patch.raceId, options, availableFunds)
   }
   // A manual jockey/tactic choice survives ordinary rerenders and same-race clicks.
   return { ...current, ...patch }

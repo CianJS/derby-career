@@ -23,11 +23,20 @@ import { writeCareer } from './repository'
 import { restoreLocalCareer } from './local-recovery'
 import { writeLifecycleSave } from './lifecycle-repository'
 import { startLocalCareer, retireLocalCareer } from './local-career'
+import { applyCareer } from './lifecycle'
+import { assertLifecycleSave } from './lifecycle-save'
+import { migrateEconomy, settleLocal, assertMoney, type LocalEconomy } from './local-economy'
 import type { LifecycleSave } from './lifecycle-save'
-import { BROWSER_SAVE_KEY, readBrowserSave, STORAGE_ACCESS_MESSAGE } from './browser-save'
+import {
+  BROWSER_SAVE_KEY,
+  readBrowserSave,
+  writeBrowserSave,
+  STORAGE_ACCESS_MESSAGE,
+} from './browser-save'
 import { lockRaceEntryWithLog, type RaceEntryDraft } from './race-entry'
-import { removeRaceLog, writeRaceLog } from './race-log-repository'
-import type { RaceSimulationResult } from './race-simulation'
+import { readRaceLog, removeRaceLog, writeRaceLog } from './race-log-repository'
+import { validateRaceLog, type RaceSimulationResult } from './race-simulation'
+import { readLifecycleSave } from './lifecycle-repository'
 
 type Snapshot = {
   ready: boolean
@@ -40,6 +49,7 @@ type Snapshot = {
   raceOptions: SaveSnapshot['raceOptions']
   candidates: SaveSnapshot['candidates']
   localCareerId: string | null
+  lifecycle: LifecycleSave | null
 }
 type RetirementReceipt = { mode: 'local'; lifecycle: LifecycleSave } | { mode: 'server' }
 const initial: Snapshot = {
@@ -53,6 +63,7 @@ const initial: Snapshot = {
   candidates: [],
   raceOptions: null,
   localCareerId: null,
+  lifecycle: null,
 }
 let snapshot = initial
 const listeners = new Set<() => void>()
@@ -62,6 +73,7 @@ let modeGeneration = 0
 const journalKey = 'derby-career-server-command-v1'
 function configure(mode: 'local' | 'server') {
   if (snapshot.mode === mode) {
+    void refresh()
     return
   }
   server?.dispose()
@@ -135,6 +147,22 @@ async function locked<T>(operation: () => T): Promise<T> {
     throw error
   }
 }
+function localEconomy(): LifecycleSave & LocalEconomy {
+  const saved = readLifecycleSave() ?? {}
+  assertLifecycleSave(saved)
+  const migrated = migrateEconomy(saved)
+  if (migrated !== saved) {
+    writeBrowserSave({ lifecycle: migrated })
+  }
+  return migrated
+}
+export function stableFunds(state: ReturnType<typeof useCareer>): number | null {
+  return state.mode === 'server'
+    ? (state.workspace?.stable?.funds ?? null)
+    : state.mode === 'local'
+      ? (state.lifecycle?.fundsKRW ?? null)
+      : null
+}
 async function refresh() {
   if (!snapshot.mode) {
     return
@@ -151,8 +179,10 @@ async function refresh() {
       if (modeGeneration !== generation || snapshot.mode !== 'local') {
         throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
       }
+      const lifecycle = localEconomy()
       return {
         career: restoreLocalCareer(),
+        lifecycle,
         localCareerId: readBrowserSave().localCareerId ?? null,
       }
     })
@@ -163,6 +193,7 @@ async function refresh() {
     if (modeGeneration === generation) {
       publish({
         ready: true,
+        lifecycle: null,
         error: error instanceof Error ? error.message : '저장 데이터를 읽지 못했습니다.',
       })
     }
@@ -186,7 +217,7 @@ function subscribe(listener: () => void) {
     }
     window.addEventListener('focus', refresh)
     window.addEventListener('storage', storageChanged)
-    void refresh()
+    // The root configures the intended mode before any durable recovery/migration.
   }
   return () => {
     listeners.delete(listener)
@@ -202,7 +233,14 @@ function subscribe(listener: () => void) {
     }
   }
 }
-async function mutate(operation: (saved: Career | null) => Career | null) {
+async function mutate(
+  operation: (saved: Career | null, lifecycle: LifecycleSave & LocalEconomy) => Career | null,
+  settlement?: (
+    saved: Career | null,
+    next: Career | null,
+    lifecycle: LifecycleSave & LocalEconomy,
+  ) => LifecycleSave & LocalEconomy,
+) {
   if (snapshot.mode !== 'local') {
     return false
   }
@@ -216,15 +254,31 @@ async function mutate(operation: (saved: Career | null) => Career | null) {
       if (modeGeneration !== generation || snapshot.mode !== 'local') {
         throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
       }
+      const primary = readBrowserSave()
+      if (primary.career && snapshot.localCareerId !== (primary.localCareerId ?? null)) {
+        throw new Error('다른 탭에서 육성마가 변경되었습니다. 다시 불러와 주세요.')
+      }
+      const lifecycle = localEconomy()
       const saved = restoreLocalCareer()
       if (saved && snapshot.localCareerId !== (readBrowserSave().localCareerId ?? null)) {
         throw new Error('다른 탭에서 육성마가 변경되었습니다. 다시 불러와 주세요.')
       }
-      const next = operation(saved)
+      const next = operation(saved, lifecycle)
+      const settled = settlement?.(saved, next, lifecycle) ?? lifecycle
+      const projected = next
+        ? applyCareer(
+            { ...settled, activeHorse: settled.activeHorse ?? null, month: settled.month ?? 4 },
+            next,
+          )
+        : settled
       if (next && next !== saved) {
-        writeCareer(next)
+        writeBrowserSave({ career: next, lifecycle: projected })
       }
-      return { career: next, localCareerId: readBrowserSave().localCareerId ?? null }
+      return {
+        career: next,
+        lifecycle: readBrowserSave().lifecycle ?? null,
+        localCareerId: readBrowserSave().localCareerId ?? null,
+      }
     })
     if (modeGeneration === generation) {
       publish(loaded)
@@ -261,6 +315,7 @@ export const careerStore = {
       ? locked(() => {
           if (snapshot.mode === 'local' && modeGeneration === generation) {
             writeLifecycleSave(state)
+            publish({ lifecycle: readBrowserSave().lifecycle ?? null })
           }
         })
       : Promise.resolve()
@@ -295,12 +350,55 @@ export const careerStore = {
         body: { commandId: crypto.randomUUID() },
       })
     }
-    const done = await mutate((saved) => {
-      if (!saved) {
-        throw new Error('육성 기록이 없습니다.')
-      }
-      return completeRace(saved, raceRunId, result.placing, result.prizeMoney)
-    })
+    const done = await mutate(
+      (saved) => {
+        if (!saved) {
+          throw new Error('육성 기록이 없습니다.')
+        }
+        // Completed historical runs never gain a retroactive payment.
+        if (saved.raceRecords.some((record) => record.raceRunId === raceRunId)) {
+          return saved.raceRun?.raceRunId === raceRunId
+            ? completeRace(saved, raceRunId, result.placing, result.prizeMoney)
+            : saved
+        }
+        const run = saved.raceRun
+        if (!run || run.raceRunId !== raceRunId) {
+          throw new Error('출전 기록이 일치하지 않습니다.')
+        }
+        const log = readRaceLog(raceRunId)
+        validateRaceLog(log, run)
+        if (log.result.placing !== result.placing || log.result.prizeMoney !== result.prizeMoney) {
+          throw new Error('저장된 시뮬레이션 결과와 일치하지 않습니다.')
+        }
+        assertMoney(log.result.prizeMoney)
+        const priorPrize = saved.raceRecords.reduce(
+          (sum, record) => sum + (record.prizeMoney ?? 0),
+          0,
+        )
+        assertMoney(priorPrize + log.result.prizeMoney)
+        return completeRace(saved, raceRunId, log.result.placing, log.result.prizeMoney)
+      },
+      (saved, next, lifecycle) => {
+        if (
+          !saved ||
+          next === saved ||
+          saved.raceRecords.some((record) => record.raceRunId === raceRunId)
+        ) {
+          return lifecycle
+        }
+        if (
+          lifecycle.economyLedger.some((row) => row.raceRunId === raceRunId && row.kind === 'prize')
+        ) {
+          throw new Error('이미 지급된 경주입니다. 기존 기록은 유지됩니다.')
+        }
+        const record = next?.raceRecords.find((record) => record.raceRunId === raceRunId)
+        if (!record) {
+          throw new Error('확정 상금을 확인하지 못했습니다.')
+        }
+        assertMoney(record.prizeMoney)
+        return settleLocal(lifecycle, { raceRunId, kind: 'prize', amount: record.prizeMoney })
+      },
+    )
     if (done) {
       removeRaceLog(raceRunId)
     }
@@ -333,6 +431,11 @@ export const careerStore = {
         if (modeGeneration !== generation || snapshot.mode !== 'local') {
           throw new Error('저장 방식이 변경되었습니다. 다시 불러와 주세요.')
         }
+        const primary = readBrowserSave()
+        if (primary.career && snapshot.localCareerId !== (primary.localCareerId ?? null)) {
+          throw new Error('다른 탭에서 육성마가 변경되었습니다. 다시 불러와 주세요.')
+        }
+        localEconomy()
         const career = restoreLocalCareer()
         if (!career) {
           throw new Error('은퇴할 육성 기록이 없습니다.')
@@ -343,7 +446,7 @@ export const careerStore = {
         return retireLocalCareer(career)
       })
       if (modeGeneration === generation) {
-        publish({ career: null })
+        publish({ career: null, lifecycle })
       }
       notify()
       return { mode: 'local', lifecycle }
@@ -384,16 +487,36 @@ export const careerStore = {
             },
           })
         })()
-      : mutate((saved) => {
-          if (!saved || saved.horse.id !== horseId || saved.month !== month) {
-            throw new Error('육성 상태가 변경되었습니다. 다시 불러와 주세요.')
-          }
-          const { career, log } = lockRaceEntryWithLog(saved, draft)
-          if (log) {
-            writeRaceLog(log)
-          }
-          return career
-        }),
+      : mutate(
+          (saved, lifecycle) => {
+            if (!saved || saved.horse.id !== horseId || saved.month !== month) {
+              throw new Error('육성 상태가 변경되었습니다. 다시 불러와 주세요.')
+            }
+            const { career, log } = lockRaceEntryWithLog(
+              saved,
+              draft,
+              undefined,
+              lifecycle.fundsKRW,
+            )
+            if (log) {
+              writeRaceLog(log, false)
+            }
+            return career
+          },
+          (saved, next, lifecycle) => {
+            if (saved === next || !next?.raceRun) {
+              return lifecycle
+            }
+            if (lifecycle.economyLedger.some((row) => row.raceRunId === next.raceRun!.raceRunId)) {
+              throw new Error('이미 정산된 경주 식별자입니다. 기존 기록은 유지됩니다.')
+            }
+            return settleLocal(lifecycle, {
+              raceRunId: next.raceRun.raceRunId,
+              kind: 'entry_fee',
+              amount: -next.raceRun.raceDefinitionSnapshot.entryFee,
+            })
+          },
+        ),
   select: (horseId: string) =>
     snapshot.mode === 'server'
       ? serverCommand({
