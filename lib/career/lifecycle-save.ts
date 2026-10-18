@@ -1,3 +1,4 @@
+import { assertEconomy, type EconomyEntry } from './local-economy'
 import { assertJockeyRelations } from './jockey-trust'
 import type { LifecycleHorse } from './lifecycle'
 import type { HorseRaceRecord } from './records'
@@ -6,6 +7,8 @@ export type LifecycleSave = {
   stableName?: string
   country?: string
   funds?: string
+  fundsKRW?: number
+  economyLedger?: EconomyEntry[]
   activeHorse?: LifecycleHorse | null
   archive?: LifecycleHorse[]
   candidateSeed?: string
@@ -105,6 +108,7 @@ export function assertLifecycleSave(value: unknown): asserts value is LifecycleS
   if (!object(value)) {
     throw invalid()
   }
+  assertEconomy(value)
   for (const key of ['stableName', 'country', 'funds', 'candidateSeed', 'lastRetiredId']) {
     if (value[key] !== undefined && typeof value[key] !== 'string') {
       throw invalid()

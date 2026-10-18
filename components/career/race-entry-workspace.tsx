@@ -14,7 +14,7 @@ import {
   tactics,
   type RaceEntryDraft,
 } from '@/lib/career/race-entry'
-import { careerStore, useCareer } from '@/lib/career/store'
+import { careerStore, useCareer, stableFunds } from '@/lib/career/store'
 import {
   jockeyTrust,
   raceEntryJockeyTrust,
@@ -26,18 +26,22 @@ import { cn } from '@/lib/utils'
 import type { components } from '@/packages/shared/src/generated/api'
 
 export function RaceAction({ onOpen }: { onOpen: () => void }) {
-  const { career, busy, pending, mode, raceOptions } = useCareer()
+  const snapshot = useCareer()
+  const { career, busy, pending, mode, raceOptions } = snapshot
+  const funds = stableFunds(snapshot)
   if (!career) {
     return null
   }
   const restriction =
     mode === 'server'
       ? (raceOptions?.restrictionReason ?? (!raceOptions ? '출전 정보를 불러오는 중…' : null))
-      : entryRestriction(career)
+      : entryRestriction(career, funds ?? undefined)
   const open =
     mode === 'server'
       ? (raceOptions?.races.filter((row) => row.eligible).length ?? 0)
-      : racesForTurn(career.careerTurnIndex).filter((r) => !raceEligibility(career, r)).length
+      : racesForTurn(career.careerTurnIndex).filter(
+          (r) => !raceEligibility(career, r, funds ?? undefined),
+        ).length
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-xs text-muted-foreground">
@@ -87,7 +91,9 @@ export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }
       busy={busy || pending}
       error={error}
       onStartRace={onStartRace}
-      canConfirm={mode === 'local' || !!raceOptions}
+      canConfirm={mode === 'local' ? stableFunds(snapshot) !== null : !!raceOptions}
+      availableFunds={mode === 'local' ? (stableFunds(snapshot) ?? undefined) : undefined}
+      balance={stableFunds(snapshot)}
       serverOptions={mode === 'server' ? raceOptions : undefined}
       trustForJockey={(id) => jockeyTrust(snapshot, id)}
     />
@@ -101,6 +107,8 @@ export function RaceEntryForm({
   onStartRace,
   canConfirm = true,
   serverOptions,
+  availableFunds,
+  balance = null,
   trustForJockey = (id) => raceEntryJockeyTrust(serverOptions, id),
 }: {
   career: Career
@@ -110,9 +118,11 @@ export function RaceEntryForm({
   serverOptions?: components['schemas']['RaceEntryOptions'] | null
   trustForJockey?: (jockeyId: string) => JockeyTrust
   canConfirm?: boolean
+  availableFunds?: number
+  balance?: number | null
 }) {
   const [draft, setDraft] = useState<RaceEntryDraft>(() =>
-    recommendRaceEntry(career, undefined, serverOptions ?? undefined),
+    recommendRaceEntry(career, undefined, serverOptions ?? undefined, availableFunds),
   )
   const availableJockeys =
     serverOptions === undefined ? contractedRoster(career) : (serverOptions?.jockeys ?? [])
@@ -130,7 +140,7 @@ export function RaceEntryForm({
   const aptitude = horse?.aptitude ?? career.horse.aptitude
   const restriction =
     serverOptions === undefined
-      ? entryRestriction(career)
+      ? entryRestriction(career, availableFunds)
       : (serverOptions?.restrictionReason ?? (!serverOptions ? '출전 정보를 불러오는 중…' : null))
   const warnings = [
     values.fatigue >= 40 ? '피로가 높습니다.' : '',
@@ -143,7 +153,7 @@ export function RaceEntryForm({
   const update = (patch: Partial<RaceEntryDraft>) => {
     if (!locked && !busy) {
       setDraft((current) =>
-        updateRaceEntryDraft(career, current, patch, serverOptions ?? undefined),
+        updateRaceEntryDraft(career, current, patch, serverOptions ?? undefined, availableFunds),
       )
     }
   }
@@ -191,6 +201,10 @@ export function RaceEntryForm({
             .join(' · ')}
         </p>
       </section>
+      <p role="status" className="text-sm tabular-nums" data-entry-balance>
+        마방 잔액 · {balance === null ? '확인 중' : `₩${balance.toLocaleString('ko-KR')}`}
+        {locked && ' · 등록비 정산 후'}
+      </p>
       {error && (
         <p role="alert" className="ui-error-state">
           {error}
@@ -207,7 +221,7 @@ export function RaceEntryForm({
           const reason = locked
             ? null
             : serverOptions === undefined
-              ? raceEligibility(career, r)
+              ? raceEligibility(career, r, availableFunds)
               : (serverOptions?.races.find((row) => row.definition.id === r.id)
                   ?.restrictionReason ?? null)
           return (
@@ -359,6 +373,9 @@ export function RaceEntryForm({
                 !race ||
                 !jockey ||
                 !tactic ||
+                (serverOptions === undefined &&
+                  !!race &&
+                  !!raceEligibility(career, race, availableFunds)) ||
                 (serverOptions !== undefined &&
                   (!serverOptions?.races.find((row) => row.definition.id === race?.id)?.eligible ||
                     !serverOptions?.tactics.includes(tactic)))

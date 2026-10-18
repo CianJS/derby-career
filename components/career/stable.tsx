@@ -1,5 +1,6 @@
 'use client'
 
+import { useCareer, stableFunds } from '@/lib/career/store'
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { View, CareerHorse } from './legacy-types'
@@ -15,6 +16,8 @@ export function Stable({
   archive?: CareerHorse[]
   onArchiveSelect?: (id: string) => void
 }) {
+  const snapshot = useCareer()
+  const funds = stableFunds(snapshot)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('recent')
   // Both save modes provide newest retirements first; keep that order for ties as well.
@@ -42,6 +45,19 @@ export function Stable({
       eyebrow="STABLE"
       description="육성을 마친 경주마와 그들의 커리어 기록을 조회합니다."
     >
+      <section aria-label="마방 자금 현황" className="border-y border-border py-4 text-sm">
+        <span className="text-muted-foreground">마방 자금</span>
+        <p className="mt-2 font-medium tabular-nums">
+          {funds === null
+            ? '자금 정보를 확인하지 못했습니다.'
+            : `₩${funds.toLocaleString('ko-KR')}`}
+        </p>
+        {snapshot.error && (
+          <p role="alert" className="mt-2 text-sm">
+            {snapshot.error}
+          </p>
+        )}
+      </section>
       {archive.length === 0 && (
         <div className="ui-empty-state border-y border-border/70 py-8">
           <p>아직 기록된 경주마가 없습니다.</p>
