@@ -938,8 +938,8 @@ paths:
         required: true
         schema: *id003
       description: 계약 기수, 현재 월 및 전적 검증. 공유 health 규칙의 정상/경상/중등도 부상은 허용하고 중상은 차단. 현재
-        건강 및 healthRecovery를 Snapshot과 healthAtEntry로 보존. 엔진 생략 시 공유 v3를 사용하며 v1/v2 지정 요청도 지원.
-        동일 ID와 최초 본문 재시도는 당시 저장된 응답만 반환하고 Seed와 로그를 재생성하지 않는다. 유료 등록비 제한은 현재 공유 playable 코드를 유지.
+        건강 및 healthRecovery를 Snapshot과 healthAtEntry로 보존. 엔진 생략 시 공유 v4를 사용하며 v1/v2/v3 지정 요청도 지원.
+        동일 ID와 최초 본문 재시도는 당시 저장된 응답만 반환하고 Seed와 로그를 재생성하지 않는다. DB 등록비·마방 잔액과 개최 국가·활성 원정 자격을 최종 검증한다.
   /v1/careers/{careerId}/race-runs/{raceRunId}:
     get:
       operationId: getRaceRun
@@ -1287,6 +1287,130 @@ paths:
           $ref: '#/components/responses/ApiError'
         '503':
           $ref: '#/components/responses/ApiError'
+  /v1/careers/{careerId}/expedition:
+    get:
+      operationId: getExpedition
+      summary: getExpedition
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpeditionResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/careers/{careerId}/expeditions:
+    post:
+      operationId: startExpedition
+      summary: startExpedition
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartExpedition'
+  /v1/careers/{careerId}/expeditions/{expeditionId}/return:
+    post:
+      operationId: returnExpedition
+      summary: returnExpedition
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: expeditionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnExpedition'
 components:
   securitySchemes:
     CareerBearer:
@@ -2078,6 +2202,8 @@ components:
     RaceDefinition:
       type: object
       properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'
         id: *id004
         name: *id004
         month: *id009
@@ -2402,6 +2528,8 @@ components:
     Career:
       type: object
       properties:
+        travel:
+          $ref: '#/components/schemas/StableTravel'
         id: *id003
         stableId: *id003
         ownedHorseId: *id003
@@ -2446,6 +2574,8 @@ components:
           additionalProperties: false
           required: [id, funds, calendarDate]
           properties:
+            travel:
+              $ref: '#/components/schemas/StableTravel'
             id: *id003
             funds: *id005
             calendarDate:
@@ -2581,6 +2711,8 @@ components:
     CreateCareer:
       type: object
       properties:
+        homeCountry:
+          $ref: '#/components/schemas/CountryCode'
         careerId: *id003
         horseDefinitionId:
           type: string
@@ -3547,3 +3679,62 @@ components:
             $ref: '#/components/schemas/RaceSchedule'
         pagination:
           $ref: '#/components/schemas/Pagination'
+
+    CountryCode:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      description: ISO alpha-3. Gameplay supports KOR/JPN/USA. Unknown legacy codes (including GBR) are preserved and never coerced.
+    Expedition:
+      type: object
+      additionalProperties: false
+      required: [id, careerId, targetCountry, targetRaceDefinitionId, status, startedRevision, startedTurn, endedTurn, endReason, createdAt, endedAt]
+      properties:
+        id: {type: string, format: uuid}
+        careerId: {type: string, format: uuid}
+        targetCountry:
+          $ref: '#/components/schemas/CountryCode'
+        targetRaceDefinitionId: {type: string, nullable: true}
+        status: {type: string, enum: [active, returned]}
+        startedRevision: {type: integer, minimum: 1}
+        startedTurn: {type: integer, minimum: 1}
+        endedTurn: {type: integer, minimum: 1, nullable: true}
+        endReason: {type: string, enum: [return, retirement], nullable: true}
+        createdAt: {type: string, format: date-time}
+        endedAt: {type: string, format: date-time, nullable: true}
+    StableTravel:
+      type: object
+      additionalProperties: false
+      required: [homeCountry, locationCountry, revision, activeExpedition]
+      properties:
+        homeCountry:
+          $ref: '#/components/schemas/CountryCode'
+        locationCountry:
+          $ref: '#/components/schemas/CountryCode'
+        revision: {type: integer, minimum: 0}
+        activeExpedition:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/Expedition'
+    ExpeditionResponse:
+      type: object
+      additionalProperties: false
+      required: [travel]
+      properties:
+        travel:
+          $ref: '#/components/schemas/StableTravel'
+    StartExpedition:
+      type: object
+      additionalProperties: false
+      required: [commandId, targetCountry, expectedTravelRevision]
+      properties:
+        commandId: {type: string, format: uuid}
+        targetCountry: {type: string, enum: [KOR, JPN, USA]}
+        expectedTravelRevision: {type: integer, minimum: 0}
+        raceDefinitionId: {type: string, minLength: 1, maxLength: 100}
+    ReturnExpedition:
+      type: object
+      additionalProperties: false
+      required: [commandId, expectedTravelRevision]
+      properties:
+        commandId: {type: string, format: uuid}
+        expectedTravelRevision: {type: integer, minimum: 0}

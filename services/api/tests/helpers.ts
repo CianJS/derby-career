@@ -10,6 +10,7 @@ import { embeddedDatabase } from './database'
 import type { Database } from '../src/db'
 export async function fixture(
   options: {
+    seed?: boolean
     directorVersion?: 'event-director-v1' | 'event-director-v2'
     probability?: number
     share?: number
@@ -20,7 +21,9 @@ export async function fixture(
   const db = options.db ?? (await embeddedDatabase())
   try {
     await migrate(db, options.migrationsDirectory)
-    await seedDevelopmentCatalog(db, false)
+    if (options.seed !== false) {
+      await seedDevelopmentCatalog(db, false)
+    }
   } catch (error) {
     await db.close()
     throw error

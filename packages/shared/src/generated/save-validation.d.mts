@@ -1,5 +1,9 @@
 // Generated from contracts/openapi.yaml. Do not edit.
 import type { components } from './api'
+export declare function validateStableTravel(value: unknown): value is components['schemas']['StableTravel']
+export declare function validateExpeditionResponse(value: unknown): value is components['schemas']['ExpeditionResponse']
+export declare function validateStartExpedition(value: unknown): value is components['schemas']['StartExpedition']
+export declare function validateReturnExpedition(value: unknown): value is components['schemas']['ReturnExpedition']
 export declare function validateRacecourse(value: unknown): value is components['schemas']['Racecourse']
 export declare function validateCourse(value: unknown): value is components['schemas']['Course']
 export declare function validateRaceSchedule(value: unknown): value is components['schemas']['RaceSchedule']

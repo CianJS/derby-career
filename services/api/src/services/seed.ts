@@ -1,3 +1,4 @@
+import { expeditionFixtures } from './expedition-fixtures'
 import { readFile } from 'node:fs/promises'
 import { horses, jockeyCatalog, raceDefinitions } from '../../../../packages/shared/src/domain'
 import { importEvents } from '../modules/events/import'
@@ -24,10 +25,10 @@ export async function seedDevelopmentCatalog(db: Database, includeExpansion = tr
         [jockey.id, JSON.stringify(jockey)],
       )
     }
-    for (const race of raceDefinitions) {
+    for (const race of [...raceDefinitions, ...expeditionFixtures]) {
       await tx.query(
-        "INSERT INTO race_definitions(id,payload,source_kind) VALUES($1,$2,'development_fixture') ON CONFLICT DO NOTHING",
-        [race.id, JSON.stringify(race)],
+        "INSERT INTO race_definitions(id,payload,source_kind,country_code) VALUES($1,$2,'development_fixture',$3) ON CONFLICT DO NOTHING",
+        [race.id, JSON.stringify(race), race.countryCode ?? 'KOR'],
       )
     }
   })

@@ -18,7 +18,7 @@ npm run db:seed
 npm run dev
 ```
 
-`http://127.0.0.1:4000/health/ready`와 `GET /v1/events?category=common&enabled=true`로 확인한다. `db:seed`는 기존 playable 코드의 말 3두·기수 6명·경주 17개와 실제 Notion 이벤트를 넣는다. 말/기수/경주는 `development_fixture`로 명시하며 운영 환경에서 `db:seed`는 거부한다. 이벤트만 가져오려면 `npm run events:import -- seeds/events.catalog.json`을 사용한다.
+`http://127.0.0.1:4000/health/ready`와 `GET /v1/events?category=common&enabled=true`로 확인한다. `db:seed`는 기존 playable 코드의 말 3두·기수 6명·기존 국내 경주 17개·해외 개발용 경주 2개와 실제 Notion 이벤트를 넣는다. 말/기수/경주는 `development_fixture`로 명시하며 운영 환경에서 `db:seed`는 거부한다. 이벤트만 가져오려면 `npm run events:import -- seeds/events.catalog.json`을 사용한다.
 
 빌드 후 실행도 독립적으로 가능하다.
 
@@ -118,7 +118,7 @@ API `actionId`는 UUID이며 `career.state.action.actionId`의 기존 도메인 
 
 ## 서버 레이스
 
-신규 출전은 공유 `simulateRace`의 **race-sim-v4**를 기본 사용한다. 기존 v1/v2/v3 지정 요청과 저장 로그는 원래 계산으로 유지한다. v4는 기존 v3 코어에 잠긴 신뢰도의 execution 보정만 더한다. 적용 전 `npm run db:migrate`로 **007_jockey_trust.sql**까지 실행한다. readiness도 007을 요구하며 기존 migration과 저장 로그/결과는 변경하지 않는다.
+신규 출전은 공유 `simulateRace`의 **race-sim-v4**를 기본 사용한다. 기존 v1/v2/v3 지정 요청과 저장 로그는 원래 계산으로 유지한다. v4는 기존 v3 코어에 잠긴 신뢰도의 execution 보정만 더한다. 적용 전 `npm run db:migrate`로 **007_jockey_trust.sql**까지 실행한다. readiness는 국가/원정 스키마 008까지 요구하며 기존 migration과 저장 로그/결과는 변경하지 않는다.
 
 [신뢰도 규칙·출전 전 전력 평가·DB/Local 이행·Frontend 계약](docs/jockey-trust.md)을 확인한다. 기존 내부 chemistry 필드는 신뢰도를 뜻하며 새 조회는 `GET /v1/careers/{careerId}/jockey-relations` / `getJockeyRelations`다. 현역/은퇴 관계의 trust·starts와 Career ID/revision을 소유자 범위로 제공한다. 실제 이벤트 1,000개에는 신뢰도 효과를 임의로 추가하지 않았다.
 
@@ -233,7 +233,7 @@ Frontend 계약은 기존 `GET /v1/events`, 상세 조회, `GET /v1/careers/{id}
 
 ## 실존 경마장·경주 일정 참조 카탈로그
 
-`006_racing_reference_catalog.sql`은 `racecourses`, `racecourse_courses`, `race_schedules`를 추가한다. 기존 `race_definitions` 17개, Career/RaceRun/결과/ledger/저장 로그와 분리되어 있으며 `db:seed`와 서버 시작은 실존 카탈로그를 가져오지 않는다. `/health/ready`는 현재 최신 007까지 적용되어야 성공한다. 운영 DB에는 이번 작업에서 적용하지 않았다.
+`006_racing_reference_catalog.sql`은 `racecourses`, `racecourse_courses`, `race_schedules`를 추가한다. 기존 `race_definitions` 17개, Career/RaceRun/결과/ledger/저장 로그와 분리되어 있으며 `db:seed`와 서버 시작은 실존 카탈로그를 가져오지 않는다. `/health/ready`는 현재 최신 008까지 적용되어야 성공한다. 운영 DB에는 이번 작업에서 적용하지 않았다.
 
 2026-10-15 Notion의 필터 없는 기본 뷰를 끝까지 조회한 속성 snapshot을 `seeds/racing.notion.source.json`에 보존했다. 경마장 **90**, 코스 **101**, 경주 원본 **851행**이다. 비공개 Notion 페이지 식별자는 제거하고 관계는 원본의 안정 ID로 바꿨다. 공식 외부 출처·메모·원본 제원은 보존한다. 변환 결과는 `seeds/racing.catalog.json`, 검토 목록은 `reports/racing-catalog.json`이다. 이 수치는 서로 다른 851개 대회 또는 실행 가능한 경주 수가 아니다.
 
@@ -296,3 +296,7 @@ const facility = await client.getRacecourse('RC_KOR_SEOUL')
 생성 타입은 `components.schemas.Racecourse/Course/RaceSchedule`과 목록/상세를 사용한다. `generated/save-validation.mjs`의 `validateRacecourse`, `validateCourse`, `validateRaceSchedule`, `validateRacecourseList`, `validateRacecourseDetail`, `validateRaceScheduleList`로 외부 응답을 검사할 수 있다. 기존 API 응답은 변경하지 않았다. Frontend 화면 수정은 포함하지 않는다.
 
 미확인 제원·자격·상금·최대 출전두수·코스 연결은 null이다. 연령/성별 원문은 `originalEligibility`에도 보존하며 성별 제한이 없는 것을 추정하지 않는다. 미국 `distanceMeters`는 Notion 명목 환산값을 그대로 보존하고 `originalDistance`/unit 및 `distanceBasis=nominal_conversion`으로 구분한다. 실제 발주선 검증을 뜻하지 않는다. 두 중복 후보의 원문 거리/등급은 현재 메모에서 빠져 있으므로 null/검토 표시하며 다른 행에서 복사하지 않는다. NAR는 기타/미확인 상태를 유지하고 환율·게임 상금을 생성하지 않는다.
+
+## 마방 국가 · 해외 원정
+
+`008_overseas_expeditions.sql`을 기존 migration runner로 적용한다. [해외 원정 API 계약·호환성·검증](docs/overseas-expeditions.md)을 따른다. 기존 마방은 명시적 기본 국가 KOR를 부여하며 자금/로그/receipt를 초기화하지 않는다. 일본·미국 게임 fixture 2개는 개발 환경의 `db:seed`로만 추가한다. 운영 DB 변경이나 실존 참고 경주 활성화는 수행하지 않는다.

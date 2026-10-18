@@ -37,6 +37,10 @@ function portableSchema(value: unknown): unknown {
 export async function generateSaveValidation() {
   const spec = await readContract()
   const models = [
+    'StableTravel',
+    'ExpeditionResponse',
+    'StartExpedition',
+    'ReturnExpedition',
     'Racecourse',
     'Course',
     'RaceSchedule',
