@@ -1,3 +1,4 @@
+import { withRaceCountry } from './repositories/expeditions'
 import Fastify, { type FastifyError } from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
@@ -131,9 +132,9 @@ export async function createApp(
   app.get('/health/ready', { schema: routeSchema(spec, '/health/ready', 'get') }, async () => {
     try {
       const result = await db.query(
-        "SELECT name FROM schema_migrations WHERE name IN ('001_foundation.sql','002_history_guards.sql','003_exact_race_log_json.sql','004_race_sim_v3.sql','005_event_activation_guards.sql','006_racing_reference_catalog.sql','007_jockey_trust.sql')",
+        "SELECT name FROM schema_migrations WHERE name IN ('001_foundation.sql','002_history_guards.sql','003_exact_race_log_json.sql','004_race_sim_v3.sql','005_event_activation_guards.sql','006_racing_reference_catalog.sql','007_jockey_trust.sql','008_overseas_expeditions.sql')",
       )
-      if (result.rows.length !== 7) {
+      if (result.rows.length !== 8) {
         throw new Error('Migration missing')
       }
       return { status: 'ready' }
@@ -154,9 +155,14 @@ export async function createApp(
       `/v1/catalog/${name}`,
       { schema: routeSchema(spec, `/v1/catalog/${name}`, 'get') },
       async () => ({
-        data: (await db.query(`SELECT payload,source_kind FROM ${table} ORDER BY id`)).rows.map(
-          (x) => ({ sourceKind: x.source_kind, definition: x.payload }),
-        ),
+        data: (
+          await db.query(
+            `SELECT payload,source_kind${name === 'races' ? ',country_code' : ''} FROM ${table} ORDER BY id`,
+          )
+        ).rows.map((x) => ({
+          sourceKind: x.source_kind,
+          definition: name === 'races' ? withRaceCountry(x.payload, x.country_code) : x.payload,
+        })),
       }),
     )
   }

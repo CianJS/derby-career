@@ -125,7 +125,7 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
   try {
     const input = await source()
     const legacy = (await f.call('GET', '/v1/catalog/races')).json()
-    assert.equal(legacy.data.length, 17)
+    assert.equal(legacy.data.length, 19)
     const career = await f.create()
     const before = (await f.call('GET', `/v1/careers/${career.id}`)).json()
     await t.test('transactional first import and idempotent replay', async () => {
@@ -354,7 +354,7 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
       assert.equal(repeat.statusCode, 200, repeat.body)
       assert.deepEqual(first.json().career, repeat.json().career)
       assert.equal(repeat.json().career.state.careerTurnIndex, 4)
-      assert.equal((await f.call('GET', '/v1/catalog/races')).json().data.length, 17)
+      assert.equal((await f.call('GET', '/v1/catalog/races')).json().data.length, 19)
     })
   } finally {
     await f.close()

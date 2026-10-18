@@ -53,6 +53,21 @@ test('actual responses conform to OpenAPI and the public adapter works without t
     })
     validate('/v1/careers', 'post', created, '201')
     validate('/v1/careers/{careerId}', 'get', await client.getCareer(id))
+    validate('/v1/careers/{careerId}/expedition', 'get', await client.getExpedition(id))
+    const departed = await client.startExpedition(id, {
+      commandId: randomUUID(),
+      targetCountry: 'JPN',
+      expectedTravelRevision: 0,
+    })
+    validate('/v1/careers/{careerId}/expeditions', 'post', departed)
+    assert.ok(departed.career.travel?.activeExpedition)
+    const returned = await client.returnExpedition(id, departed.career.travel.activeExpedition.id, {
+      commandId: randomUUID(),
+      expectedTravelRevision: 1,
+    })
+    validate('/v1/careers/{careerId}/expeditions/{expeditionId}/return', 'post', returned)
+    assert.equal(returned.career.travel?.activeExpedition, null)
+
     const action = await client.confirmAction(id, {
       actionId: randomUUID(),
       choice: 'speed',

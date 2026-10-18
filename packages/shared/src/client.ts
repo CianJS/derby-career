@@ -45,6 +45,16 @@ export function createApiClient(options: ApiClientOptions) {
         body,
         true,
       ),
+    getExpedition: (id: string) =>
+      request<Models['ExpeditionResponse']>(careerPath(id) + '/expedition', undefined, true),
+    startExpedition: (id: string, body: Models['StartExpedition']) =>
+      request<Models['CareerResponse']>(careerPath(id) + '/expeditions', body, true),
+    returnExpedition: (id: string, expeditionId: string, body: Models['ReturnExpedition']) =>
+      request<Models['CareerResponse']>(
+        careerPath(id) + `/expeditions/${encodeURIComponent(expeditionId)}/return`,
+        body,
+        true,
+      ),
     getJockeyRelations: (id: string) =>
       request<Models['JockeyRelationsResponse']>(
         careerPath(id) + '/jockey-relations',

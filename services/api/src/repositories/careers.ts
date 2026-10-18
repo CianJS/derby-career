@@ -1,4 +1,13 @@
 import {
+  readTravel,
+  withRaceCountry,
+  countryRestriction,
+  endExpedition,
+  assertSupportedCountry,
+  assertTravelMutable,
+  type ExpeditionRow,
+} from './expeditions'
+import {
   hydrateJockeyRelations,
   writeJockeyRelations,
   readJockeyRelations,
@@ -80,6 +89,7 @@ export class CareerRepository {
       status: row.status,
       revision: row.revision,
       authority: 'server' as const,
+      travel: await readTravel(tx, row.stable_id),
       funds: Number(stable.funds),
       state: row.state,
       event: historyDto(await readCareerHistory(tx, row)),
@@ -129,12 +139,18 @@ export class CareerRepository {
         }
         let stable = (await tx.query('SELECT * FROM stables WHERE owner_id=$1 FOR UPDATE', [owner]))
           .rows[0]
+        if (body.homeCountry) {
+          assertSupportedCountry(body.homeCountry)
+        }
+        if (stable && body.homeCountry && body.homeCountry !== stable.home_country) {
+          throw conflict('기존 마방의 소속 국가는 변경할 수 없습니다.')
+        }
         if (!stable) {
           stable = (
-            await tx.query('INSERT INTO stables(id,owner_id) VALUES($1,$2) RETURNING *', [
-              randomUUID(),
-              owner,
-            ])
+            await tx.query(
+              'INSERT INTO stables(id,owner_id,home_country) VALUES($1,$2,$3) RETURNING *',
+              [randomUUID(), owner, body.homeCountry ?? 'KOR'],
+            )
           ).rows[0]
           for (const id of startCareer(body.horseDefinitionId).contractedJockeyIds) {
             await tx.query('INSERT INTO jockey_contracts(stable_id,jockey_id) VALUES($1,$2)', [
@@ -243,6 +259,7 @@ export class CareerRepository {
         stable: stable
           ? {
               id: stable.id,
+              travel: await readTravel(tx, stable.id),
               funds: Number(stable.funds),
               calendarDate: { year: stable.calendar_year, month: stable.calendar_month },
             }
@@ -277,6 +294,7 @@ export class CareerRepository {
         if (row.state.raceRun || (row.state.action && !row.state.action.result)) {
           throw conflict('확정된 경주 또는 행동을 완료한 뒤 은퇴해 주세요.')
         }
+        await endExpedition(tx, row, 'retirement')
         // Retirement seals the current state; it never selects events, advances time or recalculates rewards.
         row.status = 'retired'
         row.revision++
@@ -481,9 +499,10 @@ export class CareerRepository {
       const definitions = (
         await tx.query<{
           payload: RaceDefinitionSnapshot
+          country_code: string | null
           source_kind: components['schemas']['RaceCatalog']['data'][number]['sourceKind']
         }>(
-          "SELECT payload,source_kind FROM race_definitions WHERE (payload->>'month')::integer=$1 ORDER BY id",
+          "SELECT payload,source_kind,country_code FROM race_definitions WHERE (payload->>'month')::integer=$1 ORDER BY id",
           [row.turn],
         )
       ).rows
@@ -493,6 +512,7 @@ export class CareerRepository {
           [row.horse_id, row.state.contractedJockeyIds],
         )
       ).rows.map(({ payload, chemistry }) => ({ ...payload, chemistry }))
+      const travel = await readTravel(tx, row.stable_id)
       const funds = await stableFunds(tx, row.stable_id)
       const restrictionReason =
         this.raceEntryRestriction(row, history)?.message ??
@@ -505,10 +525,13 @@ export class CareerRepository {
         career: await this.dto(tx, row),
         defaultEngineVersion: API_RACE_ENGINE_VERSION,
         restrictionReason,
-        races: definitions.map(({ payload, source_kind }) => {
-          const reason = restrictionReason ?? raceEligibility(row.state, payload, funds)
+        races: definitions.map(({ payload, source_kind, country_code }) => {
+          const reason =
+            restrictionReason ??
+            countryRestriction(travel, country_code, row.id) ??
+            raceEligibility(row.state, payload, funds)
           return {
-            definition: payload,
+            definition: withRaceCountry(payload, country_code),
             sourceKind: source_kind,
             eligible: reason === null,
             restrictionReason: reason,
@@ -539,14 +562,22 @@ export class CareerRepository {
         if (!row.state.contractedJockeyIds.includes(body.jockeyId)) {
           throw new ApiError(422, 'RACE_RESTRICTED', '계약 기수 중에서 선택해 주세요.')
         }
-        const race = (
-          await tx.query<{ payload: RaceDefinitionSnapshot }>(
-            'SELECT payload FROM race_definitions WHERE id=$1',
+        const definition = (
+          await tx.query<{ payload: RaceDefinitionSnapshot; country_code: string | null }>(
+            'SELECT payload,country_code FROM race_definitions WHERE id=$1',
             [body.raceDefinitionId],
           )
-        ).rows[0]?.payload
+        ).rows[0]
+        const race = definition
+          ? withRaceCountry(definition.payload, definition.country_code)
+          : undefined
         if (!race || race.month !== row.turn) {
           throw new ApiError(422, 'RACE_RESTRICTED', '현재 월에 출전할 수 있는 경주가 아닙니다.')
+        }
+        const travel = await readTravel(tx, row.stable_id, true)
+        const countryReason = countryRestriction(travel, definition.country_code, id)
+        if (countryReason) {
+          throw new ApiError(422, 'RACE_RESTRICTED', countryReason)
         }
         assertMoney(race.entryFee)
         assertMoney(race.prize)
@@ -604,6 +635,12 @@ export class CareerRepository {
             row.state.health,
           ],
         )
+        if (travel.activeExpedition) {
+          await tx.query(
+            "UPDATE stable_expeditions SET target_race_definition_id=$2 WHERE id=$1 AND status='active'",
+            [travel.activeExpedition.id, race.id],
+          )
+        }
         await settleRaceMoney(tx, row.stable_id, body.raceRunId, 'entry_fee', race.entryFee)
         await writeSimulationLog(tx, body.raceRunId, log)
         await this.save(tx, row)
@@ -672,6 +709,123 @@ export class CareerRepository {
         await this.eventsRepository.createMonth(tx, row)
         await this.save(tx, row)
         return { raceRunId: runId, result, career: await this.dto(tx, row) }
+      },
+    )
+  }
+  async expedition(owner: string, id: string) {
+    return this.db.transaction(async (tx) => {
+      await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+      const row = await readCareerRow(tx, owner, id)
+      return { travel: await readTravel(tx, row.stable_id) }
+    })
+  }
+  async depart(owner: string, id: string, body: Models['StartExpedition']) {
+    return executeCareerCommand(
+      this.db,
+      owner,
+      body.commandId,
+      'expedition.start',
+      body,
+      id,
+      async (tx) => {
+        const row = await readCareerRow(tx, owner, id, true)
+        assertTravelMutable(row)
+        const travel = await readTravel(tx, row.stable_id, true)
+        assertSupportedCountry(travel.homeCountry)
+        assertSupportedCountry(body.targetCountry)
+        if (travel.homeCountry === body.targetCountry) {
+          throw new ApiError(422, 'EXPEDITION_RESTRICTED', '소속 국가로 원정을 신청할 수 없습니다.')
+        }
+        const active = travel.activeExpedition
+        if (active) {
+          if (
+            active.careerId === id &&
+            active.targetCountry === body.targetCountry &&
+            (body.raceDefinitionId === undefined ||
+              active.targetRaceDefinitionId === body.raceDefinitionId) &&
+            [travel.revision, active.startedRevision - 1].includes(body.expectedTravelRevision)
+          ) {
+            return { career: await this.dto(tx, row) }
+          }
+          throw conflict('이미 진행 중인 원정이 있습니다.')
+        }
+        if (travel.revision !== body.expectedTravelRevision) {
+          throw conflict('원정 상태가 변경되었습니다.')
+        }
+        if (body.raceDefinitionId) {
+          const race = (
+            await tx.query<{ country_code: string; payload: RaceDefinitionSnapshot }>(
+              'SELECT country_code,payload FROM race_definitions WHERE id=$1',
+              [body.raceDefinitionId],
+            )
+          ).rows[0]
+          if (
+            !race ||
+            race.country_code !== body.targetCountry ||
+            race.payload.month !== row.turn
+          ) {
+            throw new ApiError(
+              422,
+              'EXPEDITION_RESTRICTED',
+              '현재 월과 원정 대상 국가의 게임 경주를 선택해 주세요.',
+            )
+          }
+        }
+        await tx.query(
+          'INSERT INTO stable_expeditions(id,stable_id,career_id,target_country,target_race_definition_id,started_revision,started_turn) VALUES($1,$2,$3,$4,$5,$6,$7)',
+          [
+            randomUUID(),
+            row.stable_id,
+            id,
+            body.targetCountry,
+            body.raceDefinitionId ?? null,
+            travel.revision + 1,
+            row.turn,
+          ],
+        )
+        await tx.query('UPDATE stables SET travel_revision=travel_revision+1 WHERE id=$1', [
+          row.stable_id,
+        ])
+        await this.save(tx, row)
+        return { career: await this.dto(tx, row) }
+      },
+    )
+  }
+  async returnHome(
+    owner: string,
+    id: string,
+    expeditionId: string,
+    body: Models['ReturnExpedition'],
+  ) {
+    return executeCareerCommand(
+      this.db,
+      owner,
+      body.commandId,
+      'expedition.return',
+      { expeditionId, ...body },
+      id,
+      async (tx) => {
+        const row = await readCareerRow(tx, owner, id, true)
+        const expedition = (
+          await tx.query<ExpeditionRow>(
+            'SELECT * FROM stable_expeditions WHERE id=$1 AND stable_id=$2 AND career_id=$3',
+            [expeditionId, row.stable_id, id],
+          )
+        ).rows[0]
+        if (!expedition) {
+          throw notFound()
+        }
+        if (expedition.status === 'returned') {
+          return { career: await this.dto(tx, row) }
+        }
+        assertTravelMutable(row)
+        const travel = await readTravel(tx, row.stable_id, true)
+        if (travel.revision !== body.expectedTravelRevision) {
+          throw conflict('원정 상태가 변경되었습니다.')
+        }
+        await endExpedition(tx, row, 'return')
+        await this.save(tx, row)
+        return { career: await this.dto(tx, row) }
       },
     )
   }

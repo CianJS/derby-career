@@ -13,7 +13,7 @@ export const tactics = ['도주', '선행', '선입', '추입'] as const
 export type RunningTactic = typeof tactics[number]
 export type RaceClass = '미승리' | '1승' | 'Listed'
 // minWins / maxWins are optional so snapshots saved before month-six races existed stay valid.
-export type RaceDefinitionSnapshot = { id: string; name: string; month: number; surface: 'Turf'; distance: number; raceClass: RaceClass; runners: number; courseProfile: string; prize: number; entryFee: number; minWins?: number; maxWins?: number }
+export type RaceDefinitionSnapshot = { countryCode?: string; id: string; name: string; month: number; surface: 'Turf'; distance: number; raceClass: RaceClass; runners: number; courseProfile: string; prize: number; entryFee: number; minWins?: number; maxWins?: number }
 export type JockeySnapshot = { id: string; name: string; start: number; pace: number; path: number; timing: number; stability: number; chemistry: number; style: string }
 export type HorseSnapshot = { id: string; name: string; age: number; values: Values; aptitude: Horse['aptitude']; health: string; healthRecovery?: number; condition: string; record: string }
 export type RaceRunnerInput = { horseSnapshot: HorseSnapshot; jockeySnapshot: JockeySnapshot; tactic: RunningTactic }

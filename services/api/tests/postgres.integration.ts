@@ -1,3 +1,4 @@
+import { registerExpeditionTests } from './expedition-cases'
 import { registerEconomyTests } from './economy-cases'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -441,6 +442,14 @@ registerEconomyTests('native PostgreSQL economy', () => {
   const url = process.env.TEST_DATABASE_URL
   if (!url || !new URL(url).pathname.endsWith('_test')) {
     throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
+  }
+  return postgresDatabase(url)
+})
+
+registerExpeditionTests('native PostgreSQL expedition', () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('Dedicated *_test database required')
   }
   return postgresDatabase(url)
 })

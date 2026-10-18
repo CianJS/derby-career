@@ -335,7 +335,7 @@ export interface paths {
         put?: never;
         /**
          * confirmRaceEntry
-         * @description 계약 기수, 현재 월 및 전적 검증. 공유 health 규칙의 정상/경상/중등도 부상은 허용하고 중상은 차단. 현재 건강 및 healthRecovery를 Snapshot과 healthAtEntry로 보존. 엔진 생략 시 공유 v3를 사용하며 v1/v2 지정 요청도 지원. 동일 ID와 최초 본문 재시도는 당시 저장된 응답만 반환하고 Seed와 로그를 재생성하지 않는다. 유료 등록비 제한은 현재 공유 playable 코드를 유지.
+         * @description 계약 기수, 현재 월 및 전적 검증. 공유 health 규칙의 정상/경상/중등도 부상은 허용하고 중상은 차단. 현재 건강 및 healthRecovery를 Snapshot과 healthAtEntry로 보존. 엔진 생략 시 공유 v4를 사용하며 v1/v2/v3 지정 요청도 지원. 동일 ID와 최초 본문 재시도는 당시 저장된 응답만 반환하고 Seed와 로그를 재생성하지 않는다. DB 등록비·마방 잔액과 개최 국가·활성 원정 자격을 최종 검증한다.
          */
         post: operations["confirmRaceEntry"];
         delete?: never;
@@ -460,6 +460,57 @@ export interface paths {
         get: operations["getRaceSchedule"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/careers/{careerId}/expedition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** getExpedition */
+        get: operations["getExpedition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/careers/{careerId}/expeditions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** startExpedition */
+        post: operations["startExpedition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/careers/{careerId}/expeditions/{expeditionId}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** returnExpedition */
+        post: operations["returnExpedition"];
         delete?: never;
         options?: never;
         head?: never;
@@ -770,6 +821,7 @@ export interface components {
             month: number;
         };
         RaceDefinition: {
+            countryCode?: components["schemas"]["CountryCode"];
             id: string;
             name: string;
             month: number;
@@ -900,6 +952,7 @@ export interface components {
             result: components["schemas"]["EventApplicationResult"] | null;
         };
         Career: {
+            travel?: components["schemas"]["StableTravel"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -918,6 +971,7 @@ export interface components {
         };
         CareerWorkspace: {
             stable: {
+                travel?: components["schemas"]["StableTravel"];
                 /** Format: uuid */
                 id: string;
                 funds: number;
@@ -990,6 +1044,7 @@ export interface components {
             retirement: components["schemas"]["RetirementRecord"];
         };
         CreateCareer: {
+            homeCountry?: components["schemas"]["CountryCode"];
             /** Format: uuid */
             careerId: string;
             horseDefinitionId: string;
@@ -1318,6 +1373,49 @@ export interface components {
         RaceScheduleList: {
             data: components["schemas"]["RaceSchedule"][];
             pagination: components["schemas"]["Pagination"];
+        };
+        /** @description ISO alpha-3. Gameplay supports KOR/JPN/USA. Unknown legacy codes (including GBR) are preserved and never coerced. */
+        CountryCode: string;
+        Expedition: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            careerId: string;
+            targetCountry: components["schemas"]["CountryCode"];
+            targetRaceDefinitionId: string | null;
+            /** @enum {string} */
+            status: "active" | "returned";
+            startedRevision: number;
+            startedTurn: number;
+            endedTurn: number | null;
+            /** @enum {string|null} */
+            endReason: "return" | "retirement" | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            endedAt: string | null;
+        };
+        StableTravel: {
+            homeCountry: components["schemas"]["CountryCode"];
+            locationCountry: components["schemas"]["CountryCode"];
+            revision: number;
+            activeExpedition: components["schemas"]["Expedition"] | null;
+        };
+        ExpeditionResponse: {
+            travel: components["schemas"]["StableTravel"];
+        };
+        StartExpedition: {
+            /** Format: uuid */
+            commandId: string;
+            /** @enum {string} */
+            targetCountry: "KOR" | "JPN" | "USA";
+            expectedTravelRevision: number;
+            raceDefinitionId?: string;
+        };
+        ReturnExpedition: {
+            /** Format: uuid */
+            commandId: string;
+            expectedTravelRevision: number;
         };
     };
     responses: {
@@ -2317,6 +2415,108 @@ export interface operations {
             };
             400: components["responses"]["ApiError"];
             404: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    getExpedition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                careerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpeditionResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            409: components["responses"]["ApiError"];
+            422: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    startExpedition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                careerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartExpedition"];
+            };
+        };
+        responses: {
+            /** @description 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            409: components["responses"]["ApiError"];
+            422: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    returnExpedition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                careerId: string;
+                expeditionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReturnExpedition"];
+            };
+        };
+        responses: {
+            /** @description 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            409: components["responses"]["ApiError"];
+            422: components["responses"]["ApiError"];
             429: components["responses"]["ApiError"];
             500: components["responses"]["ApiError"];
             503: components["responses"]["ApiError"];

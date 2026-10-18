@@ -1,3 +1,4 @@
+import { legacyRaceFixture, seedLegacyCatalog } from './legacy-race-fixture'
 import test from 'node:test'
 import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
 import assert from 'node:assert/strict'
@@ -502,43 +503,38 @@ test('004 upgrades the v1/v2 database in place, preserves logs and receipts, and
     ]) {
       await copyFile(join('migrations', name), join(directory, name))
     }
-    f = await fixture({ migrationsDirectory: directory })
+    f = await fixture({ migrationsDirectory: directory, seed: false })
+    await seedLegacyCatalog(f.db)
     assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 503)
     const previous: { id: string; body: Models['EnterRace']; response: unknown; log: string }[] = []
     for (const engineVersion of ['race-sim-v1', 'race-sim-v2'] as const) {
-      const { id } = await f.create()
-      await advanceToRaceMonth(f, id)
-      const body = { ...entryBody(), engineVersion }
-      const response = await f.call('POST', `/v1/careers/${id}/race-entries`, body)
-      assert.equal(response.statusCode, 200, response.body)
-      const log = await f.call('GET', `/v1/careers/${id}/race-runs/${body.raceRunId}/log`)
-      previous.push({ id, body, response: response.json(), log: log.body })
-      const completed = await f.call(
-        'POST',
-        `/v1/careers/${id}/race-runs/${body.raceRunId}/complete`,
-        { commandId: randomUUID() },
-      )
-      assert.equal(completed.statusCode, 200, completed.body)
-      assert.equal(
-        (
-          await f.call('POST', `/v1/careers/${id}/retirement`, {
-            commandId: randomUUID(),
-            expectedRevision: completed.json().career.revision,
-          })
-        ).statusCode,
-        200,
-      )
+      previous.push(await legacyRaceFixture(f.db, f.user.principalId, engineVersion))
     }
     const checksums = (
       await f.db.query('SELECT name,checksum FROM schema_migrations ORDER BY name')
+    ).rows
+    const oldFunds = (
+      await f.db.query('SELECT id,funds,calendar_year,calendar_month FROM stables ORDER BY id')
     ).rows
     assert.deepEqual(await migrate(f.db), [
       '004_race_sim_v3.sql',
       '005_event_activation_guards.sql',
       '006_racing_reference_catalog.sql',
       '007_jockey_trust.sql',
+      '008_overseas_expeditions.sql',
     ])
     assert.deepEqual(await migrate(f.db), [])
+    assert.deepEqual(
+      (await f.db.query('SELECT id,funds,calendar_year,calendar_month FROM stables ORDER BY id'))
+        .rows,
+      oldFunds,
+    )
+    assert.ok(
+      (await f.db.query('SELECT home_country FROM stables')).rows.every(
+        (row) => row.home_country === 'KOR',
+      ),
+    )
+
     assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 200)
     assert.deepEqual(
       (

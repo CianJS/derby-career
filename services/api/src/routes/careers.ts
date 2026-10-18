@@ -120,6 +120,19 @@ export function careerRoutes(
       return careers.records(o, r.params.careerId, p.page, p.pageSize)
     },
   )
+  register<{ Params: CareerParams }>('GET', '/v1/careers/{careerId}/expedition', (r, o) =>
+    careers.expedition(o, r.params.careerId),
+  )
+  register<{ Params: CareerParams; Body: Models['StartExpedition'] }>(
+    'POST',
+    '/v1/careers/{careerId}/expeditions',
+    (r, o) => careers.depart(o, r.params.careerId, r.body),
+  )
+  register<{ Params: CareerParams & { expeditionId: string }; Body: Models['ReturnExpedition'] }>(
+    'POST',
+    '/v1/careers/{careerId}/expeditions/{expeditionId}/return',
+    (r, o) => careers.returnHome(o, r.params.careerId, r.params.expeditionId, r.body),
+  )
   register<{ Params: CareerParams }>('GET', '/v1/careers/{careerId}/jockey-relations', (r, o) =>
     careers.jockeyRelations(o, r.params.careerId),
   )
