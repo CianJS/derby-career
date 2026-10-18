@@ -265,7 +265,9 @@ export function RaceEntryForm({
               <span className="min-w-36 flex-1 font-serif">
                 {r.name}
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {countryName(r.countryCode ?? 'KOR')}
+                  {countryName(
+                    r.countryCode ?? (serverOptions === undefined ? 'KOR' : '국가 미확인'),
+                  )}
                 </span>
               </span>
               <span className="min-w-44 text-xs tabular-nums">

@@ -34,7 +34,8 @@ concurrency:
 jobs:
   catalog-chromium:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # The overseas matrix respects the real API rate-limit windows; include setup and artifact time.
+    timeout-minutes: 20
     # Keep this version in sync with the exact @playwright/test dependency.
     container: mcr.microsoft.com/playwright:v1.58.2-noble
     services:

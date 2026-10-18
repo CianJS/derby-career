@@ -670,7 +670,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
                   raceEntry={<RaceAction onOpen={() => setView("entry")} />}
                 />
           )}{" "}
-          {['training', 'entry', 'stable', 'settings'].includes(view) && <ExpeditionPanel readOnly={view === 'stable' || view === 'settings'} />}
+          {(['training', 'entry', 'stable', 'settings'].includes(view) || (view === 'candidates' && !!career)) && <ExpeditionPanel readOnly={view === 'stable' || view === 'settings'} />}
           {view === "entry" && <RaceEntry setView={setView} />}{" "}
           {(view === "raceplay" || view === "raceexperimental") && (
             <FocusShell setView={setView} backLabel="육성으로 돌아가기">

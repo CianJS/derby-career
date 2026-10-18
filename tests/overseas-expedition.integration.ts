@@ -84,7 +84,7 @@ for (const targetCountry of ['JPN', 'USA'] as const) {
       const current = () => state.workspace!.career!
       const settleEvent = async () => {
         const event = current().event
-        if (event?.state === 'pending')
+        if (event?.state === 'pending') {
           assert.equal(
             await controller.send({
               kind: 'event',
@@ -98,6 +98,7 @@ for (const targetCountry of ['JPN', 'USA'] as const) {
             }),
             true,
           )
+        }
       }
       for (let turn = 1; turn < 3; turn++) {
         await settleEvent()

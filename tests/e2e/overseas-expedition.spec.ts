@@ -39,7 +39,7 @@ for (const [target, width] of [
     const career = { ...base, careerTurnIndex: 3, month: 3 }
     await context.addInitScript(
       ({ career, lifecycle, key, width }) => {
-        if (!localStorage.getItem(key))
+        if (!localStorage.getItem(key)) {
           localStorage.setItem(
             key,
             JSON.stringify({
@@ -50,6 +50,7 @@ for (const [target, width] of [
               lifecycle,
             }),
           )
+        }
         localStorage.setItem('theme', width === 390 ? 'light' : 'dark')
       },
       {
@@ -70,6 +71,25 @@ for (const [target, width] of [
     await openEntry(page)
     const raceId = `DEV_${target}_M3_MILE_1600`
     await expect(page.locator(`input[value="${raceId}"]`)).toBeDisabled()
+    await page.evaluate((key) => {
+      const set = Storage.prototype.setItem
+      Object.defineProperty(window, 'rejectTravelSave', { value: true, writable: true })
+      Storage.prototype.setItem = function (name, value) {
+        if (name === key && Reflect.get(window, 'rejectTravelSave')) {
+          throw new DOMException('Full', 'QuotaExceededError')
+        }
+        return set.call(this, name, value)
+      }
+    }, BROWSER_SAVE_KEY)
+    await page.getByRole('button', { name: '원정 신청', exact: true }).click()
+    await expect(page.getByRole('alert').filter({ hasText: '저장 공간' }).first()).toBeVisible()
+    expect(
+      await page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key)!).lifecycle.travel.revision,
+        BROWSER_SAVE_KEY,
+      ),
+    ).toBe(0)
+    await page.evaluate(() => Reflect.set(window, 'rejectTravelSave', false))
     const other = await context.newPage()
     await other.goto('/')
     await other.getByRole('button', { name: '육성 계속', exact: true }).click()
@@ -162,7 +182,9 @@ for (const [target, width] of [
     const get = () =>
       page.evaluate(async () => {
         const response = await fetch('/api/server-save/v1/careers/workspace?page=1&pageSize=20')
-        if (!response.ok) throw new Error(`Workspace HTTP ${response.status}`)
+        if (!response.ok) {
+          throw new Error(`Workspace HTTP ${response.status}`)
+        }
         return response.json()
       })
     await expect(page.getByText('서버 기록 연결됨', { exact: false }).first()).toBeVisible()
@@ -195,7 +217,9 @@ for (const [target, width] of [
     const initialFunds = current.stable.funds
     const posts: string[] = []
     page.on('request', (r) => {
-      if (r.method() === 'POST' && r.url().endsWith('/expeditions')) posts.push(r.postData()!)
+      if (r.method() === 'POST' && r.url().endsWith('/expeditions')) {
+        posts.push(r.postData()!)
+      }
     })
     await page.getByLabel('원정 국가', { exact: true }).selectOption(target)
     await page.route(
@@ -227,6 +251,10 @@ for (const [target, width] of [
     await expect(page.getByText('출전 정보 저장 완료 · 선택 잠김', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: '귀국', exact: true })).toBeDisabled()
     const run = (await get()).career.state.raceRun
+    await info.attach('server-overseas-entry', {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: 'image/png',
+    })
     await page.reload()
     await page.getByRole('button', { name: '경주 연출을 건너뛰고 결과 보기', exact: true }).click()
     await page.getByRole('button', { name: '결과 확정 · 다음 달 시작', exact: true }).click()
@@ -263,6 +291,19 @@ for (const [target, width] of [
     expect(current.career.travel.activeExpedition).toBeNull()
     expect(await page.evaluate((key) => localStorage.getItem(key), BROWSER_SAVE_KEY)).toBeNull()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.getByLabel('원정 국가', { exact: true }).selectOption(target)
+    await page.getByRole('button', { name: '원정 신청', exact: true }).click()
+    await expect(page.getByRole('button', { name: '귀국', exact: true })).toBeEnabled()
+    await page.getByRole('button', { name: '현재 육성마 상세', exact: true }).click()
+    await page.getByRole('button', { name: '은퇴', exact: true }).click()
+    await page.getByRole('button', { name: '은퇴 확정', exact: true }).click()
+    await expect(
+      page.getByRole('button', { name: 'Career Archive 보기', exact: true }),
+    ).toBeVisible()
+    const retired = await get()
+    expect(retired.stable.travel.activeExpedition).toBeNull()
+    expect(retired.stable.travel.locationCountry).toBe('KOR')
+    expect(retired.stable.funds).toBe(current.stable.funds)
     await info.attach('server-overseas-return-domestic', {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',

@@ -135,3 +135,61 @@ test('parallel departure/entry, revision conflicts and quota failure preserve on
       : end.lifecycle!.travel!.locationCountry === 'KOR',
   )
 })
+
+test('Japanese and US home stables enter their own fixture without an expedition and reject Korea until departure', async () => {
+  for (const [label, code] of [
+    ['일본', 'JPN'],
+    ['미국', 'USA'],
+  ] as const) {
+    const { career } = await setup(label)
+    const travel = readBrowserSave().lifecycle!.travel!
+    const local = localRacesForTurn(3).find((r) => r.countryCode === code)!
+    const korea = localRacesForTurn(3).find((r) => r.id === 'DEV_M3_MILE_1600')!
+    assert.equal(raceEligibility(career, local, 20_000_000, travel), null)
+    assert.match(raceEligibility(career, korea, 20_000_000, travel)!, /대한민국/)
+    assert.equal(
+      await careerStore.lockRace(
+        { raceId: local.id, jockeyId: 'HAN_DOYUN', tactic: '선행' },
+        career.horse.id,
+        3,
+      ),
+      true,
+    )
+    assert.equal(readBrowserSave().career!.raceRun!.raceDefinitionSnapshot.countryCode, code)
+  }
+})
+
+test('a stale tab refreshes the committed travel after a revision conflict without retrying its command', async () => {
+  await setup()
+  const saved = readBrowserSave()
+  // A distinct tab commits a valid departure while this tab still holds revision zero.
+  const travel = saved.lifecycle!.travel!
+  writeBrowserSave({
+    lifecycle: {
+      ...saved.lifecycle,
+      travel: {
+        ...travel,
+        revision: 1,
+        locationCountry: 'JPN',
+        activeExpedition: {
+          id: crypto.randomUUID(),
+          careerId: saved.localCareerId!,
+          targetCountry: 'JPN',
+          targetRaceDefinitionId: null,
+          status: 'active',
+          startedRevision: 1,
+          startedTurn: 3,
+          endedTurn: null,
+          endReason: null,
+          createdAt: new Date().toISOString(),
+          endedAt: null,
+        },
+      },
+    },
+  })
+  const durable = readBrowserSave()
+  assert.equal(await careerStore.startExpedition('USA', 0), false)
+  assert.deepEqual(readBrowserSave(), durable)
+  assert.deepEqual(careerStore.getSnapshot().lifecycle!.travel, durable.lifecycle!.travel)
+  assert.match(careerStore.getSnapshot().error!, /변경/)
+})

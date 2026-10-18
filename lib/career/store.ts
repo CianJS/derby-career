@@ -302,7 +302,23 @@ async function mutate(
     return true
   } catch (error) {
     if (modeGeneration === generation) {
+      // A conflicting tab may have committed while this tab was busy and ignored its storage event.
+      // Show that durable document without replaying this rejected command or clearing its error.
+      let current: Partial<Snapshot> = {}
+      try {
+        const saved = readBrowserSave()
+        if (saved.localCareerId === snapshot.localCareerId) {
+          current = {
+            career: saved.career ?? null,
+            lifecycle: saved.lifecycle ?? null,
+            localCareerId: saved.localCareerId ?? null,
+          }
+        }
+      } catch {
+        // Preserve the original failure when the stored document itself is unreadable.
+      }
       publish({
+        ...current,
         error: error instanceof Error ? error.message : '저장에 실패했습니다. 다시 시도해 주세요.',
       })
     }

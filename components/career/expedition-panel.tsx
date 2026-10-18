@@ -17,12 +17,13 @@ export function ExpeditionPanel({ readOnly = false }: { readOnly?: boolean }) {
   const [target, setTarget] = useState<SupportedCountry>('JPN')
   const [raceId, setRaceId] = useState('')
   const { career, busy, pending, error } = snapshot
-  if (!travel)
+  if (!travel) {
     return (
       <p role="status" className="m-4 text-sm">
         원정 정보를 확인하는 중…
       </p>
     )
+  }
   const active = travel.activeExpedition
   const allowed = supportedCountry(travel.homeCountry)
   const blocked = busy || pending || !career || !!career.raceRun || !allowed
@@ -40,6 +41,7 @@ export function ExpeditionPanel({ readOnly = false }: { readOnly?: boolean }) {
   return (
     <section
       aria-label="해외 원정"
+      aria-busy={busy}
       className="m-4 rounded-lg border border-border bg-card p-4 text-sm"
     >
       <h2 className="font-semibold">해외 원정</h2>
@@ -128,6 +130,11 @@ export function ExpeditionPanel({ readOnly = false }: { readOnly?: boolean }) {
       <p className="mt-2 text-xs text-muted-foreground">
         원정은 비용과 월 진행 없이 즉시 시작됩니다.
       </p>
+      {busy && (
+        <p role="status" className="mt-2 text-xs">
+          원정 상태를 확인하고 있습니다…
+        </p>
+      )}
       {pending && (
         <Button
           variant="outline"

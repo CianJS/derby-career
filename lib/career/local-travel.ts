@@ -56,10 +56,14 @@ export function travelRestriction(
   travel: StableTravel,
   raceCountry: string | undefined,
 ): string | null {
-  if (!supportedCountry(travel.homeCountry))
+  if (!supportedCountry(travel.homeCountry)) {
     return '이 마방의 소속 국가는 현재 출전·원정을 지원하지 않습니다.'
-  if (!raceCountry || !supportedCountry(raceCountry)) return '개최 국가가 확인되지 않은 경주입니다.'
-  if (raceCountry !== travel.locationCountry)
+  }
+  if (!raceCountry || !supportedCountry(raceCountry)) {
+    return '개최 국가가 확인되지 않은 경주입니다.'
+  }
+  if (raceCountry !== travel.locationCountry) {
     return `${countryName(raceCountry)} 경주입니다. 해당 국가 원정 또는 귀국이 필요합니다.`
+  }
   return null
 }
