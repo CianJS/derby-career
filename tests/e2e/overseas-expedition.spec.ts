@@ -239,6 +239,9 @@ for (const [target, width] of [
     await expect(page.locator('[data-travel-location]')).toContainText(
       `현재 체류 · ${target === 'JPN' ? '일본' : '미국'}`,
     )
+    await expect(page.getByRole('region', { name: '월간 정보' })).toContainText(
+      '현재 출전 가능 1 / 5개',
+    )
     expect(posts).toHaveLength(2)
     expect(posts[0]).toBe(posts[1])
     current = await get()
