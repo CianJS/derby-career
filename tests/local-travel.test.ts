@@ -193,3 +193,16 @@ test('a stale tab refreshes the committed travel after a revision conflict witho
   assert.deepEqual(careerStore.getSnapshot().lifecycle!.travel, durable.lifecycle!.travel)
   assert.match(careerStore.getSnapshot().error!, /변경/)
 })
+
+test('retirement abroad preserves the actual stable jockey contracts for the next horse', async () => {
+  await setup()
+  const saved = readBrowserSave()
+  writeBrowserSave({ career: { ...saved.career!, contractedJockeyIds: ['HAN_DOYUN'] } })
+  await careerStore.refresh()
+  assert.equal(await careerStore.startExpedition('JPN', 0), true)
+  assert.ok(await careerStore.release())
+  assert.deepEqual(readBrowserSave().lifecycle!.contractedJockeyIds, ['HAN_DOYUN'])
+  assert.equal(await careerStore.select('DEV_HORSE_SERENE_STEP'), true)
+  assert.deepEqual(readBrowserSave().career!.contractedJockeyIds, ['HAN_DOYUN'])
+  assert.equal(readBrowserSave().lifecycle!.travel!.activeExpedition, null)
+})

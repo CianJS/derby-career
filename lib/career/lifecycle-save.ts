@@ -5,6 +5,7 @@ import type { LifecycleHorse } from './lifecycle'
 import type { HorseRaceRecord } from './records'
 
 export type LifecycleSave = {
+  contractedJockeyIds?: string[]
   travel?: StableTravel
   stableName?: string
   country?: string
@@ -108,6 +109,14 @@ function horse(value: unknown) {
 }
 export function assertLifecycleSave(value: unknown): asserts value is LifecycleSave {
   if (!object(value)) {
+    throw invalid()
+  }
+  if (
+    value.contractedJockeyIds !== undefined &&
+    (!Array.isArray(value.contractedJockeyIds) ||
+      value.contractedJockeyIds.some((id) => typeof id !== 'string' || !id) ||
+      new Set(value.contractedJockeyIds).size !== value.contractedJockeyIds.length)
+  ) {
     throw invalid()
   }
   assertEconomy(value)

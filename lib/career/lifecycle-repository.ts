@@ -60,6 +60,9 @@ export function writeLifecycleSave(value: unknown): void {
   // A stale tab may update presentation metadata, but cannot erase an immutable archive.
   let next = {
     ...value,
+    ...(saved.lifecycle?.contractedJockeyIds
+      ? { contractedJockeyIds: saved.lifecycle.contractedJockeyIds }
+      : {}),
     travel:
       saved.lifecycle?.stableName || saved.career
         ? migrateTravel(saved.lifecycle ?? value).travel

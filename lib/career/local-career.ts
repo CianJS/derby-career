@@ -18,7 +18,11 @@ export function startLocalCareer(horseId: string, current: Career | null): Caree
   if (!supportedCountry(migrateTravel(lifecycle).travel.homeCountry)) {
     throw new Error('이 마방의 소속 국가는 신규 육성을 지원하지 않습니다.')
   }
-  return { ...next, calendarDate: { year: lifecycle.year ?? 2028, month: lifecycle.month ?? 4 } }
+  return {
+    ...next,
+    contractedJockeyIds: lifecycle.contractedJockeyIds ?? next.contractedJockeyIds,
+    calendarDate: { year: lifecycle.year ?? 2028, month: lifecycle.month ?? 4 },
+  }
 }
 export function retireLocalCareer(career: Career) {
   if (career.raceRun) {
@@ -34,6 +38,7 @@ export function retireLocalCareer(career: Career) {
       ...saved,
       activeHorse: saved.activeHorse ?? null,
       archive: saved.archive ?? [],
+      contractedJockeyIds: [...career.contractedJockeyIds],
       year: career.calendarDate.year,
       month: career.calendarDate.month,
     },
