@@ -1,7 +1,8 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
-import { startCareer } from '../lib/career/model'
+
 import { parseSaveWorkspace } from '../lib/server-save/workspace'
 import {
   validateSaveResponse,

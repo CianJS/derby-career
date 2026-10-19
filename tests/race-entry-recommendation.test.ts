@@ -1,9 +1,10 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { RaceEntryForm } from '../components/career/race-entry-workspace'
-import { commitAction, horses, startCareer, type Career } from '../lib/career/model'
+import { commitAction, horses, type Career } from '../lib/career/model'
 import {
   contractedRoster,
   distanceAptitude,

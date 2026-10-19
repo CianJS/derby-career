@@ -1,8 +1,9 @@
+import { legacyCareer as startCareer } from '../helpers/legacy-career'
 import { setTimeout as delay } from 'node:timers/promises'
 import { test, expect, type Page } from '@playwright/test'
 import { BROWSER_SAVE_KEY } from '../../lib/career/browser-save'
 import { fixtureLifecycle } from '../../lib/career/fixtures'
-import { startCareer } from '../../lib/career/model'
+
 
 async function rest(page: Page) {
   await page

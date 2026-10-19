@@ -3,6 +3,8 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { createWriteStream } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { createRequire } from 'node:module'
+import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
@@ -255,9 +257,34 @@ try {
     throw new Error('Could not prepare isolated development test session')
   }
   try {
-    devToken = JSON.parse(session.stdout).token
+    const sessionData = JSON.parse(session.stdout)
+    devToken = sessionData.token
     if (typeof devToken !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(devToken)) {
       throw new Error()
+    }
+    // These existing browser regressions restore a pre-starter stable, not a new
+    // onboarding flow. The runner above permits only an ephemeral local *_test DB.
+    const { Client } = createRequire(import.meta.url)('../services/api/node_modules/pg')
+    const legacy = new Client({ connectionString: databaseUrl })
+    try {
+      await legacy.connect()
+      await legacy.query('BEGIN')
+      const stable = (await legacy.query('SELECT id FROM stables WHERE owner_id=$1', [sessionData.principalId])).rows[0]
+      if (!stable) {
+        const id = randomUUID()
+        await legacy.query('INSERT INTO stables(id,owner_id) VALUES($1,$2)', [id, sessionData.principalId])
+        // The catalog's historical subset is selected by the exact saved IDs,
+        // and exists exclusively as an explicit old-save test fixture.
+        for (const jockeyId of ['HAN_DOYUN', 'SEO_JIAN', 'YOON_TAESUNG']) {
+          await legacy.query('INSERT INTO jockey_contracts(stable_id,jockey_id) VALUES($1,$2)', [id, jockeyId])
+        }
+      }
+      await legacy.query('COMMIT')
+    } catch (error) {
+      await legacy.query('ROLLBACK').catch(() => {})
+      throw error
+    } finally {
+      await legacy.end()
     }
   } catch {
     throw new Error('Could not read isolated development test session')

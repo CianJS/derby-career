@@ -31,6 +31,7 @@ import { writeCareer } from './repository'
 import { restoreLocalCareer } from './local-recovery'
 import { writeLifecycleSave } from './lifecycle-repository'
 import { startLocalCareer, retireLocalCareer } from './local-career'
+import type { StarterJockeyId } from './jockey-catalog'
 import { applyCareer } from './lifecycle'
 import { assertLifecycleSave } from './lifecycle-save'
 import { migrateEconomy, settleLocal, assertMoney, type LocalEconomy } from './local-economy'
@@ -667,19 +668,24 @@ export const careerStore = {
               : settled
           },
         ),
-  select: (horseId: string, homeCountry?: SupportedCountry) =>
+  select: (horseId: string, homeCountry?: SupportedCountry, starterJockeyId?: StarterJockeyId) =>
     snapshot.mode === 'server'
       ? serverCommand({
           kind: 'create',
           body: {
             careerId: crypto.randomUUID(),
             horseDefinitionId: horseId,
+            ...(starterJockeyId !== undefined ? { starterJockeyId } : {}),
             ...(!snapshot.workspace?.stable && homeCountry ? { homeCountry } : {}),
           },
         })
-      : mutate((saved) => {
-          return withMonthEvent(startLocalCareer(horseId, saved))
-        }),
+      : mutate(
+          (saved) => withMonthEvent(startLocalCareer(horseId, saved, starterJockeyId)),
+          (_saved, next, lifecycle) => ({
+            ...lifecycle,
+            contractedJockeyIds: [...next!.contractedJockeyIds],
+          }),
+        ),
   chooseEvent: (eventId: string, choice: EventChoiceId, expectedMonth: number) =>
     mutate((saved) => {
       if (!saved || saved.month !== expectedMonth) {

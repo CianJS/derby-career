@@ -5,6 +5,7 @@ import {
   assertJockeyRelations,
   type JockeyRelations,
 } from './jockey-trust'
+import { initialJockeyContracts, type CareerJockeySelection } from './jockey-catalog'
 import { assertRaceRun, type RaceRunInput } from './race-entry'
 import { BALANCE } from './balance'
 import { deriveCondition, isHealthy, rollsInjury } from './status'
@@ -271,7 +272,7 @@ export type Career = {
   recent: ActionRecord[]
   raceRun?: RaceRunInput
 }
-export function startCareer(horseId: string): Career {
+export function startCareer(horseId: string, selection: CareerJockeySelection = {}): Career {
   const horse = horses.find((h) => h.id === horseId)
   if (!horse) {
     throw new Error('육성마를 선택해 주세요.')
@@ -283,7 +284,7 @@ export function startCareer(horseId: string): Career {
     month: 1,
     calendarDate: { year: 2028, month: 4 },
     careerTurnIndex: 1,
-    contractedJockeyIds: ['HAN_DOYUN', 'SEO_JIAN', 'YOON_TAESUNG'],
+    contractedJockeyIds: initialJockeyContracts(selection),
     values: { ...horse.stats, fatigue: 5, bodyLoad: 5 },
     condition: '보통',
     health: '정상',

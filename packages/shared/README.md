@@ -1,5 +1,7 @@
 # 공유 코드
 
+초기 기수: `domain.ts`에서 전체 `jockeyCatalog`, 네 `starterJockeyOptions`, `StarterJockeyId`/`StarterJockeyOption`/`JockeyContracts`/`CareerJockeySelection`을 제공한다. 후보와 실제 저장된 계약은 구분한다. 최초 생성은 선택 1명, 기존 마방은 저장 계약을 승계한다. [API·Local 연동](../../services/api/docs/starter-jockeys.md)을 따른다.
+
 - `src/domain.ts`: 기존 `lib/career`의 순수 도메인 재내보내기. 브라우저 store/repository는 제외한다.
 - `src/server-domain.ts`: 공유 계산을 사용하면서 Local fixture 이벤트를 등록하지 않는 서버 권한 모드. API 신규 경주의 기본 엔진은 공유 v4이며 v1/v2/v3 지정 요청과 과거 로그도 유지한다.
 - `src/events.ts`: 직렬화 가능한 이벤트 조건·효과·Director 설정.

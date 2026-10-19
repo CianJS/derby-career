@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url'
 
 // Keep format and format:check on exactly the same targets.
 const targets = [
+  '../../lib/career/jockey-catalog.ts',
+  '../../tests/jockey-starter.test.ts',
+  '../../tests/helpers/legacy-career.ts',
   '../../lib/career/jockey-trust.ts',
   '../../lib/career/race-sim-v4.ts',
   '../../lib/career/local-recovery.ts',

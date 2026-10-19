@@ -14,7 +14,16 @@ export async function readJockeyRelations(tx: Query, horseId: string): Promise<J
   )
 }
 export async function hydrateJockeyRelations(tx: Query, row: CareerRow) {
-  row.state = { ...row.state, jockeyTrust: await readJockeyRelations(tx, row.horse_id) }
+  const contracts = (
+    await tx.query('SELECT jockey_id FROM jockey_contracts WHERE stable_id=$1 ORDER BY jockey_id', [
+      row.stable_id,
+    ])
+  ).rows.map((x) => x.jockey_id as string)
+  row.state = {
+    ...row.state,
+    contractedJockeyIds: contracts,
+    jockeyTrust: await readJockeyRelations(tx, row.horse_id),
+  }
 }
 /** Called inside the owner-locked Career command, together with result/event and receipt writes. */
 export async function writeJockeyRelations(tx: Query, row: CareerRow) {

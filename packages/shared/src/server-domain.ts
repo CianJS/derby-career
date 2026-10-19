@@ -7,6 +7,7 @@ import {
   type Career,
   type Choice,
   type AdjustActionDeltas,
+  type CareerJockeySelection,
 } from './domain'
 import { createEventCatalog } from '../../../lib/career/events/repository'
 
@@ -21,8 +22,8 @@ export function withoutBrowserEvents(state: Career): Career {
   delete next.eventMisses
   return next
 }
-export const startServerCareer = (definitionId: string) =>
-  withoutBrowserEvents(startCareer(definitionId))
+export const startServerCareer = (definitionId: string, selection?: CareerJockeySelection) =>
+  withoutBrowserEvents(startCareer(definitionId, selection))
 export const resolveServerAction = (
   state: Career,
   choice: Choice,

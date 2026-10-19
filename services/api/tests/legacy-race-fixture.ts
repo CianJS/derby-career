@@ -1,10 +1,10 @@
+import { legacyCareer as startCareer } from '../../../tests/helpers/legacy-career'
 import { randomUUID } from 'node:crypto'
 import type { Database } from '../src/db'
 import {
   horses,
   jockeyCatalog,
   raceDefinitions,
-  startCareer,
   createRaceRun,
   simulateRace,
   summarizeRaceLog,

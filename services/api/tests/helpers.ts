@@ -8,6 +8,7 @@ import { createApp } from '../src/app'
 import { readConfig } from '../src/config'
 import { embeddedDatabase } from './database'
 import type { Database } from '../src/db'
+import { contractedJockeys } from '../../../packages/shared/src/domain'
 export async function fixture(
   options: {
     seed?: boolean
@@ -53,6 +54,28 @@ export async function fixture(
       headers: { authorization: `Bearer ${token}` },
     })
   const create = async () => {
+    // Old-save fixtures deliberately keep the pre-starter three contracts.
+    // New-stable tests call POST /v1/careers directly instead of this helper.
+    await db.transaction(async (tx) => {
+      await tx.query('SELECT id FROM principals WHERE id=$1 FOR UPDATE', [user.principalId])
+      if (
+        !(await tx.query('SELECT id FROM stables WHERE owner_id=$1', [user.principalId])).rows
+          .length
+      ) {
+        const stable = (
+          await tx.query('INSERT INTO stables(id,owner_id) VALUES($1,$2) RETURNING id', [
+            randomUUID(),
+            user.principalId,
+          ])
+        ).rows[0]
+        for (const jockey of contractedJockeys) {
+          await tx.query('INSERT INTO jockey_contracts(stable_id,jockey_id) VALUES($1,$2)', [
+            stable.id,
+            jockey.id,
+          ])
+        }
+      }
+    })
     const id = randomUUID()
     const result = await call('POST', '/v1/careers', {
       careerId: id,

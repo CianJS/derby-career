@@ -1,6 +1,7 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { advanceMonth, commitAction, horses, resolveAction, startCareer, statKeys, type Career } from '../lib/career/model'
+import { advanceMonth, commitAction, horses, resolveAction, statKeys, type Career } from '../lib/career/model'
 import { BALANCE } from '../lib/career/balance'
 import { deriveCondition, injuryRiskPercent, isHealthy, isStrained, rollsInjury } from '../lib/career/status'
 

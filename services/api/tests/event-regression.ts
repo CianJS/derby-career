@@ -1,9 +1,5 @@
-import {
-  startCareer,
-  commitAction,
-  resolveAction,
-  type Choice,
-} from '../../../packages/shared/src/domain'
+import { legacyCareer as startCareer } from '../../../tests/helpers/legacy-career'
+import { commitAction, resolveAction, type Choice } from '../../../packages/shared/src/domain'
 import {
   DEFAULT_DIRECTOR_CONFIG,
   type EventDefinition,

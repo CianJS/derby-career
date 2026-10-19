@@ -1,6 +1,7 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { horses, startCareer } from '../lib/career/model'
+import { horses} from '../lib/career/model'
 import { contractedJockeys, createRaceRun, raceDefinitions, stressRaceDefinitions, tactics, type RaceRunInput } from '../lib/career/race-entry'
 import { liveCommentary } from '../lib/career/race-feed'
 import { frameAt, simulateRace, type RaceSimulationLog } from '../lib/career/race-simulation'

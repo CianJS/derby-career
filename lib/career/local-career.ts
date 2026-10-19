@@ -5,12 +5,23 @@ import { assertLifecycleSave } from './lifecycle-save'
 import { applyCareer, archiveActiveHorse } from './lifecycle'
 import { writeBrowserSave } from './browser-save'
 
-export function startLocalCareer(horseId: string, current: Career | null): Career {
+export function startLocalCareer(
+  horseId: string,
+  current: Career | null,
+  starterJockeyId?: string,
+): Career {
   if (current) {
     throw new Error('현재 커리어를 먼저 은퇴해 주세요.')
   }
   const lifecycle = readLifecycleSave()
-  const next = startCareer(horseId)
+  if (lifecycle !== null) {
+    assertLifecycleSave(lifecycle)
+  }
+  const savedContracts = lifecycle?.contractedJockeyIds
+  if (savedContracts === undefined && starterJockeyId === undefined) {
+    throw new Error('초기 후보 기수 중 한 명을 선택해 주세요.')
+  }
+  const next = startCareer(horseId, { starterJockeyId, contractedJockeyIds: savedContracts })
   if (lifecycle === null) {
     return next
   }
@@ -20,7 +31,6 @@ export function startLocalCareer(horseId: string, current: Career | null): Caree
   }
   return {
     ...next,
-    contractedJockeyIds: lifecycle.contractedJockeyIds ?? next.contractedJockeyIds,
     calendarDate: { year: lifecycle.year ?? 2028, month: lifecycle.month ?? 4 },
   }
 }

@@ -1,10 +1,11 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { RaceEntryForm } from '../components/career/race-entry-workspace'
 import { createRaceDataAdapter } from '../lib/career/race-data-adapter'
-import { startCareer } from '../lib/career/model'
+
 import { lockRaceEntry } from '../lib/career/race-entry'
 import { recommendRaceEntry } from '../lib/career/race-entry-recommendation'
 import { simulateRace, summarizeRaceLog } from '../lib/career/race-simulation'

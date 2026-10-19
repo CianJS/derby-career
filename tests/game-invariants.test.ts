@@ -1,7 +1,7 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  startCareer,
   horses,
   statKeys,
   assertCareer,

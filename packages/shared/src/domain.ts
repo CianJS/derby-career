@@ -11,4 +11,12 @@ export * from '../../../lib/career/health'
 export { applyActionEffects } from '../../../lib/career/events/effects'
 
 export * from '../../../lib/career/jockey-trust'
+export {
+  isStarterJockeyId,
+  initialJockeyContracts,
+  type StarterJockeyId,
+  type StarterJockeyOption,
+  type JockeyContracts,
+  type CareerJockeySelection,
+} from '../../../lib/career/jockey-catalog'
 export * from '../../../lib/career/race-sim-v4'

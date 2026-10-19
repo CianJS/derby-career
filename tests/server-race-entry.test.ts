@@ -1,10 +1,11 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { RaceEntryForm } from '../components/career/race-entry-workspace'
-import { startCareer } from '../lib/career/model'
+
 import { recommendRaceEntry, updateRaceEntryDraft } from '../lib/career/race-entry-recommendation'
 import { contractedRoster, racesForTurn, tactics } from '../lib/career/race-entry'
 import { validateSaveCommand } from '../lib/server-save/commands'

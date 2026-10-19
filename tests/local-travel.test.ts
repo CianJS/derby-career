@@ -1,9 +1,10 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { browserStorage } from './helpers/browser-storage'
 import { BROWSER_SAVE_KEY, readBrowserSave, writeBrowserSave } from '../lib/career/browser-save'
 import { fixtureLifecycle } from '../lib/career/fixtures'
-import { startCareer } from '../lib/career/model'
+
 import { careerStore } from '../lib/career/store'
 import { migrateTravel, assertTravel, countryCode } from '../lib/career/local-travel'
 import { localRacesForTurn, raceEligibility } from '../lib/career/race-entry'

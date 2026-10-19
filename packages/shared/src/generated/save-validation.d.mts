@@ -13,6 +13,8 @@ export declare function validateRaceScheduleList(value: unknown): value is compo
 export declare function validateServerSaveCommand(value: unknown): value is components['schemas']['ServerSaveCommand']
 export declare function validateCareerWorkspace(value: unknown): value is components['schemas']['CareerWorkspace']
 export declare function validateHorseCatalog(value: unknown): value is components['schemas']['HorseCatalog']
+export declare function validateJockeyCatalog(value: unknown): value is components['schemas']['JockeyCatalog']
+export declare function validateCreateCareer(value: unknown): value is components['schemas']['CreateCareer']
 export declare function validateCareerResponse(value: unknown): value is components['schemas']['CareerResponse']
 export declare function validateActionResponse(value: unknown): value is components['schemas']['ActionResponse']
 export declare function validateRetireCareerResponse(value: unknown): value is components['schemas']['RetireCareerResponse']

@@ -50,6 +50,8 @@ export async function generateSaveValidation() {
     'ServerSaveCommand',
     'CareerWorkspace',
     'HorseCatalog',
+    'JockeyCatalog',
+    'CreateCareer',
     'CareerResponse',
     'ActionResponse',
     'RetireCareerResponse',

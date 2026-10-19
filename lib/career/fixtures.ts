@@ -1,4 +1,4 @@
-import { startCareer, type Career } from './model'
+import { startCareer as initializeCareer, type Career } from './model'
 import { summarizeRecords, type HorseRaceRecord } from './records'
 import { buildOpponents, raceDefinitions, stressRaceDefinitions, contractedJockeys, type RaceDefinitionSnapshot, type RaceRunInput, type RaceRunnerInput } from './race-entry'
 import { simulateRace, summarizeRaceLog, type RaceSimulationLog } from './race-simulation'
@@ -6,6 +6,8 @@ import { simulateRace, summarizeRaceLog, type RaceSimulationLog } from './race-s
 export type FixtureView = 'home' | 'training' | 'raceplay' | 'result' | 'careerComplete' | 'candidates' | 'jockeys' | 'races'
 export type FixtureState = { id: string; label: string; view: FixtureView; career: Career | null; log?: RaceSimulationLog; archive: boolean }
 
+// Explicit historical roster for old-save fixtures only.
+const startCareer = (id: string) => initializeCareer(id, { contractedJockeyIds: contractedJockeys.map(j => j.id) })
 const baseHorse = () => startCareer('DEV_HORSE_SERENE_STEP')
 
 function raceCareer(def: RaceDefinitionSnapshot, kind: string, outcome: 'any' | 'win' | 'lose'): { career: Career; log: RaceSimulationLog } {
@@ -60,5 +62,5 @@ export function fixtureLifecycle(archive: boolean) {
     horse('fixture-archive-2', '새벽의 약속', '2028.04', retiredRecords('a', [['한신 컵', '2027.11', 1, 'SEO_JIAN', '서지안', 60000000], ['사츠키상', '2028.02', 3, 'SEO_JIAN', '서지안', 12000000], ['마일 챔피언십', '2028.03', 5, 'HAN_DOYUN', '한도윤', 0]])),
     horse('fixture-archive-1', '푸른 연대기', '2027.06', retiredRecords('b', [['신마전', '2026.12', 2, 'YOON_TAESUNG', '윤태성', 16000000], ['스프링 스테이크스', '2027.04', 1, 'HAN_DOYUN', '한도윤', 45000000]])),
   ] : []
-  return { stableName: '청람 마방', country: '대한민국', funds: '₩42,800,000', activeHorse: null, archive: horses, month: 6, year: 2028, postRace: null, lifecycleView: 'home', lastRetiredId: horses[0]?.id }
+  return { contractedJockeyIds: contractedJockeys.map(j => j.id), stableName: '청람 마방', country: '대한민국', funds: '₩42,800,000', activeHorse: null, archive: horses, month: 6, year: 2028, postRace: null, lifecycleView: 'home', lastRetiredId: horses[0]?.id }
 }

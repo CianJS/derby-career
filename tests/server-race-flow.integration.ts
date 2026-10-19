@@ -90,7 +90,7 @@ test('Frontend bridge/journal/adapter progresses Month 1–7 with server races i
     assert.equal(
       await c.send({
         kind: 'create',
-        body: { careerId: id, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+        body: { careerId: id, horseDefinitionId: 'DEV_HORSE_SERENE_STEP', starterJockeyId: 'HAN_DOYUN' as const },
       }),
       true,
     )
@@ -342,7 +342,7 @@ test('a late completion receipt never overwrites a newer server Career workspace
       expectedRevision: completed.career.revision,
     })
     const nextId = randomUUID()
-    await api.createCareer({ careerId: nextId, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' })
+    await api.createCareer({ careerId: nextId, horseDefinitionId: 'DEV_HORSE_SERENE_STEP', starterJockeyId: 'HAN_DOYUN' as const })
     text = JSON.stringify(complete) // restore a tab whose receipt was lost before the other tab moved on
     assert.equal(await c.refresh(), true)
     assert.equal(state!.workspace!.career!.id, nextId)
