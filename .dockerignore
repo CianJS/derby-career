@@ -1,0 +1,7 @@
+**/node_modules
+**/.env
+**/.env.local
+.git
+.next
+services/api/dist
+services/api/seeds/notion

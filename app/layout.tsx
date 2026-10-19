@@ -4,8 +4,8 @@ import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
-  title: 'DERBY CAREER — 오늘의 마방',
-  description: '한 마리의 말과 함께 만들어가는 커리어 시뮬레이션',
+  title: 'DERBY CAREER — 월간 육성',
+  description: '육성마 선택부터 월간 훈련과 휴식까지. 한 마리의 경주마와 함께하는 DERBY CAREER Checkpoint 1.',
   generator: 'DERBY CAREER',
   icons: {
     icon: [
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#101c24',
+  colorScheme: 'light dark',
+  themeColor: [{ media: '(prefers-color-scheme: light)', color: '#f1f2ef' }, { media: '(prefers-color-scheme: dark)', color: '#171d24' }],
 }
 
 export default function RootLayout({

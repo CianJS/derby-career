@@ -1,0 +1,98 @@
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+
+// Keep format and format:check on exactly the same targets.
+const targets = [
+  '../../lib/career/jockey-trust.ts',
+  '../../lib/career/race-sim-v4.ts',
+  '../../lib/career/local-recovery.ts',
+  '../../tests/local-recovery.test.ts',
+  '../../tests/save-response-validation.test.ts',
+  'src',
+  'vercel.json',
+  'scripts',
+  'tests',
+  'eslint.config.mjs',
+  'package.json',
+  'README.md',
+  'docs',
+  '../../packages/shared/src',
+  '../../packages/shared/README.md',
+  '../../app/api/event-catalog',
+  '../../app/dev/event-catalog',
+  '../../components/dev/event-catalog.tsx',
+  '../../components/dev/event-detail.tsx',
+  '../../lib/event-catalog',
+  '../../README.md',
+  '../../CONTRIBUTING.md',
+  '../../AGENTS.md',
+  '../../.prettierrc.json',
+  '../../.github/workflows/backend-foundation.yml',
+  '../../app/api/events/route.ts',
+  '../../components/career/race-playback.tsx',
+  '../../lib/career/model.ts',
+  '../../lib/career/health.ts',
+  '../../lib/career/race-feed.ts',
+  '../../tests/health.test.ts',
+  '../../tests/public-events.test.ts',
+  '../../tests/race-feed.test.ts',
+  '../../tests/race-golden.test.ts',
+  '../../next.config.mjs',
+  '../../lib/career/lifecycle.ts',
+  '../../tests/lifecycle.test.ts',
+  '../../app/api/server-save',
+  '../../lib/server-save',
+  '../../lib/career/store.ts',
+  '../../components/career/server-month-event.tsx',
+  '../../scripts/dev-server-save.mjs',
+  '../../tests/server-save.test.ts',
+  '../../lib/career/browser-save.ts',
+  '../../lib/career/lifecycle-save.ts',
+  '../../lib/career/local-career.ts',
+  '../../lib/career/repository.ts',
+  '../../lib/career/lifecycle-repository.ts',
+  '../../lib/career/race-log-repository.ts',
+  '../../tests/browser-save.test.ts',
+  '../../components/career/retirement-confirm.tsx',
+  '../../tests/retirement-confirm.test.ts',
+  '../../tests/game-invariants.test.ts',
+  '../../tests/helpers',
+  '../../tests/career.test.ts',
+  '../../tests/race-entry.test.ts',
+  '../../tests/race-aftermath.test.ts',
+  '../../lib/career/race-entry-recommendation.ts',
+  '../../components/career/race-entry-workspace.tsx',
+  '../../tests/race-entry-recommendation.test.ts',
+  '../../components/career/horse-record.tsx',
+  '../../components/career/jockey-record.tsx',
+  '../../components/career/legacy-catalog.ts',
+  '../../components/career/legacy-types.ts',
+  '../../components/career/management.tsx',
+  '../../components/career/navigation.tsx',
+  '../../components/career/presentation.tsx',
+  '../../components/career/race-catalog.tsx',
+  '../../components/career/stable.tsx',
+  '../../tests/career-management.test.ts',
+]
+
+const mode = process.argv[2]
+if (!['--write', '--check'].includes(mode)) {
+  throw new Error('Expected --write or --check')
+}
+const result = spawnSync(
+  process.execPath,
+  [
+    fileURLToPath(new URL('../node_modules/prettier/bin/prettier.cjs', import.meta.url)),
+    mode,
+    '--config',
+    '../../.prettierrc.json',
+    '--ignore-path',
+    '../../.prettierignore',
+    ...targets,
+  ],
+  { cwd: fileURLToPath(new URL('../', import.meta.url)), stdio: 'inherit' },
+)
+if (result.error) {
+  throw result.error
+}
+process.exitCode = result.status ?? 1

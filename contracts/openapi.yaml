@@ -1,0 +1,3740 @@
+openapi: 3.0.3
+info:
+  title: DERBY CAREER Backend Foundation
+  version: 0.1.0
+  description: 독립 Fastify/PostgreSQL 서버. public 이벤트/기준 카탈로그 API와 소유자 인증으로 보호된 Career API.
+    AUTH_MODE=disabled가 기본이며 Career API는 503으로 닫힘. 로컬 dev-session 또는 명시적으로 설정한
+    운영 oidc-jwt 인증을 사용한다. 외부 로그인 서비스·공식 후보 생성·유료 등록비 연동은 후속 협의.
+    계약 변경 시 이 파일과 생성 타입을 함께 갱신.
+servers:
+- url: http://127.0.0.1:4000
+  description: Local independent API server
+paths:
+  /health/live:
+    get:
+      operationId: getLiveness
+      summary: getLiveness
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liveness'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /health/ready:
+    get:
+      operationId: getReadiness
+      summary: getReadiness
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/events:
+    get:
+      operationId: listEvents
+      summary: listEvents
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      parameters:
+      - &id001
+        name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          default: 1
+      - &id002
+        name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - common
+          - normal
+          - special
+          - accident
+          - hidden
+      - name: enabled
+        in: query
+        required: false
+        schema: &id008
+          type: boolean
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ready
+          - needs_mapping
+          - deferred
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - id
+          - name
+          default: id
+      - name: order
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+          default: asc
+      description: 공개 가능한 활성·ready·검토 완료 비히든 정의만 반환한다. query는 공개 범위를 좁히는
+        필터이며 enabled=false, 미검토 상태, hidden 요청은 빈 목록을 반환한다. total도 공개 범위 기준이다.
+        page/pageSize 방식, id 또는 name(C collation + id) 안정 정렬. 기존 공통 활성315개는 유지한다.
+  /v1/events/{eventId}:
+    get:
+      operationId: getEvent
+      summary: getEvent
+      description: 공개 목록과 같은 접근 정책을 적용한다. 비활성·미검토·히든 정의와 없는 ID는 동일한404를
+        반환한다. 히든이 실제 발생한 소유 Career의 이벤트는 인증된 Career/이력 API에서만 조회한다.
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDefinition'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+  /v1/catalog/horses:
+    get:
+      operationId: listHorsesCatalog
+      summary: listHorsesCatalog
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HorseCatalog'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/catalog/jockeys:
+    get:
+      operationId: listJockeysCatalog
+      summary: listJockeysCatalog
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JockeyCatalog'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/catalog/races:
+    get:
+      operationId: listRacesCatalog
+      summary: listRacesCatalog
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceCatalog'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/careers/workspace:
+    get:
+      operationId: getCareerWorkspace
+      summary: Restore the current stable, active career and immutable retirement history
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerWorkspace'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - *id001
+      - *id002
+  /v1/careers:
+    get:
+      operationId: listCareers
+      summary: listCareers
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - *id001
+      - *id002
+    post:
+      operationId: createCareer
+      summary: createCareer
+      responses:
+        '201':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCareer'
+      description: 개발용 카탈로그에서 새로운 서버 Career 생성. careerId는 재시도에 유지해야 하는 UUID. 기존 브라우저
+        저장의 이전/삭제 없음.
+  /v1/careers/{careerId}:
+    get:
+      operationId: getCareer
+      summary: getCareer
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: &id003
+          type: string
+          format: uuid
+  /v1/careers/{careerId}/retirement:
+    get:
+      operationId: getCareerRetirement
+      summary: 소유자의 불변 은퇴 기록 조회
+      description: 은퇴 당시의 Career, 자금, 세계 날짜와 공개 이벤트 상태를 반환한다. 활성 Career나 다른 소유자의 Career는 404다.
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetirementResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+    post:
+      operationId: retireCareer
+      summary: 서버 Career 수동 은퇴 확정
+      description: 현재 Career revision을 expectedRevision으로 전달한다. 미완료 경주나 행동, revision 불일치,
+        이미 은퇴한 Career는 409다. 동일 commandId와 본문 재시도는 최초 응답을 재생하고 다른 본문이나 명령에 ID를 재사용하면 409다.
+        서버 상태만 snapshot으로 저장하며 자금, 능력치, 월과 이벤트 기록은 변경하지 않는다. 은퇴 후 새 쓰기는 거부하고
+        기존 명령의 동일 요청 재시도만 원래 응답을 재생한다. 은퇴 이유는 서버가 manual로 고정하며 자동 은퇴 규칙은 없다.
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetireCareer'
+      responses:
+        '200':
+          description: 성공 또는 동일 요청 재생
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetireCareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/careers/{careerId}/actions:
+    get:
+      operationId: listCareerActions
+      summary: listCareerActions
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      - *id001
+      - *id002
+    post:
+      operationId: confirmMonthlyAction
+      summary: confirmMonthlyAction
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmAction'
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      description: 동일 actionId/본문 재전송은 원래 응답을 반환. ID 재사용 시 본문이 다르면 409. 동일 월 다른 actionId도
+        409. 서버가 공유 도메인 함수로 계산하며 client state/result/seed는 받지 않음.
+  /v1/careers/{careerId}/months/advance:
+    post:
+      operationId: advanceMonth
+      summary: advanceMonth
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdvanceMonth'
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+  /v1/careers/{careerId}/events:
+    get:
+      operationId: listCareerEvents
+      summary: listCareerEvents
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerEventList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      - *id001
+      - *id002
+  /v1/careers/{careerId}/events/{historyId}/choice:
+    post:
+      operationId: chooseCareerEvent
+      summary: chooseCareerEvent
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChooseEvent'
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      - name: historyId
+        in: path
+        required: true
+        schema: *id003
+      description: 월별 저장된 이벤트 선택만 허용. 동일 이벤트의 선택 변경/중복 효과 적용 금지.
+  /v1/careers/{careerId}/records:
+    get:
+      operationId: listCareerRecords
+      summary: listCareerRecords
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      - *id001
+      - *id002
+  /v1/careers/{careerId}/jockey-relations:
+    get:
+      operationId: getJockeyRelations
+      summary: 현역 또는 은퇴마의 기수 신뢰도 조회
+      description: 소유자 범위에서 현재 저장된 말-기수 신뢰도와 완료 기승 횟수를 조회한다. Career와 owned horse 식별자 및 revision을 확인하며 은퇴 관계도 보존한다. 알려진 관계만 반환하고 결과를 캐시하지 않는다.
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JockeyRelationsResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+  /v1/careers/{careerId}/race-entries:
+    get:
+      operationId: getRaceEntryOptions
+      summary: 현재 Career의 출전 조건과 계약 기수 조회
+      description: 소유자 범위의 일관된 읽기. 현재 육성 월의 DB 경주와 제한 사유, 실제 계약 기수의 현재 신뢰도, 전술 목록을 반환한다. 조회는 Seed나 Snapshot을 만들거나 행동을 확정하지 않는다. restrictionReason이 null이어도 개별 경주의 eligible을 확인해야 한다.
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceEntryOptions'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+    post:
+      operationId: confirmRaceEntry
+      summary: confirmRaceEntry
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceEntryResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterRace'
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      description: 계약 기수, 현재 월 및 전적 검증. 공유 health 규칙의 정상/경상/중등도 부상은 허용하고 중상은 차단. 현재
+        건강 및 healthRecovery를 Snapshot과 healthAtEntry로 보존. 엔진 생략 시 공유 v4를 사용하며 v1/v2/v3 지정 요청도 지원.
+        동일 ID와 최초 본문 재시도는 당시 저장된 응답만 반환하고 Seed와 로그를 재생성하지 않는다. DB 등록비·마방 잔액과 개최 국가·활성 원정 자격을 최종 검증한다.
+  /v1/careers/{careerId}/race-runs/{raceRunId}:
+    get:
+      operationId: getRaceRun
+      summary: getRaceRun
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceRunResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      - name: raceRunId
+        in: path
+        required: true
+        schema: *id003
+  /v1/careers/{careerId}/race-runs/{raceRunId}/log:
+    get:
+      operationId: getRaceLog
+      summary: getRaceLog
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceLogResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      - name: raceRunId
+        in: path
+        required: true
+        schema: *id003
+  /v1/careers/{careerId}/race-runs/{raceRunId}/complete:
+    post:
+      operationId: completeRace
+      summary: completeRace
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceCompleteResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '413':
+          $ref: '#/components/responses/ApiError'
+        '415':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      security:
+      - CareerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteRace'
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: *id003
+      - name: raceRunId
+        in: path
+        required: true
+        schema: *id003
+      description: 저장된 Simulation Log의 결과만 사용. 결과/상금은 요청으로 받지 않음. 동일 RaceRun은 새로운
+        commandId로 호출해도 상금/월 진행 중복 없음. 완료 시 다음 월로 진행.
+  /v1/racecourses:
+    get:
+      operationId: listRacecourses
+      summary: listRacecourses
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: country
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogCountry'
+      - name: verificationStatus
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+      - name: search
+        in: query
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 120
+      responses:
+        '200':
+          description: Reference catalog, independent of playable RaceDefinitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RacecourseList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/racecourses/{id}:
+    get:
+      operationId: getRacecourse
+      summary: getRacecourse
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+      responses:
+        '200':
+          description: Reference catalog, independent of playable RaceDefinitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RacecourseDetail'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/race-schedule:
+    get:
+      operationId: listRaceSchedule
+      summary: listRaceSchedule
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: country
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogCountry'
+      - name: verificationStatus
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+      - name: search
+        in: query
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 120
+      - name: year
+        in: query
+        schema:
+          type: integer
+          minimum: 1900
+          maximum: 2200
+      - name: month
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 12
+      - name: racecourseId
+        in: query
+        schema:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+      - name: grade
+        in: query
+        schema:
+          type: string
+          enum:
+          - G1
+          - G2
+          - G3
+          - Listed
+          - 기타
+      - name: surface
+        in: query
+        schema:
+          $ref: '#/components/schemas/CatalogSurface'
+      - name: minDistance
+        in: query
+        schema:
+          type: number
+          minimum: 0
+          maximum: 100000
+      - name: maxDistance
+        in: query
+        schema:
+          type: number
+          minimum: 0
+          maximum: 100000
+      - name: scheduleStatus
+        in: query
+        schema:
+          type: string
+          enum:
+          - dated
+          - date_unconfirmed
+          - not_run
+      responses:
+        '200':
+          description: Reference catalog, independent of playable RaceDefinitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceScheduleList'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/race-schedule/{id}:
+    get:
+      operationId: getRaceSchedule
+      summary: getRaceSchedule
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+      responses:
+        '200':
+          description: Reference catalog, independent of playable RaceDefinitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceSchedule'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/careers/{careerId}/expedition:
+    get:
+      operationId: getExpedition
+      summary: getExpedition
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpeditionResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+  /v1/careers/{careerId}/expeditions:
+    post:
+      operationId: startExpedition
+      summary: startExpedition
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartExpedition'
+  /v1/careers/{careerId}/expeditions/{expeditionId}/return:
+    post:
+      operationId: returnExpedition
+      summary: returnExpedition
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: expeditionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnExpedition'
+components:
+  securitySchemes:
+    CareerBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT or opaque development session
+      description: oidc-jwt는 설정한 HTTPS JWKS로 RS256/ES256 서명, issuer, API 전용 audience, token type,
+        sub, iat, exp와 최대 나이를 검증한다. 검증된 issuer와 sub만 소유자에 매핑한다.
+        미설정은 503, 유효하지 않은 토큰은 401, 공개키 서비스 장애는 503이다. dev-session은 CLI 발급,
+        해시 저장, 만료/폐기 검사를 사용하며 로컬에서만 허용한다. 로그인·토큰 발급 HTTP endpoint는 없다.
+  responses:
+    Unauthorized:
+      description: 유효한 소유자 인증이 필요함
+      headers:
+        WWW-Authenticate:
+          description: Bearer 인증을 요구하는 HTTP challenge
+          schema:
+            type: string
+            enum:
+            - Bearer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ApiError:
+      description: 검증 실패, 권한 거부, 충돌 또는 외부 의존성 오류
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: &id004
+              type: string
+            message: *id004
+            requestId: *id004
+          required:
+          - code
+          - message
+          - requestId
+          additionalProperties: false
+      required:
+      - error
+      additionalProperties: false
+    Values:
+      type: object
+      properties:
+        speed:
+          type: number
+          minimum: 0
+          maximum: 1000
+        stamina:
+          type: number
+          minimum: 0
+          maximum: 1000
+        power:
+          type: number
+          minimum: 0
+          maximum: 1000
+        guts:
+          type: number
+          minimum: 0
+          maximum: 1000
+        intelligence:
+          type: number
+          minimum: 0
+          maximum: 1000
+        fatigue:
+          type: number
+          minimum: 0
+        bodyLoad:
+          type: number
+          minimum: 0
+      required:
+      - speed
+      - stamina
+      - power
+      - guts
+      - intelligence
+      - fatigue
+      - bodyLoad
+      additionalProperties: false
+    Stats:
+      type: object
+      properties:
+        speed:
+          type: number
+          minimum: 0
+          maximum: 1000
+        stamina:
+          type: number
+          minimum: 0
+          maximum: 1000
+        power:
+          type: number
+          minimum: 0
+          maximum: 1000
+        guts:
+          type: number
+          minimum: 0
+          maximum: 1000
+        intelligence:
+          type: number
+          minimum: 0
+          maximum: 1000
+      required:
+      - speed
+      - stamina
+      - power
+      - guts
+      - intelligence
+      additionalProperties: false
+    Aptitudes:
+      type: array
+      items:
+        type: array
+        items: *id004
+        minItems: 2
+        maxItems: 2
+    HorseDefinition:
+      type: object
+      properties:
+        id: *id004
+        name: *id004
+        growth: *id004
+        description: *id004
+        stats:
+          $ref: '#/components/schemas/Stats'
+        aptitude:
+          $ref: '#/components/schemas/Aptitudes'
+      required:
+      - id
+      - name
+      - growth
+      - description
+      - stats
+      - aptitude
+      additionalProperties: false
+    ConditionAlways:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - always
+      required:
+      - type
+      additionalProperties: false
+    ConditionHealthy:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - healthy
+      required:
+      - type
+      additionalProperties: false
+    ConditionTrainingAvailable:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - training_available
+        stat: &id007
+          type: string
+          enum: &id010
+          - speed
+          - stamina
+          - power
+          - guts
+          - intelligence
+      required:
+      - type
+      - stat
+      additionalProperties: false
+    ConditionActionIs:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - action_is
+        choices:
+          type: array
+          items: &id012
+            type: string
+            enum:
+            - speed
+            - stamina
+            - power
+            - guts
+            - intelligence
+            - rest
+            - treatment
+          minItems: 1
+      required:
+      - type
+      - choices
+      additionalProperties: false
+    ConditionValueRange:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - value_range
+        key: &id006
+          type: string
+          enum:
+          - speed
+          - stamina
+          - power
+          - guts
+          - intelligence
+          - fatigue
+          - bodyLoad
+        min: &id005
+          type: number
+        max: *id005
+      required:
+      - type
+      - key
+      additionalProperties: false
+    ConditionTurnRange:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - turn_range
+        min:
+          type: integer
+          minimum: 1
+        max:
+          type: integer
+          minimum: 1
+      required:
+      - type
+      additionalProperties: false
+    ConditionAptitudeAny:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [aptitude_any]
+        names:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        grades:
+          type: array
+          minItems: 1
+          items:
+            type: string
+      required: [type, names, grades]
+      additionalProperties: false
+    ConditionGrowthIs:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [growth_is]
+        growth:
+          type: string
+          enum: [조숙, 표준, 만성]
+      required: [type, growth]
+      additionalProperties: false
+    ConditionHealthIs:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [health_is]
+        health:
+          type: array
+          minItems: 1
+          items:
+            type: string
+      required: [type, health]
+      additionalProperties: false
+    ConditionRecordRange:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [record_range]
+        metric:
+          type: string
+          enum: [starts, wins]
+        min:
+          type: integer
+          minimum: 0
+        max:
+          type: integer
+          minimum: 0
+      required: [type, metric]
+      additionalProperties: false
+    ConditionStatSummary:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [stat_summary]
+        metric:
+          type: string
+          enum: [spread, count]
+        threshold:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        min:
+          type: integer
+          minimum: 0
+        max:
+          type: integer
+          minimum: 0
+      required: [type, metric]
+      additionalProperties: false
+    EventCondition:
+      oneOf:
+      - $ref: '#/components/schemas/ConditionAptitudeAny'
+      - $ref: '#/components/schemas/ConditionGrowthIs'
+      - $ref: '#/components/schemas/ConditionHealthIs'
+      - $ref: '#/components/schemas/ConditionRecordRange'
+      - $ref: '#/components/schemas/ConditionStatSummary'
+      - $ref: '#/components/schemas/ConditionAlways'
+      - $ref: '#/components/schemas/ConditionHealthy'
+      - $ref: '#/components/schemas/ConditionTrainingAvailable'
+      - $ref: '#/components/schemas/ConditionActionIs'
+      - $ref: '#/components/schemas/ConditionValueRange'
+      - $ref: '#/components/schemas/ConditionTurnRange'
+    TrustValue:
+      type: integer
+      minimum: 0
+      maximum: 100
+      description: 말-기수 신뢰도. Snapshot의 기존 chemistry 필드와 같은 단위.
+    JockeyRelation:
+      type: object
+      properties:
+        starts: {type: integer, minimum: 0}
+        trust: {$ref: '#/components/schemas/TrustValue'}
+      required: [starts, trust]
+      additionalProperties: false
+    JockeyRelations:
+      type: object
+      additionalProperties: {$ref: '#/components/schemas/JockeyRelation'}
+    JockeyRelationsResponse:
+      type: object
+      description: 소유한 현역 또는 은퇴 Career의 확인된 관계만 반환. 정보가 없는 관계를 추정하지 않는다.
+      properties:
+        careerId: {type: string, format: uuid}
+        ownedHorseId: {type: string, format: uuid}
+        revision: {type: integer, minimum: 1}
+        status: {type: string, enum: [active, retired]}
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              jockeyId: {type: string}
+              starts: {type: integer, minimum: 0}
+              trust: {$ref: '#/components/schemas/TrustValue'}
+            required: [jockeyId, starts, trust]
+            additionalProperties: false
+      required: [careerId, ownedHorseId, revision, status, data]
+      additionalProperties: false
+    TrustContext:
+      type: object
+      description: 출전 전 고정 v3 평가 Seed 3개의 평균 전력. 최강 상대 대비 2% 이상 우위일 때 우승 유력.
+      properties:
+        version: {type: string, enum: [jockey-trust-v1]}
+        favorite: {type: boolean}
+        playerRating: {type: number, minimum: 0}
+        strongestOpponentRating: {type: number, minimum: 0}
+      required: [version, favorite, playerRating, strongestOpponentRating]
+      additionalProperties: false
+    TrustChange:
+      type: object
+      properties:
+        version: {type: string, enum: [jockey-trust-v1]}
+        before: {$ref: '#/components/schemas/TrustValue'}
+        after: {$ref: '#/components/schemas/TrustValue'}
+        delta: {type: integer, minimum: -6, maximum: 15}
+        reason: {type: string, enum: [growth, decline]}
+        favorite: {type: boolean}
+        rated: {type: boolean}
+        lossProbability: {type: number, minimum: 0, maximum: 1}
+        roll: {type: number, minimum: 0, maximum: 1, exclusiveMaximum: true}
+      required: [version, before, after, delta, reason, favorite, rated, lossProbability, roll]
+      additionalProperties: false
+    TrustEventChange:
+      type: object
+      properties:
+        jockeyId: {type: string}
+        before: {$ref: '#/components/schemas/TrustValue'}
+        after: {$ref: '#/components/schemas/TrustValue'}
+        delta: {type: integer, minimum: -12, maximum: 12}
+      required: [jockeyId, before, after, delta]
+      additionalProperties: false
+    EffectJockeyTrust:
+      type: object
+      description: 현재 말의 명시된 계약 또는 기존 관계 기수의 신뢰도만 변경.
+      properties:
+        type: {type: string, enum: [jockey_trust]}
+        jockeyId: {type: string, minLength: 1, maxLength: 100}
+        amount: {type: integer, enum: [-12, -8, -5, 5, 8, 12]}
+      required: [type, jockeyId, amount]
+      additionalProperties: false
+    EffectValueDelta:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - value_delta
+        key: *id006
+        amount:
+          type: integer
+          minimum: -1000
+          maximum: 1000
+      required:
+      - type
+      - key
+      - amount
+      additionalProperties: false
+    EffectActionModifier:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - action_modifier
+        action:
+          type: string
+          enum:
+          - training
+          - rest
+          - treatment
+        training: *id007
+        field:
+          type: string
+          enum:
+          - primaryGain
+          - secondaryGain
+          - fatigue
+          - bodyLoad
+        operation:
+          type: string
+          enum:
+          - add
+          - multiply
+        value:
+          type: number
+          minimum: -1000
+          maximum: 1000
+      required:
+      - type
+      - action
+      - field
+      - operation
+      - value
+      additionalProperties: false
+    EffectResolvedGrowthBonus:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - resolved_growth_bonus
+        stat: *id007
+        ratio:
+          type: number
+          minimum: 0
+          maximum: 2
+      required:
+      - type
+      - stat
+      - ratio
+      additionalProperties: false
+    EventEffect:
+      oneOf:
+      - $ref: '#/components/schemas/EffectJockeyTrust'
+      - $ref: '#/components/schemas/EffectValueDelta'
+      - $ref: '#/components/schemas/EffectActionModifier'
+      - $ref: '#/components/schemas/EffectResolvedGrowthBonus'
+    EventRisk:
+      type: object
+      properties:
+        version:
+          type: string
+          enum: [event-risk-v1]
+        outcomes:
+          type: object
+          properties:
+            great_success:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            success:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            failure:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+            disaster:
+              type: array
+              items:
+                $ref: '#/components/schemas/EventEffect'
+          required: [great_success, success, failure, disaster]
+          additionalProperties: false
+      required: [version, outcomes]
+      additionalProperties: false
+    EventReview:
+      type: object
+      properties:
+        sourceDigest:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+        converted:
+          type: boolean
+        executable:
+          type: boolean
+        contentReviewed:
+          type: boolean
+        balanceReviewed:
+          type: boolean
+        groupId:
+          type: string
+          nullable: true
+        representativeId:
+          type: string
+          nullable: true
+      required: [sourceDigest, converted, executable, contentReviewed, balanceReviewed, groupId, representativeId]
+      additionalProperties: false
+    EventChoice:
+      type: object
+      properties:
+        risk:
+          $ref: '#/components/schemas/EventRisk'
+        id: *id004
+        label: *id004
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventCondition'
+        effects:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventEffect'
+      required:
+      - id
+      - label
+      - conditions
+      - effects
+      additionalProperties: false
+    EventDefinition:
+      type: object
+      properties:
+        review:
+          $ref: '#/components/schemas/EventReview'
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name: *id004
+        category:
+          type: string
+          enum:
+          - common
+          - normal
+          - special
+          - accident
+          - hidden
+        subtype: *id004
+        introduction:
+          type: string
+          enum:
+          - candidate
+          - followup
+          - hold
+        timing:
+          type: string
+          enum:
+          - month_start
+          - training_result
+          - rest_result
+          - treatment_result
+          - before_race
+          - after_race
+        status:
+          type: string
+          enum:
+          - ready
+          - needs_mapping
+          - deferred
+        enabled: *id008
+        weight:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+        revision: &id011
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        balanceVersion: *id004
+        description:
+          type: string
+          nullable: true
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventCondition'
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventChoice'
+          maxItems: 2
+        automatic: *id008
+        source:
+          type: object
+          description: 응답에서 url은 null, conditionText/effectText는 빈 문자열이며 body는 생략한다.
+            원문 조건·효과와 내부 출처는 DB의 불변 revision에만 보존한다. 화면은 구조화 conditions/choices/effects와 고정 description을 사용한다.
+          properties:
+            url:
+              type: string
+              format: uri
+              nullable: true
+            conditionText: *id004
+            effectText: *id004
+            body: *id004
+          required:
+          - url
+          - conditionText
+          - effectText
+          additionalProperties: false
+        mappingNotes:
+          type: array
+          items: *id004
+      required:
+      - id
+      - name
+      - category
+      - subtype
+      - introduction
+      - timing
+      - status
+      - enabled
+      - weight
+      - revision
+      - balanceVersion
+      - description
+      - conditions
+      - choices
+      - automatic
+      - source
+      - mappingNotes
+      additionalProperties: false
+    Pagination:
+      type: object
+      properties:
+        page: &id009
+          type: integer
+        pageSize: *id009
+        total: *id009
+        totalPages: *id009
+      required:
+      - page
+      - pageSize
+      - total
+      - totalPages
+      additionalProperties: false
+    EventList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventDefinition'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+      required:
+      - data
+      - pagination
+      additionalProperties: false
+    Change:
+      type: object
+      properties:
+        key: *id006
+        before: *id005
+        after: *id005
+      required:
+      - key
+      - before
+      - after
+      additionalProperties: false
+    StatusChange:
+      type: object
+      properties:
+        key:
+          type: string
+          enum:
+          - health
+          - condition
+          - recovery
+        before: *id004
+        after: *id004
+      required:
+      - key
+      - before
+      - after
+      additionalProperties: false
+    ActionRecord:
+      type: object
+      properties:
+        actionId: *id004
+        horseId: *id004
+        month: *id009
+        actionType:
+          type: string
+          enum:
+          - training
+          - rest
+          - treatment
+        trainingType:
+          type: string
+          enum: *id010
+          nullable: true
+        seed: *id009
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/Change'
+          nullable: true
+        statusChanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusChange'
+      required:
+      - actionId
+      - horseId
+      - month
+      - actionType
+      - trainingType
+      - seed
+      - result
+      additionalProperties: false
+    HorseRaceRecord:
+      type: object
+      properties:
+        trustChange:
+          $ref: '#/components/schemas/TrustChange'
+        raceRunId: *id004
+        race: *id004
+        result: *id004
+        date: *id004
+        placing: *id009
+        prizeMoney: *id005
+        jockeyId: *id004
+        jockeyName: *id004
+        distance: *id005
+        grade: *id004
+        month: *id009
+      required:
+      - race
+      - result
+      - date
+      additionalProperties: false
+    CalendarDate:
+      type: object
+      properties:
+        year: *id009
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+      required:
+      - year
+      - month
+      additionalProperties: false
+    RaceDefinition:
+      type: object
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'
+        id: *id004
+        name: *id004
+        month: *id009
+        surface:
+          type: string
+          enum:
+          - Turf
+        distance: *id009
+        raceClass:
+          type: string
+          enum:
+          - 미승리
+          - 1승
+          - Listed
+        runners: *id009
+        courseProfile: *id004
+        prize: *id005
+        entryFee: *id005
+        minWins: *id009
+        maxWins: *id009
+      required:
+      - id
+      - name
+      - month
+      - surface
+      - distance
+      - raceClass
+      - runners
+      - courseProfile
+      - prize
+      - entryFee
+      additionalProperties: false
+    JockeyDefinition:
+      type: object
+      properties:
+        id: *id004
+        name: *id004
+        start: *id005
+        pace: *id005
+        path: *id005
+        timing: *id005
+        stability: *id005
+        chemistry: *id005
+        style: *id004
+      required:
+      - id
+      - name
+      - start
+      - pace
+      - path
+      - timing
+      - stability
+      - chemistry
+      - style
+      additionalProperties: false
+    HorseSnapshot:
+      type: object
+      properties:
+        id: *id004
+        name: *id004
+        age: *id009
+        values:
+          $ref: '#/components/schemas/Values'
+        aptitude:
+          $ref: '#/components/schemas/Aptitudes'
+        health:
+          type: string
+        condition: *id004
+        record: *id004
+        healthRecovery:
+          type: number
+          minimum: 0
+      required:
+      - id
+      - name
+      - age
+      - values
+      - aptitude
+      - health
+      - condition
+      - record
+      additionalProperties: false
+    RaceRunner:
+      type: object
+      properties:
+        horseSnapshot:
+          $ref: '#/components/schemas/HorseSnapshot'
+        jockeySnapshot:
+          $ref: '#/components/schemas/JockeyDefinition'
+        tactic:
+          type: string
+          enum:
+          - 도주
+          - 선행
+          - 선입
+          - 추입
+      required:
+      - horseSnapshot
+      - jockeySnapshot
+      - tactic
+      additionalProperties: false
+    RaceSimulationResult:
+      type: object
+      properties:
+        playerHorseId: *id004
+        placing: *id009
+        finishTime: *id005
+        marginToWinner: *id005
+        prizeMoney: *id005
+      required:
+      - playerHorseId
+      - placing
+      - finishTime
+      - marginToWinner
+      - prizeMoney
+      additionalProperties: false
+    RaceSimulationSummary:
+      type: object
+      properties:
+        engineVersion:
+          type: string
+          enum:
+          - race-sim-v1
+          - race-sim-v2
+          - race-sim-v3
+          - race-sim-v4
+        digest: *id004
+        durationMs: *id009
+        result:
+          $ref: '#/components/schemas/RaceSimulationResult'
+      required:
+      - engineVersion
+      - digest
+      - durationMs
+      - result
+      additionalProperties: false
+    RaceRun:
+      type: object
+      properties:
+        trustContext:
+          $ref: '#/components/schemas/TrustContext'
+        raceRunId: *id004
+        month: *id009
+        raceDefinitionSnapshot:
+          $ref: '#/components/schemas/RaceDefinition'
+        playerHorseId: *id004
+        runners:
+          type: array
+          items:
+            $ref: '#/components/schemas/RaceRunner'
+        player:
+          $ref: '#/components/schemas/RaceRunner'
+        raceSeed: *id004
+        engineVersion:
+          type: string
+          enum:
+          - entry-contract-v1
+        simulation:
+          $ref: '#/components/schemas/RaceSimulationSummary'
+      required:
+      - raceRunId
+      - month
+      - raceDefinitionSnapshot
+      - playerHorseId
+      - runners
+      - player
+      - raceSeed
+      - engineVersion
+      additionalProperties: false
+    CareerState:
+      type: object
+      properties:
+        jockeyTrust:
+          $ref: '#/components/schemas/JockeyRelations'
+        version:
+          type: integer
+          enum:
+          - 1
+        horse:
+          $ref: '#/components/schemas/HorseDefinition'
+        age: *id009
+        month: *id009
+        calendarDate:
+          $ref: '#/components/schemas/CalendarDate'
+        careerTurnIndex: *id009
+        contractedJockeyIds:
+          type: array
+          items: *id004
+        values:
+          $ref: '#/components/schemas/Values'
+        condition: *id004
+        health: *id004
+        record: *id004
+        prize: *id004
+        raceRecords:
+          type: array
+          items:
+            $ref: '#/components/schemas/HorseRaceRecord'
+        action:
+          allOf:
+          - $ref: '#/components/schemas/ActionRecord'
+          nullable: true
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionRecord'
+          maxItems: 3
+        raceRun:
+          $ref: '#/components/schemas/RaceRun'
+        totalStarts: *id009
+        wins: *id009
+        seconds: *id009
+        thirds: *id009
+        totalPrizeMoney: *id005
+        best: *id004
+        jockeyRelations:
+          type: array
+          items:
+            type: object
+            properties:
+              jockeyId: *id004
+              starts: *id009
+              wins: *id009
+            required:
+            - jockeyId
+            - starts
+            - wins
+            additionalProperties: false
+        careerTimeline:
+          type: array
+          items:
+            type: object
+            properties:
+              date: *id004
+              text: *id004
+            required:
+            - date
+            - text
+            additionalProperties: false
+        healthRecovery:
+          type: number
+          minimum: 0
+      required:
+      - version
+      - horse
+      - age
+      - month
+      - calendarDate
+      - careerTurnIndex
+      - contractedJockeyIds
+      - values
+      - condition
+      - health
+      - record
+      - prize
+      - raceRecords
+      - action
+      - recent
+      additionalProperties: false
+    EventApplicationResult:
+      type: object
+      properties:
+        trustChanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustEventChange'
+        risk:
+          type: object
+          properties:
+            version:
+              type: string
+              enum: [event-risk-v1]
+            outcome:
+              type: string
+              enum: [great_success, success, failure, disaster]
+          required: [version, outcome]
+          additionalProperties: false
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Change'
+        actionChanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/Change'
+      required:
+      - changes
+      additionalProperties: false
+    CareerEvent:
+      type: object
+      properties:
+        id: *id003
+        turn: *id009
+        eventId: *id004
+        revision: *id011
+        choiceId:
+          type: string
+          nullable: true
+        state:
+          type: string
+          enum:
+          - pending
+          - selected
+          - applied
+          - expired
+        definition:
+          $ref: '#/components/schemas/EventDefinition'
+        result:
+          allOf:
+          - $ref: '#/components/schemas/EventApplicationResult'
+          nullable: true
+      required:
+      - id
+      - turn
+      - eventId
+      - revision
+      - choiceId
+      - state
+      - definition
+      - result
+      additionalProperties: false
+    Career:
+      type: object
+      properties:
+        travel:
+          $ref: '#/components/schemas/StableTravel'
+        id: *id003
+        stableId: *id003
+        ownedHorseId: *id003
+        horseDefinitionId: *id004
+        status:
+          type: string
+          enum:
+          - active
+          - retired
+        revision: *id009
+        authority:
+          type: string
+          enum:
+          - server
+        funds: *id005
+        state:
+          $ref: '#/components/schemas/CareerState'
+        event:
+          allOf:
+          - $ref: '#/components/schemas/CareerEvent'
+          nullable: true
+      required:
+      - id
+      - stableId
+      - ownedHorseId
+      - horseDefinitionId
+      - status
+      - revision
+      - authority
+      - funds
+      - state
+      - event
+      additionalProperties: false
+    CareerWorkspace:
+      type: object
+      additionalProperties: false
+      required: [stable, career, confirmedActionId, retirements, pagination]
+      properties:
+        stable:
+          type: object
+          nullable: true
+          additionalProperties: false
+          required: [id, funds, calendarDate]
+          properties:
+            travel:
+              $ref: '#/components/schemas/StableTravel'
+            id: *id003
+            funds: *id005
+            calendarDate:
+              $ref: '#/components/schemas/CalendarDate'
+        career:
+          allOf:
+          - $ref: '#/components/schemas/Career'
+          nullable: true
+        confirmedActionId:
+          type: string
+          format: uuid
+          nullable: true
+          description: API action UUID for advancing the active turn, distinct from the domain action ID.
+        retirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetirementRecord'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    ServerSaveCommand:
+      description: Browser retry journal contains command metadata only; never an authoritative game state or credential.
+      oneOf:
+      - type: object
+        additionalProperties: false
+        required: [kind, body]
+        properties:
+          kind:
+            type: string
+            enum: [create]
+          body:
+            $ref: '#/components/schemas/CreateCareer'
+      - type: object
+        additionalProperties: false
+        required: [kind, body, careerId]
+        properties:
+          kind:
+            type: string
+            enum: [action]
+          body:
+            $ref: '#/components/schemas/ConfirmAction'
+          careerId: *id003
+      - type: object
+        additionalProperties: false
+        required: [kind, body, careerId]
+        properties:
+          kind:
+            type: string
+            enum: [advance]
+          body:
+            $ref: '#/components/schemas/AdvanceMonth'
+          careerId: *id003
+      - type: object
+        additionalProperties: false
+        required: [kind, body, careerId, historyId]
+        properties:
+          kind:
+            type: string
+            enum: [event]
+          body:
+            $ref: '#/components/schemas/ChooseEvent'
+          careerId: *id003
+          historyId: *id003
+      - type: object
+        additionalProperties: false
+        required: [kind, body, careerId]
+        properties:
+          kind:
+            type: string
+            enum: [retire]
+          body:
+            $ref: '#/components/schemas/RetireCareer'
+          careerId: *id003
+    CareerResponse:
+      type: object
+      properties:
+        career:
+          $ref: '#/components/schemas/Career'
+      required:
+      - career
+      additionalProperties: false
+    RetireCareer:
+      type: object
+      properties:
+        commandId: *id003
+        expectedRevision:
+          type: integer
+          minimum: 1
+      required:
+      - commandId
+      - expectedRevision
+      additionalProperties: false
+    RetirementRecord:
+      type: object
+      properties:
+        careerId: *id003
+        reason:
+          type: string
+          enum:
+          - manual
+        retiredAt:
+          type: string
+          format: date-time
+        retiredOn:
+          $ref: '#/components/schemas/CalendarDate'
+        snapshot:
+          $ref: '#/components/schemas/Career'
+      required:
+      - careerId
+      - reason
+      - retiredAt
+      - retiredOn
+      - snapshot
+      additionalProperties: false
+    RetirementResponse:
+      type: object
+      properties:
+        retirement:
+          $ref: '#/components/schemas/RetirementRecord'
+      required:
+      - retirement
+      additionalProperties: false
+    RetireCareerResponse:
+      type: object
+      properties:
+        career:
+          $ref: '#/components/schemas/Career'
+        retirement:
+          $ref: '#/components/schemas/RetirementRecord'
+      required:
+      - career
+      - retirement
+      additionalProperties: false
+    CreateCareer:
+      type: object
+      properties:
+        homeCountry:
+          $ref: '#/components/schemas/CountryCode'
+        careerId: *id003
+        horseDefinitionId:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+      - careerId
+      - horseDefinitionId
+      additionalProperties: false
+    ConfirmAction:
+      type: object
+      properties:
+        actionId: *id003
+        choice: *id012
+        expectedTurn:
+          type: integer
+          minimum: 1
+      required:
+      - actionId
+      - choice
+      - expectedTurn
+      additionalProperties: false
+    ActionResponse:
+      type: object
+      properties:
+        actionId: *id003
+        career:
+          $ref: '#/components/schemas/Career'
+      required:
+      - actionId
+      - career
+      additionalProperties: false
+    AdvanceMonth:
+      type: object
+      properties:
+        commandId: *id003
+        actionId: *id003
+        expectedTurn:
+          type: integer
+          minimum: 1
+      required:
+      - commandId
+      - actionId
+      - expectedTurn
+      additionalProperties: false
+    ChooseEvent:
+      type: object
+      properties:
+        commandId: *id003
+        choiceId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        expectedTurn:
+          type: integer
+          minimum: 1
+      required:
+      - commandId
+      - choiceId
+      - expectedTurn
+      additionalProperties: false
+    EnterRace:
+      type: object
+      properties:
+        raceRunId: *id003
+        raceDefinitionId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        jockeyId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        tactic:
+          type: string
+          enum:
+          - 도주
+          - 선행
+          - 선입
+          - 추입
+        expectedTurn:
+          type: integer
+          minimum: 1
+        engineVersion:
+          type: string
+          enum:
+          - race-sim-v1
+          - race-sim-v2
+          - race-sim-v3
+          - race-sim-v4
+          description: 생략 시 race-sim-v4. 과거 요청 재시도에서는 생략 여부도 최초 본문과 같게 유지한다.
+      required:
+      - raceRunId
+      - raceDefinitionId
+      - jockeyId
+      - tactic
+      - expectedTurn
+      additionalProperties: false
+    RaceEntryOptions:
+      type: object
+      properties:
+        career:
+          $ref: '#/components/schemas/Career'
+        defaultEngineVersion:
+          type: string
+          enum:
+          - race-sim-v1
+          - race-sim-v2
+          - race-sim-v3
+          - race-sim-v4
+        restrictionReason:
+          type: string
+          nullable: true
+        races:
+          type: array
+          items:
+            type: object
+            properties:
+              sourceKind:
+                type: string
+                enum:
+                - development_fixture
+                - catalog
+              definition:
+                $ref: '#/components/schemas/RaceDefinition'
+              eligible:
+                type: boolean
+              restrictionReason:
+                type: string
+                nullable: true
+            required:
+            - sourceKind
+            - definition
+            - eligible
+            - restrictionReason
+            additionalProperties: false
+        jockeys:
+          type: array
+          items:
+            $ref: '#/components/schemas/JockeyDefinition'
+        tactics:
+          type: array
+          items:
+            type: string
+            enum:
+            - 도주
+            - 선행
+            - 선입
+            - 추입
+      required:
+      - career
+      - defaultEngineVersion
+      - restrictionReason
+      - races
+      - jockeys
+      - tactics
+      additionalProperties: false
+    RaceEntryResponse:
+      type: object
+      properties:
+        raceRunId: *id003
+        career:
+          $ref: '#/components/schemas/Career'
+      required:
+      - raceRunId
+      - career
+      additionalProperties: false
+    CompleteRace:
+      type: object
+      properties:
+        commandId: *id003
+      required:
+      - commandId
+      additionalProperties: false
+    RaceCompleteResponse:
+      type: object
+      properties:
+        raceRunId: *id003
+        result:
+          $ref: '#/components/schemas/RaceSimulationResult'
+        career:
+          $ref: '#/components/schemas/Career'
+      required:
+      - raceRunId
+      - result
+      - career
+      additionalProperties: false
+    RaceLogMetadata:
+      type: object
+      properties:
+        engineVersion:
+          type: string
+          enum:
+          - race-sim-v1
+          - race-sim-v2
+          - race-sim-v3
+          - race-sim-v4
+        digest: *id004
+        durationMs: *id009
+        byteLength: *id009
+        storageVersion: *id009
+      required:
+      - engineVersion
+      - digest
+      - durationMs
+      - byteLength
+      - storageVersion
+      additionalProperties: false
+    RaceRunResponse:
+      type: object
+      properties:
+        raceRun:
+          $ref: '#/components/schemas/RaceRun'
+        healthAtEntry: *id004
+        metadata:
+          $ref: '#/components/schemas/RaceLogMetadata'
+      required:
+      - raceRun
+      - healthAtEntry
+      - metadata
+      additionalProperties: false
+    RaceSample:
+      type: object
+      properties:
+        tMs: *id009
+        runners:
+          type: array
+          items:
+            type: object
+            properties:
+              horseId: *id004
+              distance: *id005
+              lane: *id005
+            required:
+            - horseId
+            - distance
+            - lane
+            additionalProperties: false
+      required:
+      - tMs
+      - runners
+      additionalProperties: false
+    InternalRaceEvent:
+      type: object
+      properties:
+        id: *id004
+        tMs: *id009
+        type: &id013
+          type: string
+          enum:
+          - START
+          - BLOCKED
+          - PATH_CLEAR
+          - OVERTAKE
+          - SPRINT_START
+          - FINISH
+        horseId: *id004
+        relatedHorseId: *id004
+        distance: *id005
+        rank: *id009
+      required:
+      - id
+      - tMs
+      - type
+      - distance
+      additionalProperties: false
+    RaceHighlight:
+      type: object
+      properties:
+        id: *id004
+        tMs: *id009
+        type: *id013
+        priority: *id005
+        templateKey: *id004
+        values:
+          type: object
+          additionalProperties:
+            oneOf:
+            - *id004
+            - *id005
+      required:
+      - id
+      - tMs
+      - type
+      - priority
+      - templateKey
+      - values
+      additionalProperties: false
+    FinishRecord:
+      type: object
+      properties:
+        horseId: *id004
+        horseName: *id004
+        placing: *id009
+        finishTime: *id005
+        marginToWinner: *id005
+        prizeMoney: *id005
+      required:
+      - horseId
+      - horseName
+      - placing
+      - finishTime
+      - marginToWinner
+      - prizeMoney
+      additionalProperties: false
+    RaceSimulationLog:
+      type: object
+      properties:
+        raceRunId: *id004
+        engineVersion:
+          type: string
+          enum:
+          - race-sim-v1
+          - race-sim-v2
+          - race-sim-v3
+          - race-sim-v4
+        seed: *id004
+        raceDistance: *id009
+        durationMs: *id009
+        samples:
+          type: array
+          items:
+            $ref: '#/components/schemas/RaceSample'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternalRaceEvent'
+        highlights:
+          type: array
+          items:
+            $ref: '#/components/schemas/RaceHighlight'
+        phaseMarkers:
+          type: array
+          items:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum:
+                - START
+                - MID
+                - FINAL_CORNER
+                - STRETCH
+                - FINISH
+              tMs: *id009
+              distance: *id005
+            required:
+            - phase
+            - tMs
+            - distance
+            additionalProperties: false
+        finishOrder:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinishRecord'
+        result:
+          $ref: '#/components/schemas/RaceSimulationResult'
+      required:
+      - raceRunId
+      - engineVersion
+      - seed
+      - raceDistance
+      - durationMs
+      - samples
+      - events
+      - highlights
+      - phaseMarkers
+      - finishOrder
+      - result
+      additionalProperties: false
+    RaceLogResponse:
+      type: object
+      properties:
+        log:
+          $ref: '#/components/schemas/RaceSimulationLog'
+      required:
+      - log
+      additionalProperties: false
+    ActionResult:
+      type: object
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Change'
+        statusChanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusChange'
+      required:
+      - changes
+      additionalProperties: false
+    ActionHistory:
+      type: object
+      properties:
+        id: *id003
+        turn: *id009
+        kind:
+          type: string
+          enum:
+          - training
+          - rest
+          - treatment
+          - race
+        record:
+          allOf:
+          - $ref: '#/components/schemas/ActionRecord'
+          nullable: true
+        result:
+          oneOf:
+          - $ref: '#/components/schemas/ActionResult'
+          - $ref: '#/components/schemas/RaceSimulationResult'
+          nullable: true
+        createdAt: &id014
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - turn
+      - kind
+      - record
+      - result
+      - createdAt
+      - resolvedAt
+      additionalProperties: false
+    CareerSummary:
+      type: object
+      properties:
+        id: *id003
+        status:
+          type: string
+          enum:
+          - active
+          - retired
+        turn: *id009
+        revision: *id009
+        createdAt: *id014
+      required:
+      - id
+      - status
+      - turn
+      - revision
+      - createdAt
+      additionalProperties: false
+    CareerList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CareerSummary'
+        page: *id009
+        pageSize: *id009
+      required:
+      - data
+      - page
+      - pageSize
+      additionalProperties: false
+    ActionList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionHistory'
+        page: *id009
+        pageSize: *id009
+      required:
+      - data
+      - page
+      - pageSize
+      additionalProperties: false
+    RecordList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/HorseRaceRecord'
+        page: *id009
+        pageSize: *id009
+      required:
+      - data
+      - page
+      - pageSize
+      additionalProperties: false
+    CareerEventList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CareerEvent'
+        page: *id009
+        pageSize: *id009
+      required:
+      - data
+      - page
+      - pageSize
+      additionalProperties: false
+    HorseCatalog:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              sourceKind:
+                type: string
+                enum:
+                - development_fixture
+                - catalog
+              definition:
+                $ref: '#/components/schemas/HorseDefinition'
+            required:
+            - sourceKind
+            - definition
+            additionalProperties: false
+      required:
+      - data
+      additionalProperties: false
+    JockeyCatalog:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              sourceKind:
+                type: string
+                enum:
+                - development_fixture
+                - catalog
+              definition:
+                $ref: '#/components/schemas/JockeyDefinition'
+            required:
+            - sourceKind
+            - definition
+            additionalProperties: false
+      required:
+      - data
+      additionalProperties: false
+    RaceCatalog:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              sourceKind:
+                type: string
+                enum:
+                - development_fixture
+                - catalog
+              definition:
+                $ref: '#/components/schemas/RaceDefinition'
+            required:
+            - sourceKind
+            - definition
+            additionalProperties: false
+      required:
+      - data
+      additionalProperties: false
+    Liveness:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - ok
+      required:
+      - status
+      additionalProperties: false
+    Readiness:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - ready
+      required:
+      - status
+      additionalProperties: false
+    CatalogVerificationStatus:
+      type: string
+      enum:
+      - verified
+      - partial
+      - conflict
+      - unverified
+      - review_required
+    CatalogCountry:
+      type: string
+      enum:
+      - KOR
+      - JPN
+      - USA
+    CatalogSurface:
+      type: string
+      enum:
+      - turf
+      - dirt
+      - sand
+      - synthetic
+      - other
+      - unknown
+    Racecourse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - officialName
+      - country
+      - countryCode
+      - region
+      - city
+      - operator
+      - operationalStatus
+      - racingType
+      - sourceUrl
+      - verificationStatus
+      - gameEnabled
+      - notes
+      - reviewIssues
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        name:
+          type: string
+        officialName:
+          type: string
+          nullable: true
+        country:
+          type: string
+        countryCode:
+          $ref: '#/components/schemas/CatalogCountry'
+        region:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        operator:
+          type: string
+          nullable: true
+        operationalStatus:
+          type: string
+          nullable: true
+        racingType:
+          type: string
+          nullable: true
+        sourceUrl:
+          type: string
+          format: uri
+          nullable: true
+        verificationStatus:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+        gameEnabled:
+          type: boolean
+          enum:
+          - false
+        notes:
+          type: string
+        reviewIssues:
+          type: array
+          items:
+            type: string
+    Course:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - racecourseId
+      - name
+      - surface
+      - configuration
+      - layout
+      - direction
+      - straightLength
+      - trackLength
+      - widthMin
+      - widthMax
+      - elevationDifference
+      - originalSpecifications
+      - confirmedDistances
+      - sourceUrl
+      - verificationStatus
+      - gameEnabled
+      - notes
+      - reviewIssues
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        racecourseId:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        name:
+          type: string
+        surface:
+          $ref: '#/components/schemas/CatalogSurface'
+        configuration:
+          type: string
+          nullable: true
+        layout:
+          type: string
+          nullable: true
+        direction:
+          type: string
+          nullable: true
+        straightLength:
+          type: number
+          minimum: 0
+          nullable: true
+        trackLength:
+          type: number
+          minimum: 0
+          nullable: true
+        widthMin:
+          type: number
+          minimum: 0
+          nullable: true
+        widthMax:
+          type: number
+          minimum: 0
+          nullable: true
+        elevationDifference:
+          type: number
+          minimum: 0
+          nullable: true
+        originalSpecifications:
+          type: string
+          nullable: true
+        confirmedDistances:
+          type: string
+          nullable: true
+        sourceUrl:
+          type: string
+          format: uri
+          nullable: true
+        verificationStatus:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+        gameEnabled:
+          type: boolean
+          enum:
+          - false
+        notes:
+          type: string
+        reviewIssues:
+          type: array
+          items:
+            type: string
+    RaceSchedule:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - year
+      - raceDate
+      - scheduleStatus
+      - country
+      - racecourseId
+      - courseId
+      - grade
+      - originalGrade
+      - gradeSystem
+      - internationalGrade
+      - surface
+      - distanceMeters
+      - originalDistance
+      - originalDistanceUnit
+      - distanceBasis
+      - originalDate
+      - ageCondition
+      - sexCondition
+      - originalEligibility
+      - maxRunners
+      - prizeMoney
+      - prizeCurrency
+      - prizeBasis
+      - gamePrizeMoney
+      - entryFee
+      - entryEligibility
+      - duplicateGroup
+      - sourceUrl
+      - verificationStatus
+      - gameEnabled
+      - notes
+      - reviewIssues
+      properties:
+        id:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        name:
+          type: string
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2200
+        raceDate:
+          type: string
+          format: date
+          nullable: true
+        scheduleStatus:
+          type: string
+          enum:
+          - dated
+          - date_unconfirmed
+          - not_run
+        country:
+          $ref: '#/components/schemas/CatalogCountry'
+        racecourseId:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+        courseId:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]{1,119}$
+          nullable: true
+        grade:
+          type: string
+        originalGrade:
+          type: string
+          nullable: true
+        gradeSystem:
+          type: string
+          enum:
+          - KRA_domestic
+          - JRA
+          - NAR
+          - USA
+        internationalGrade:
+          type: string
+          nullable: true
+        surface:
+          $ref: '#/components/schemas/CatalogSurface'
+        distanceMeters:
+          type: number
+          minimum: 0
+          nullable: true
+        originalDistance:
+          type: string
+          nullable: true
+        originalDistanceUnit:
+          type: string
+          enum:
+          - m
+          - furlong
+          - mile
+          nullable: true
+        distanceBasis:
+          type: string
+          enum:
+          - source_meters
+          - nominal_conversion
+          - unconfirmed
+        originalDate:
+          type: string
+          nullable: true
+        ageCondition:
+          type: string
+          nullable: true
+        sexCondition:
+          type: string
+          nullable: true
+        originalEligibility:
+          type: string
+          nullable: true
+        maxRunners:
+          type: integer
+          minimum: 1
+          nullable: true
+        prizeMoney:
+          type: number
+          minimum: 0
+          nullable: true
+        prizeCurrency:
+          type: string
+          enum:
+          - KRW
+          - JPY
+          - USD
+          nullable: true
+        prizeBasis:
+          type: string
+          nullable: true
+        gamePrizeMoney:
+          type: number
+          minimum: 0
+          nullable: true
+        entryFee:
+          type: number
+          minimum: 0
+          nullable: true
+        entryEligibility:
+          type: string
+          enum:
+          - not_evaluated
+          description: Reference catalog only; never a Career entry eligibility decision.
+        duplicateGroup:
+          type: string
+          nullable: true
+        sourceUrl:
+          type: string
+          format: uri
+          nullable: true
+        verificationStatus:
+          $ref: '#/components/schemas/CatalogVerificationStatus'
+        gameEnabled:
+          type: boolean
+          enum:
+          - false
+        notes:
+          type: string
+        reviewIssues:
+          type: array
+          items:
+            type: string
+    RacecourseDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - racecourse
+      - courses
+      properties:
+        racecourse:
+          $ref: '#/components/schemas/Racecourse'
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Course'
+    RacecourseList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Racecourse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    RaceScheduleList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RaceSchedule'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CountryCode:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      description: ISO alpha-3. Gameplay supports KOR/JPN/USA. Unknown legacy codes (including GBR) are preserved and never coerced.
+    Expedition:
+      type: object
+      additionalProperties: false
+      required: [id, careerId, targetCountry, targetRaceDefinitionId, status, startedRevision, startedTurn, endedTurn, endReason, createdAt, endedAt]
+      properties:
+        id: {type: string, format: uuid}
+        careerId: {type: string, format: uuid}
+        targetCountry:
+          $ref: '#/components/schemas/CountryCode'
+        targetRaceDefinitionId: {type: string, nullable: true}
+        status: {type: string, enum: [active, returned]}
+        startedRevision: {type: integer, minimum: 1}
+        startedTurn: {type: integer, minimum: 1}
+        endedTurn: {type: integer, minimum: 1, nullable: true}
+        endReason: {type: string, enum: [return, retirement], nullable: true}
+        createdAt: {type: string, format: date-time}
+        endedAt: {type: string, format: date-time, nullable: true}
+    StableTravel:
+      type: object
+      additionalProperties: false
+      required: [homeCountry, locationCountry, revision, activeExpedition]
+      properties:
+        homeCountry:
+          $ref: '#/components/schemas/CountryCode'
+        locationCountry:
+          $ref: '#/components/schemas/CountryCode'
+        revision: {type: integer, minimum: 0}
+        activeExpedition:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/Expedition'
+    ExpeditionResponse:
+      type: object
+      additionalProperties: false
+      required: [travel]
+      properties:
+        travel:
+          $ref: '#/components/schemas/StableTravel'
+    StartExpedition:
+      type: object
+      additionalProperties: false
+      required: [commandId, targetCountry, expectedTravelRevision]
+      properties:
+        commandId: {type: string, format: uuid}
+        targetCountry: {type: string, enum: [KOR, JPN, USA]}
+        expectedTravelRevision: {type: integer, minimum: 0}
+        raceDefinitionId: {type: string, minLength: 1, maxLength: 100}
+    ReturnExpedition:
+      type: object
+      additionalProperties: false
+      required: [commandId, expectedTravelRevision]
+      properties:
+        commandId: {type: string, format: uuid}
+        expectedTravelRevision: {type: integer, minimum: 0}

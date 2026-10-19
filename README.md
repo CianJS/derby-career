@@ -1,0 +1,116 @@
+# DERBY CAREER
+
+프런트엔드는 루트의 Next.js 앱, 백엔드는 `services/api`의 Fastify/PostgreSQL 서비스다. 각 실행과 lockfile은 분리되어 있다.
+
+통합 브랜치는 `develop`이다. Backend는 `api/develop`, Frontend는 해당 Work가 지정한 별도 개발 브랜치에서 작업하고 작은 PR로 통합한다. 담당 범위와 최신 기준 반영·검사·병합 절차는 [협업 규칙](CONTRIBUTING.md)을 따른다.
+
+## 프런트엔드 로컬 실행
+
+Node.js 22 LTS 최신 패치 또는 24 이상과 pnpm을 사용한다.
+
+```bash
+pnpm install --frozen-lockfile
+cp .env.example .env.local
+pnpm dev
+```
+
+백엔드 실행과 DB 초기화는 [API 실행 안내](services/api/README.md)를 따른다. Next 서버의 `.env.local`에서 `DERBY_API_URL=http://127.0.0.1:4000`을 지정한다. 실제 API 위치에 맞게 값을 바꾸고 개발 서버를 다시 실행한다. `NEXT_PUBLIC_` 접두어를 붙이지 않는다.
+
+## 브라우저 저장과 복구
+
+기본 모드는 `localStorage`의 `derby-career-browser-save-v1`에 육성 상태와 마방 기록을 하나의 문서로 저장한다. 은퇴 시 활성 기록 제거와 Archive 추가도 한 번에 저장한다. 기존 Career·마방 쿠키는 읽어서 이전하며 새 쿠키를 쓰거나 원본 쿠키를 삭제하지 않는다. 은퇴 표시가 있으면 이전 쿠키의 육성마를 다시 불러오지 않는다. 서버 저장으로의 이전은 포함하지 않는다.
+
+저장 전후 검증과 Web Locks로 여러 탭의 쓰기를 조율한다. 다른 탭에서 새 커리어가 시작되면 오래된 탭의 명령을 막고, 마방 화면의 오래된 상태가 최신 능력치나 Archive를 덮어쓰지 않도록 한다. 저장 공간 부족·권한 거부·손상된 데이터는 오류로 표시하고 기록을 임의로 초기화하지 않는다. 미리보기에서 저장소 접근이 차단되면 **새 탭에서 열기**로 같은 사이트를 열어 다시 확인할 수 있다. 브라우저 데이터 삭제나 다른 기기 간 동기화는 이 모드에서 지원하지 않는다.
+
+은퇴 완료 화면은 저장이 확정된 Archive 결과로 바로 갱신한다. 은퇴 확인창에서 저장 중 상태, 실패 이유와 다시 불러오기를 표시한다. 확정한 경주나 미완료 행동이 있으면 해당 진행을 완료한 뒤 은퇴할 수 있다.
+
+`tests/browser-save.test.ts`는 쿠키 차단, 저장 공간 부족, 실패한 쓰기, 기존 저장 이전, 은퇴의 원자성·완료 데이터·중복 확정, 탭 충돌과 경주 로그 복구를 검사한다. `tests/retirement-confirm.test.ts`는 은퇴 확인창의 진행·오류·출전 잠금·재시도 표시를 검사한다. `tests/game-invariants.test.ts`는 말별 84개월의 행동·이벤트·회복·달력 진행과 개발 시나리오의 경주 완료 중복 방지를 검사한다. 실제 브라우저의 권한 정책과 미리보기 안에서의 동작은 별도 확인이 필요하다.
+
+## 로컬 서버 저장 연동
+
+로그인 기능을 추가하지 않고 기존 개발용 세션으로 서버 저장을 검증할 수 있다. 기본 `pnpm dev`는 기존 브라우저 저장 모드다.
+
+1. [API 실행 안내](services/api/README.md)에 따라 PostgreSQL migration·개발 Seed를 적용하고, API를 `AUTH_MODE=dev-session`, `HOST=127.0.0.1`로 실행한다.
+2. `services/api`에서 `npm run session:create -- local-developer 8`로 발급한 token을 루트 `.env.local`의 `DERBY_API_DEV_SESSION_TOKEN`에 넣는다. `DERBY_API_URL`은 `http://127.0.0.1:4000` 등 루프백 HTTP 주소를 사용한다.
+3. 루트에서 `pnpm dev:server-save`를 실행하고 `http://127.0.0.1:3000`에서 접속한다. 별도 포트는 `PORT` 환경변수로 설정한다.
+
+말 생성·육성 상태 복원·훈련/휴식/치료·월 진행·서버 이벤트 선택·은퇴와 Archive 조회를 서버 기록으로 처리한다. 서버 모드는 기존 Career와 마방 쿠키를 읽거나 수정하지 않고, 브라우저 저장을 가져오지 않는다. 경주 후보와 제한·계약 기수는 서버에서 조회하고, 출전·관전·완료는 저장된 RaceRun/Log로 처리한다. 경주 완료가 다음 월까지 진행하므로 별도 월 진행 요청을 보내지 않는다. 서버 경주를 Local Save나 로컬 시뮬레이션으로 우회하지 않는다.
+
+Next `/api/server-save`는 명시적으로 켠 로컬 개발 모드에서만 열리고, 실행 명령은 Next를 `127.0.0.1`에 바인딩한다. token은 Next 서버 환경변수에만 있고 브라우저에는 전달하지 않는다. 운영 빌드에서는 저장 bridge가 항상 404다. 운영 로그인/세션 연동과 기존 저장 이관은 별도 범위다.
+
+응답이 끊기면 화면의 **같은 요청으로 다시 확인**을 사용한다. `sessionStorage`에는 UUID와 요청 본문만 보관하며 게임 상태나 token은 저장하지 않는다. 재접속·재시도는 같은 UUID/본문으로 처리하고, 성공 응답의 과거 receipt 대신 최신 서버 workspace를 다시 조회한다. 확인되지 않은 요청이 있으면 새 저장을 막고 브라우저 저장으로 대체하지 않는다. 다른 탭에서 먼저 진행한 경우 409 뒤 최신 상태를 표시한다. 은퇴 목록은 20개씩 읽으며 마구간의 더 불러오기로 이전 기록을 조회한다.
+
+## 공개 이벤트 조회 연동
+
+`/dev/event-catalog`은 개발 서버에서만 열리는 DB 카탈로그 확인 화면이다. 목록·상세·발생 조건·선택지 효과를 확인하고 분류·적용 상태·활성 여부·정렬·페이지를 바꿀 수 있다. 기본 조회는 `ready` 상태의 활성 이벤트 315개다. 공개 API 정책에 따라 비활성/보류/히든은 숨기며 전체 필터를 선택해도 공개 범위를 넓힐 수 없다. 숨긴 ID 상세는 404다. 원문 조건·효과 대신 구조화 필드와 고정 설명을 사용한다. 운영 빌드에서 확인 화면은 404를 반환한다.
+
+연동 경로는 **브라우저 → Next `/api/event-catalog` → Fastify `/v1/events` → PostgreSQL**이다. 읽기 API는 운영 빌드에서도 제공되며 `AUTH_MODE=disabled`에서도 사용할 수 있다. Next 서버가 API에 요청하므로 브라우저용 CORS 설정이나 로그인 토큰은 필요하지 않다. 브라우저 cookie와 Authorization은 전달하지 않는다.
+
+| Next 조회 경로                     | 응답과 사용법                               |
+| ---------------------------------- | ------------------------------------------- |
+| `GET /api/event-catalog`           | OpenAPI `EventList`: `{ data, pagination }` |
+| `GET /api/event-catalog/{eventId}` | OpenAPI `EventDefinition`                   |
+
+목록의 query는 `category`, `enabled`, `status`, `sort`, `order`, `page`, `pageSize`다. 허용 값과 범위는 `contracts/openapi.yaml`과 동일하다. 중복·알 수 없는 query와 잘못된 값은 400으로 거부한다. 공개 응답의 원문 body와 출처 URL은 제거하며, 내부 DB revision은 보존한다. 목록·상세 성공 응답도 OpenAPI에서 생성한 검증기로 서버와 브라우저 양쪽에서 검사한다. 목록을 한 번에 전부 내려받지 않고 서버 페이지 단위로 조회한다.
+
+설정이 없거나 잘못되면 503 `API_NOT_CONFIGURED`, API 연결 실패나 서버 오류는 502 `CATALOG_UNAVAILABLE`, 5초 초과는 504 `CATALOG_TIMEOUT`이다. 상세 404와 요청 제한 429도 구분한다. 성공·실패 응답은 캐시하지 않고 화면에서 재시도할 수 있다. 고정 이벤트 데이터로 대체하지 않는다.
+
+기존 `/api/events`와 월간 이벤트의 조건·효과 계약은 새 API 카탈로그와 다르다. 기존 육성 화면과 Local Save는 현재 계산을 유지하며, 조회 화면은 Career 저장을 읽거나 변경하지 않는다. 로컬 서버 저장 모드는 DB 이벤트를 별도로 표시하며, 기존 브라우저 이벤트 fixture와 함께 계산하지 않는다. 레이스 v4는 새 경주의 기본 엔진이며 기존 v1/v2/v3 로그는 저장된 버전으로만 재생한다. 운영 로그인과 기존 저장 이관은 후속 범위다. ��탈로그의 초기 보상은 최종 밸런스가 아닌 버전이 있는 제안치다.
+
+## 개발 검사
+
+경주 출전 화면은 출전 가능한 경주 중 기존 시뮬레이션의 거리 구분에 따른 말의 적성이 가장 높은 경주를 기본 선택한다. 계약 기수와 전술은 화면의 기존 기승 적합도 점수가 가장 높은 조합을 선택하며, 동률이면 전술 적성 및 고정 목록 순서를 따른다. 경주 변경 시 그 경주의 추천 조합으로 갱신하고, 직접 고른 기수·전술은 다시 렌더링하거나 같은 경주를 클릭해도 유지한다. 이미 확정한 경주의 선택·seed·로그는 변경하지 않으며 추천만으로 출전을 확정하지 않는다.
+
+[코딩 규칙](CONTRIBUTING.md)을 따른다. API 디렉터리에서 포맷·린트·API 타입·계약·테스트를 검사한다. 새 공개 카탈로그 연동 파일도 포맷과 린트 검사 범위에 포함한다.
+
+```bash
+cd services/api
+npm ci
+npm run format:check
+npm run lint
+npm run typecheck
+npm run contract:check
+npm test
+npm run build
+```
+
+루트 프런트엔드에서도 확인한다.
+
+```bash
+pnpm exec next typegen
+pnpm exec tsc --noEmit --incremental false
+node --import ./services/api/node_modules/tsx/dist/loader.mjs --test tests/*.test.ts
+pnpm build
+```
+
+Next 운영 빌드는 타입 오류를 건너뛰지 않는다. 기존 v1 경주 로그는 432개 고정 digest로 확인하며, DB migration과 Seed는 리뷰 수정에서도 원본을 보존한다.
+
+## 서버 레이스 전체 연동
+
+기존 단일 Race Entry Workspace에서 서버 `getRaceEntryOptions`의 경주별 eligible/제한 사유·계약 기수/신뢰도·전술만 표시한다. 추천은 조회된 후보 안에서 기존 거리 적성/기승 적합도 계산으로 결정하며, 같은 Career/월의 재조회에서 수동 선택을 초기화하지 않는다. 서버 제한은 확정 요청에서 다시 검증된다.
+
+출전과 완료는 Frontend `lib/server-save/commands.ts`의 Journal 명령으로 처리하고 생성된 `validateEnterRace`/`validateCompleteRace`로 본문을 검증한다. 공통 ServerSaveCommand에는 레이스 envelope가 아직 없으므로 Frontend에서만 확장한다. 최초 UUID와 본문을 sessionStorage에 보관하고 불확실한 응답에는 같은 요청을 재전송한다. 저장 모드를 떠난 controller는 늦은 응답으로 화면이나 Journal을 변경하지 않는다.
+
+Adapter와 Next bridge는 생성 RaceRun/Log 응답 검증기 및 기존 digest 검증을 사용한다. 서버 로그를 Local Save에 쓰거나 재시뮬레이션하지 않는다. v1/v2/v3/v4 저장 로그를 같은 Playback/Position Board/History/Feed/Result에 재생한다. 서버 새로고침 시 미완료 출전이 있으면 관전으로 돌아오고, 저장된 로그를 처음부터 다시 재생한다. 관전 시각은 게임 상태로 저장하지 않는다.
+
+Result의 완료는 서버에 commandId만 전송하고 최신 workspace를 다시 읽는다. 서버가 이미 상금·전적·건강과 다음 월 진행을 처리하므로 클라이언트 보상을 적용하거나 months/advance를 추가 호출하지 않는다. 로컬 브라우저 저장 경로는 기존 방식을 유지한다.
+
+추가 검증 명령:
+
+```bash
+pnpm exec tsc --project tsconfig.frontend-integration.json --noEmit --incremental false
+cd services/api
+node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/server-race-flow.integration.ts
+```
+
+Next의 루트 타입 검사에서는 `tests/**/*.integration.ts`만 제외한다. 이 테스트가 Backend fixture를 가져오므로 API 의존성을 설치하지 않는 Frontend 배포에서는 모듈 누락을 일으킬 수 있다. 일반 Frontend 테스트와 앱·공유 import의 타입 검사는 유지하며, 서버 통합 테스트는 위 별도 설정으로 검사한다. `verify-frontend` CI는 API 의존성을 설치하기 전에 루트 의존성만으로 Next 빌드하고, 이후 API 의존성을 설치해 통합 테스트의 타입 검사와 실행을 수행한다. 타입 오류를 무시하거나 배포에 Backend 패키지를 추가하지 않는다.
+
+이 테스트는 기존 Fastify 서비스·migration·Seed와 PGlite PostgreSQL 엔진을 실제로 사용한다. Frontend bridge/공유 클라이언트/controller/journal/adapter를 통해 Month 1→7, Month 3·6 레이스, 출전/관전 중 재조회, 완료 직후 응답 유실, 동일 명령 재시도, controller 교체 중 응답, 상금/전적 1회 반영을 검사한다. 실제 브라우저 클릭·새로고침과 PostgreSQL 다중 연결 검증을 대체하지 않는다.
+
+## 공개 경주 정보 연동
+
+경주 정보 목록·상세는 두 저장 모드에서 동일한 공개 API를 사용한다. Next 서버에 `DERBY_API_URL`을 설정하고 API DB에 참고 카탈로그를 import해야 한다. 브라우저는 `/api/racing-catalog/v1/race-schedule` 및 `/api/racing-catalog/v1/racecourses`를 조회하고, Next는 공유 클라이언트와 생성된 검증기로 Fastify 응답을 확인한다. cookie/Authorization은 전달하지 않는다.
+
+경주 목록은 100행 단위 서버 페이지네이션을 사용하며 국가·기준연도·월·등급·노면·거리·경마장·경주명·일정 상태를 필터링한다. 연도는 기준연도, 월은 실제 개최일 기준이다. 필터·페이지·선택 ID는 URL에 보존하고 뒤로 가기에서는 선택 행과 스크롤을 복원한다. 출처 통화/상금 기준과 중복 후보를 유지하며, 이 자료를 게임 달력이나 출전 후보로 사용하지 않는다. API 미연결/빈 DB를 mock으로 대체하지 않는다.
+
+검증 기록과 한계는 [Frontend 경주 카탈로그 연동](docs/frontend-race-catalog.md)을 참고한다. 정적 Sites에는 Next 프록시/Fastify/PostgreSQL이 없으므로 API 연결 오류가 표시된다. 실제 데이터 조회는 API가 연결된 Next 실행 환경에서 확인해야 한다.

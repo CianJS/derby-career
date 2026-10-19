@@ -1,0 +1,112 @@
+import { readFile } from 'node:fs/promises'
+import { importRacingCatalog, readRacingSource } from './modules/racing/import'
+import { readConfig } from './config'
+import { postgresDatabase } from './db'
+import { migrate } from './services/migrations'
+import { seedDevelopmentCatalog } from './services/seed'
+import { importEvents, importEventDrafts, readEventSource } from './modules/events/import'
+import { importExpansion, activateExpansion } from './modules/events/expansion'
+import { createDevelopmentSession, revokeSession } from './modules/auth/sessions'
+const config = readConfig()
+const db = postgresDatabase(config.databaseUrl)
+try {
+  const [command, ...args] = process.argv.slice(2)
+  switch (command) {
+    case 'import-racing': {
+      const result = await readRacingSource(
+        args.length ? args : ['seeds/racing.notion.source.json'],
+      )
+        .then((source) => importRacingCatalog(db, source))
+        .catch((error: unknown) => ({
+          created: 0,
+          updated: 0,
+          unchanged: 0,
+          needsReview: 0,
+          failed: 1,
+          committed: false,
+          error: error instanceof Error ? error.message : 'Catalog source read failed',
+        }))
+      console.log(JSON.stringify(result))
+      if (!result.committed) {
+        process.exitCode = 1
+      }
+      break
+    }
+    case 'migrate':
+      console.log(JSON.stringify({ applied: await migrate(db) }))
+      break
+    case 'seed':
+      if (config.nodeEnv === 'production') {
+        throw new Error(
+          'Development fixtures cannot be seeded in production. Use import-events separately.',
+        )
+      }
+      console.log(JSON.stringify(await seedDevelopmentCatalog(db)))
+      break
+    case 'import-event-expansion':
+      console.log(
+        JSON.stringify(
+          await importExpansion(
+            db,
+            JSON.parse(await readFile(args[0] ?? 'seeds/events.expansion.source.json', 'utf8')),
+          ),
+        ),
+      )
+      break
+    case 'activate-event-expansion':
+      if (!args[0]) {
+        throw new Error('A reviewed, revision-pinned approval manifest is required')
+      }
+      console.log(
+        JSON.stringify(await activateExpansion(db, JSON.parse(await readFile(args[0], 'utf8')))),
+      )
+      break
+    case 'import-events': {
+      const file = args[0] ?? 'seeds/events.catalog.json'
+      console.log(
+        JSON.stringify(
+          await importEvents(
+            db,
+            readEventSource(await readFile(file, 'utf8'), file.endsWith('.csv') ? 'csv' : 'json'),
+          ),
+        ),
+      )
+      break
+    }
+    case 'import-event-drafts': {
+      if (!args[0]) {
+        throw new Error('A preflight draft packet file is required')
+      }
+      console.log(
+        JSON.stringify(await importEventDrafts(db, JSON.parse(await readFile(args[0], 'utf8')))),
+      )
+      break
+    }
+    case 'session-create':
+      if (config.authMode !== 'dev-session' || config.nodeEnv === 'production') {
+        throw new Error('Set AUTH_MODE=dev-session for a local development session')
+      }
+      console.log(
+        JSON.stringify(
+          await createDevelopmentSession(db, args[0] ?? 'local-developer', Number(args[1] ?? 8)),
+        ),
+      )
+      break
+    case 'session-revoke':
+      if (config.authMode !== 'dev-session' || config.nodeEnv === 'production') {
+        throw new Error('Development only')
+      }
+      if (!process.env.DEV_SESSION_TOKEN) {
+        throw new Error('DEV_SESSION_TOKEN is required; avoid putting a token in shell arguments')
+      }
+      await revokeSession(db, process.env.DEV_SESSION_TOKEN)
+      console.log('Session revoked')
+      break
+    default:
+      throw new Error(
+        'Commands: migrate, seed, import-racing [json | venues.csv courses.csv races.csv], import-events [file], import-event-drafts <file>, session-create [subject] [ttlHours], session-revoke',
+      )
+  }
+} finally {
+  await db.close()
+}

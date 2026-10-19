@@ -1,0 +1,141 @@
+name: Backend foundation
+on:
+  pull_request:
+    paths:
+      - 'services/api/**'
+      - 'packages/shared/**'
+      - 'contracts/**'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.json'
+      - 'tsconfig.frontend-integration.json'
+      - 'next.config.mjs'
+      - '.gitignore'
+      - 'tests/**'
+      - 'README.md'
+      - '.env.example'
+      - '.github/workflows/backend-foundation.yml'
+      - '.editorconfig'
+      - '.prettierrc.json'
+      - '.prettierignore'
+      - 'CONTRIBUTING.md'
+      - 'AGENTS.md'
+  push:
+    branches: ['develop', 'api/develop', 'frontend/develop', 'feature/frontend']
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: derby
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: derby_career_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U derby -d derby_career_test"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      DATABASE_URL: postgresql://derby:local_ci_only@127.0.0.1:5432/derby_career_test
+      TEST_DATABASE_URL: postgresql://derby:local_ci_only@127.0.0.1:5432/derby_career_test
+      NODE_ENV: test
+      AUTH_MODE: disabled
+      LOG_LEVEL: silent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run contract:check
+      - run: npm run events:convert && git diff --exit-code -- seeds/events.catalog.json
+      - run: npm run events:expand && git diff --exit-code -- seeds/events.expansion.source.json seeds/events.expansion.catalog.json reports/event-expansion.json
+      - run: npm test
+      - run: npm run db:migrate && npm run db:seed
+      - run: npm run test:postgres
+      - run: npm run build
+      - name: Verify compiled HTTP server against PostgreSQL
+        run: |
+          NODE_ENV=production node dist/server.js &
+          API_PROCESS_ID=$!
+          trap 'kill "$API_PROCESS_ID" 2>/dev/null || true' EXIT
+          curl --silent --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:4000/health/ready > /dev/null
+          node scripts/http-smoke.mjs
+  verify-vercel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: derby
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: derby_deployment_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U derby -d derby_deployment_test"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      DATABASE_URL_UNPOOLED: postgresql://derby:local_ci_only@127.0.0.1:5432/derby_deployment_test
+      TEST_DATABASE_URL: postgresql://derby:local_ci_only@127.0.0.1:5432/derby_deployment_test
+      NODE_ENV: production
+      AUTH_MODE: disabled
+      LOG_LEVEL: silent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: npm ci --include=dev
+      - run: npm run deployment:db -- migrate
+      - name: Import only real reference data twice (no development seed)
+        run: |
+          npm run deployment:db -- import-racing
+          npm run deployment:db -- import-racing
+      - run: npm run build:vercel
+      - name: Verify relocated function against clean PostgreSQL
+        run: node --import tsx --test tests/vercel-build.integration.ts
+  verify-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec next typegen
+      - run: pnpm exec tsc --noEmit --incremental false
+      - name: Build Frontend with root dependencies only
+        run: pnpm build
+      - run: npm ci --prefix services/api
+      - run: pnpm exec tsc --project tsconfig.frontend-integration.json --noEmit --incremental false
+      - run: node --import ./services/api/node_modules/tsx/dist/loader.mjs --test tests/*.test.ts
+      - name: Verify Frontend API integration flows
+        working-directory: services/api
+        run: node --import ./node_modules/tsx/dist/loader.mjs --test ../../tests/*.integration.ts

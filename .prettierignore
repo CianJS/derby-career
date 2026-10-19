@@ -1,0 +1,8 @@
+**/node_modules/**
+**/dist/**
+.next/**
+pnpm-lock.yaml
+**/package-lock.json
+packages/shared/src/generated/**
+services/api/migrations/**
+services/api/seeds/**
