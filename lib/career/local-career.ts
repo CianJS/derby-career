@@ -1,3 +1,4 @@
+import { migrateTravel, closeLocalTravel, supportedCountry } from './local-travel'
 import { startCareer, type Career } from './model'
 import { readLifecycleSave } from './lifecycle-repository'
 import { assertLifecycleSave } from './lifecycle-save'
@@ -14,7 +15,14 @@ export function startLocalCareer(horseId: string, current: Career | null): Caree
     return next
   }
   assertLifecycleSave(lifecycle)
-  return { ...next, calendarDate: { year: lifecycle.year ?? 2028, month: lifecycle.month ?? 4 } }
+  if (!supportedCountry(migrateTravel(lifecycle).travel.homeCountry)) {
+    throw new Error('이 마방의 소속 국가는 신규 육성을 지원하지 않습니다.')
+  }
+  return {
+    ...next,
+    contractedJockeyIds: lifecycle.contractedJockeyIds ?? next.contractedJockeyIds,
+    calendarDate: { year: lifecycle.year ?? 2028, month: lifecycle.month ?? 4 },
+  }
 }
 export function retireLocalCareer(career: Career) {
   if (career.raceRun) {
@@ -30,12 +38,16 @@ export function retireLocalCareer(career: Career) {
       ...saved,
       activeHorse: saved.activeHorse ?? null,
       archive: saved.archive ?? [],
+      contractedJockeyIds: [...career.contractedJockeyIds],
       year: career.calendarDate.year,
       month: career.calendarDate.month,
     },
     career,
   )
-  const retired = archiveActiveHorse(projected, career.horse.id, crypto.randomUUID())
+  const retired = {
+    ...archiveActiveHorse(projected, career.horse.id, crypto.randomUUID()),
+    travel: closeLocalTravel(migrateTravel(saved).travel),
+  }
   // The archive and retirement tombstone are durable together or neither is changed.
   writeBrowserSave({ career: null, lifecycle: retired })
   return retired

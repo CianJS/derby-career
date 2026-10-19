@@ -1,3 +1,4 @@
+import type { StableTravel } from './local-travel'
 import type { components } from '../../packages/shared/src/generated/api'
 import type { Career } from './model'
 import {
@@ -7,6 +8,7 @@ import {
   grade,
   raceEligibility,
   racesForTurn,
+  localRacesForTurn,
   ridingFit,
   tactics,
   type RaceEntryDraft,
@@ -24,6 +26,7 @@ export function recommendRaceEntry(
   raceId?: string,
   options?: components['schemas']['RaceEntryOptions'],
   availableFunds?: number,
+  travel?: StableTravel,
 ): RaceEntryDraft {
   if (career.raceRun) {
     return {
@@ -32,14 +35,15 @@ export function recommendRaceEntry(
       tactic: career.raceRun.player.tactic,
     }
   }
-  if (options ? options.restrictionReason : entryRestriction(career, availableFunds)) {
+  if (options ? options.restrictionReason : entryRestriction(career, availableFunds, travel)) {
     return emptyDraft()
   }
   const eligible = options
     ? options.races.filter((row) => row.eligible).map((row) => row.definition)
-    : racesForTurn(career.careerTurnIndex).filter(
-        (race) => !raceEligibility(career, race, availableFunds),
-      )
+    : (travel
+        ? localRacesForTurn(career.careerTurnIndex)
+        : racesForTurn(career.careerTurnIndex)
+      ).filter((race) => !raceEligibility(career, race, availableFunds, travel))
   if (!eligible.length) {
     return emptyDraft()
   }
@@ -89,14 +93,15 @@ export function updateRaceEntryDraft(
   patch: Partial<RaceEntryDraft>,
   options?: components['schemas']['RaceEntryOptions'],
   availableFunds?: number,
+  travel?: StableTravel,
 ): RaceEntryDraft {
   if (career.raceRun) {
-    return recommendRaceEntry(career, undefined, options, availableFunds)
+    return recommendRaceEntry(career, undefined, options, availableFunds, travel)
   }
   if (patch.raceId !== undefined && patch.raceId !== current.raceId) {
     return patch.raceId === null
       ? emptyDraft()
-      : recommendRaceEntry(career, patch.raceId, options, availableFunds)
+      : recommendRaceEntry(career, patch.raceId, options, availableFunds, travel)
   }
   // A manual jockey/tactic choice survives ordinary rerenders and same-race clicks.
   return { ...current, ...patch }

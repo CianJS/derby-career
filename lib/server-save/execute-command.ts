@@ -1,5 +1,5 @@
 import type { DerbyApiClient } from '../../packages/shared/src/client'
-import { validateSaveResponse } from '../../packages/shared/src/save-response-validation'
+import { validateSaveResponse } from './response'
 import type { SaveCommand } from './commands'
 
 /** Sends the original request and checks its receipt; journal lifetime belongs to the controller. */
@@ -20,6 +20,12 @@ export async function executeSaveCommand(api: DerbyApiClient, command: SaveComma
       break
     case 'retire':
       result = await api.retireCareer(command.careerId, command.body)
+      break
+    case 'expedition-start':
+      result = await api.startExpedition(command.careerId, command.body)
+      break
+    case 'expedition-return':
+      result = await api.returnExpedition(command.careerId, command.expeditionId, command.body)
       break
     case 'race-entry':
       result = await api.enterRace(command.careerId, command.body)

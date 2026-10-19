@@ -1,9 +1,12 @@
+import { assertTravel, type StableTravel } from './local-travel'
 import { assertEconomy, type EconomyEntry } from './local-economy'
 import { assertJockeyRelations } from './jockey-trust'
 import type { LifecycleHorse } from './lifecycle'
 import type { HorseRaceRecord } from './records'
 
 export type LifecycleSave = {
+  contractedJockeyIds?: string[]
+  travel?: StableTravel
   stableName?: string
   country?: string
   funds?: string
@@ -108,7 +111,18 @@ export function assertLifecycleSave(value: unknown): asserts value is LifecycleS
   if (!object(value)) {
     throw invalid()
   }
+  if (
+    value.contractedJockeyIds !== undefined &&
+    (!Array.isArray(value.contractedJockeyIds) ||
+      value.contractedJockeyIds.some((id) => typeof id !== 'string' || !id) ||
+      new Set(value.contractedJockeyIds).size !== value.contractedJockeyIds.length)
+  ) {
+    throw invalid()
+  }
   assertEconomy(value)
+  if (value.travel !== undefined) {
+    assertTravel(value.travel)
+  }
   for (const key of ['stableName', 'country', 'funds', 'candidateSeed', 'lastRetiredId']) {
     if (value[key] !== undefined && typeof value[key] !== 'string') {
       throw invalid()

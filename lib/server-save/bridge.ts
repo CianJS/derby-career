@@ -1,4 +1,4 @@
-import { validateSaveResponse } from '../../packages/shared/src/save-response-validation'
+import { validateSaveResponse } from './response'
 import { validateSaveCommand, type SaveCommand } from './commands'
 import {
   validateRaceEntryOptions,
@@ -7,6 +7,7 @@ import {
   validateRaceLogResponse,
   validateCareerWorkspace,
   validateHorseCatalog,
+  validateExpeditionResponse,
 } from '../../packages/shared/src/generated/save-validation.mjs'
 
 type Env = Record<string, string | undefined>
@@ -41,6 +42,15 @@ const uuid = '[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}'
 function commandFor(path: string, body: unknown): SaveCommand | null {
   if (path === '/v1/careers') {
     const value = { kind: 'create', body }
+    return validateSaveCommand(value) ? value : null
+  }
+  const expedition = new RegExp(`^/v1/careers/(${uuid})/expeditions(?:/(${uuid})/return)?$`).exec(
+    path,
+  )
+  if (expedition) {
+    const value = expedition[2]
+      ? { kind: 'expedition-return', careerId: expedition[1], expeditionId: expedition[2], body }
+      : { kind: 'expedition-start', careerId: expedition[1], body }
     return validateSaveCommand(value) ? value : null
   }
   const raceMatch = new RegExp(
@@ -139,7 +149,7 @@ export async function handleServerSave(
       path !== '/v1/careers/workspace' &&
       path !== '/v1/catalog/horses' &&
       !new RegExp(
-        `^/v1/careers/(${uuid})/(jockey-relations|race-entries|race-runs/(${uuid})(/log)?)$`,
+        `^/v1/careers/(${uuid})/(expedition|jockey-relations|race-entries|race-runs/(${uuid})(/log)?)$`,
       ).test(path)
     ) {
       return reply(404, '지원하지 않는 저장 경로입니다.')
@@ -200,13 +210,15 @@ export async function handleServerSave(
           ? validateCareerWorkspace(result)
           : path === '/v1/catalog/horses'
             ? validateHorseCatalog(result)
-            : path.endsWith('/jockey-relations')
-              ? validateJockeyRelationsResponse(result)
-              : path.endsWith('/race-entries')
-                ? validateRaceEntryOptions(result)
-                : path.endsWith('/log')
-                  ? validateRaceLogResponse(result)
-                  : validateRaceRunResponse(result)
+            : path.endsWith('/expedition')
+              ? validateExpeditionResponse(result)
+              : path.endsWith('/jockey-relations')
+                ? validateJockeyRelationsResponse(result)
+                : path.endsWith('/race-entries')
+                  ? validateRaceEntryOptions(result)
+                  : path.endsWith('/log')
+                    ? validateRaceLogResponse(result)
+                    : validateRaceRunResponse(result)
         : validateSaveResponse(command?.kind ?? 'create', result)
     if (!valid) {
       return reply(502, '서버 저장 응답이 계약과 다릅니다. 같은 요청으로 다시 확인해 주세요.')

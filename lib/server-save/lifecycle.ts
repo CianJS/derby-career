@@ -1,3 +1,4 @@
+import { countryName } from '../career/local-travel'
 import { applyCareer, type LifecycleHorse } from '../career/lifecycle'
 import type { SaveWorkspace } from './controller'
 
@@ -11,6 +12,9 @@ export function serverLifecycle(workspace: SaveWorkspace) {
     return { ...projected, id: state.ownedHorseId }
   }
   return {
+    country: workspace.stable?.travel
+      ? countryName(workspace.stable.travel.homeCountry)
+      : '정보 없음',
     activeHorse: workspace.career ? horse(workspace.career) : null,
     archive: workspace.retirements.map((record) => ({
       ...horse(record.snapshot),
