@@ -134,7 +134,11 @@ test('cross-owner UUID collisions return 409 without leaking data or leaving par
     const collision = await f.call(
       'POST',
       '/v1/careers',
-      { careerId: first.id, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+      {
+        careerId: first.id,
+        horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+        starterJockeyId: 'HAN_DOYUN',
+      },
       f.other.token,
     )
     assert.equal(collision.statusCode, 409, collision.body)
@@ -149,7 +153,11 @@ test('cross-owner UUID collisions return 409 without leaking data or leaving par
         await f.call(
           'POST',
           '/v1/careers',
-          { careerId: otherId, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+          {
+            careerId: otherId,
+            horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+            starterJockeyId: 'HAN_DOYUN',
+          },
           f.other.token,
         )
       ).statusCode,
