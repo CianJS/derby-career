@@ -1,4 +1,5 @@
 import { assertCareer, type Career } from './model'
+import { normalizeCareerAge } from './career-time'
 import { assertLifecycleSave, type LifecycleSave } from './lifecycle-save'
 
 export const BROWSER_SAVE_KEY = 'derby-career-browser-save-v1'
@@ -46,6 +47,7 @@ function decode(text: string | null): Save {
   }
   if ('career' in value && value.career !== null) {
     assertCareer(value.career)
+    value.career = normalizeCareerAge(value.career)
   }
   if ('lifecycle' in value) {
     assertLifecycleSave(value.lifecycle)

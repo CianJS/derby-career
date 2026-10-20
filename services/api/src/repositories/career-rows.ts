@@ -1,7 +1,7 @@
 import { hydrateJockeyRelations } from './jockey-relations'
 import type { Query } from '../db'
 import { notFound } from '../errors'
-import type { Career } from '../../../../packages/shared/src/domain'
+import { normalizeCareerAge, type Career } from '../../../../packages/shared/src/domain'
 import {
   publicEventDefinition,
   type EventDefinition,
@@ -79,6 +79,9 @@ export async function readCareerRow(
   ).rows[0]
   if (!row) {
     throw notFound()
+  }
+  if (row.status === 'active') {
+    row.state = normalizeCareerAge(row.state)
   }
   await hydrateJockeyRelations(tx, row)
   return row

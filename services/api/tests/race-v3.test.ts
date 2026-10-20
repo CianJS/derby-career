@@ -353,6 +353,85 @@ test('entry options and confirmation agree on health, records, paid entry, contr
     const locked = (await f.call('GET', path)).json<Models['RaceEntryOptions']>()
     assert.ok(locked.restrictionReason)
     assert.ok(locked.races.every((race) => !race.eligible))
+    const firstLog = (
+      await f.call('GET', `/v1/careers/${id}/race-runs/${entered.json().raceRunId}/log`)
+    ).body
+    const finish = async (runId: string) => {
+      const body = { commandId: randomUUID() }
+      const url = `/v1/careers/${id}/race-runs/${runId}/complete`
+      const completed = await f.call('POST', url, body)
+      assert.equal(completed.statusCode, 200, completed.body)
+      assert.deepEqual((await f.call('POST', url, body)).json(), completed.json())
+      const again = await f.call('POST', url, { commandId: randomUUID() })
+      assert.equal(again.statusCode, 200, again.body)
+      assert.deepEqual(again.json().career, completed.json().career)
+      return completed.json().career.state
+    }
+    let state = await finish(entered.json().raceRunId)
+    for (const turn of [13, 15, 18, 24, 60, 61, 63, 66]) {
+      // A legacy live save has a stale age, but keeps all actual records, logs, money and trust.
+      state = {
+        ...state,
+        month: turn,
+        careerTurnIndex: turn,
+        age: 2,
+        health: '정상',
+        healthRecovery: 0,
+        calendarDate: { year: 2028 + Math.floor((turn + 2) / 12), month: ((turn + 2) % 12) + 1 },
+      }
+      await f.db.query('UPDATE careers SET turn=$2,state=$3 WHERE id=$1', [
+        id,
+        turn,
+        JSON.stringify(state),
+      ])
+      const recurring = (await f.call('GET', path)).json<Models['RaceEntryOptions']>()
+      assert.ok(validateRaceEntryOptions(recurring))
+      assert.equal(recurring.career.state.age, 2 + Math.floor((turn - 1) / 12))
+      assert.ok(recurring.races.every((race) => race.definition.month === turn))
+      assert.deepEqual(
+        recurring.races
+          .filter((race) => race.definition.countryCode === 'KOR')
+          .map((race) => race.definition.id)
+          .sort(),
+        raceDefinitions
+          .filter((race) => race.month === ((turn - 1) % 12) + 1)
+          .map((race) => race.id)
+          .sort(),
+      )
+      const candidate = recurring.races.find(
+        (race) => race.eligible && race.definition.entryFee === 0,
+      )
+      if (!candidate) {
+        continue
+      }
+      const command = {
+        ...entryBody(),
+        engineVersion: 'race-sim-v4' as const,
+        expectedTurn: turn,
+        raceDefinitionId: candidate.definition.id,
+      }
+      const next = await f.call('POST', path, command)
+      assert.equal(next.statusCode, 200, next.body)
+      assert.deepEqual((await f.call('POST', path, command)).json(), next.json())
+      const run = next.json().career.state.raceRun
+      assert.equal(run.month, turn)
+      assert.equal(run.raceDefinitionSnapshot.month, turn)
+      assert.equal(run.player.horseSnapshot.age, recurring.career.state.age)
+      const beforeRecords = state.raceRecords.length
+      state = await finish(command.raceRunId)
+      assert.equal(state.raceRecords.length, beforeRecords + 1)
+      assert.equal(state.raceRecords.at(-1).month, turn)
+      assert.equal(state.careerTurnIndex, turn + 1)
+      assert.equal(state.age, 2 + Math.floor(turn / 12))
+    }
+    assert.equal(
+      (await f.call('GET', `/v1/careers/${id}/race-runs/${entered.json().raceRunId}/log`)).body,
+      firstLog,
+    )
+    assert.equal(
+      (await f.db.query('SELECT count(*)::int AS n FROM race_definitions')).rows[0].n,
+      19,
+    )
   } finally {
     await f.close()
   }

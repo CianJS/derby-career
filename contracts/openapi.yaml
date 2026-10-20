@@ -2206,7 +2206,9 @@ components:
           $ref: '#/components/schemas/CountryCode'
         id: *id004
         name: *id004
-        month: *id009
+        month:
+          type: integer
+          description: Catalog definitions use a recurring season slot (1-12). Career entry options and locked RaceRun snapshots use the actual absolute career turn.
         surface:
           type: string
           enum:
@@ -2397,11 +2399,17 @@ components:
           - 1
         horse:
           $ref: '#/components/schemas/HorseDefinition'
-        age: *id009
-        month: *id009
+        age:
+          type: integer
+          description: Live Career age is 2 + floor((careerTurnIndex - 1) / 12). Historical retirement and race snapshots retain their saved age.
+        month:
+          type: integer
+          description: Legacy absolute career turn alias; this is not the stable calendar month.
         calendarDate:
           $ref: '#/components/schemas/CalendarDate'
-        careerTurnIndex: *id009
+        careerTurnIndex:
+          type: integer
+          description: Absolute 1-based monthly turn. The baseline is 60 turns; play continues beyond 60 without automatic retirement.
         contractedJockeyIds:
           type: array
           items: *id004
