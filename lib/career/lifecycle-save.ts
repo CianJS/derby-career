@@ -1,3 +1,4 @@
+import { isStarterJockeyId, type StarterJockeyId } from './jockey-catalog'
 import { assertTravel, type StableTravel } from './local-travel'
 import { assertEconomy, type EconomyEntry } from './local-economy'
 import { assertJockeyRelations } from './jockey-trust'
@@ -5,6 +6,8 @@ import type { LifecycleHorse } from './lifecycle'
 import type { HorseRaceRecord } from './records'
 
 export type LifecycleSave = {
+  /** Confirmed UI draft; actual contracts are created atomically with the first horse. */
+  starterJockeyId?: StarterJockeyId
   contractedJockeyIds?: string[]
   travel?: StableTravel
   stableName?: string
@@ -117,6 +120,9 @@ export function assertLifecycleSave(value: unknown): asserts value is LifecycleS
       value.contractedJockeyIds.some((id) => typeof id !== 'string' || !id) ||
       new Set(value.contractedJockeyIds).size !== value.contractedJockeyIds.length)
   ) {
+    throw invalid()
+  }
+  if (value.starterJockeyId !== undefined && !isStarterJockeyId(value.starterJockeyId)) {
     throw invalid()
   }
   assertEconomy(value)

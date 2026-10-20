@@ -1,5 +1,6 @@
 'use client'
 
+import type { StarterJockeyId } from '@/packages/shared/src/domain'
 import { countryName, supportedCountries, type SupportedCountry } from '@/lib/career/local-travel'
 import { useState } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
@@ -8,7 +9,7 @@ import { horses, labels, statKeys } from '@/lib/career/model'
 import { careerStore, useCareer } from '@/lib/career/store'
 import { cn } from '@/lib/utils'
 
-export function HorseSelection({ busy }: { busy: boolean }) {
+export function HorseSelection({ busy, starterJockeyId }: { busy: boolean; starterJockeyId?: StarterJockeyId }) {
   const { mode, candidates, workspace } = useCareer()
   const options = mode === 'server' ? candidates.map(h => h.definition) : horses
   const [homeCountry, setHomeCountry] = useState<SupportedCountry>('KOR')
@@ -37,7 +38,7 @@ export function HorseSelection({ busy }: { busy: boolean }) {
     </fieldset>
     <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5">
       <p className="text-xs text-muted-foreground">{selected ? `${options.find(h => h.id === selected)!.name} 선택됨 · 확정 후 Month 1이 시작됩니다.` : '후보를 선택하면 육성을 시작할 수 있습니다.'}</p>
-      <Button size="lg" disabled={!selected || busy} onClick={() => selected && void careerStore.select(selected, homeCountry)}>{busy ? '저장 중…' : '이 말로 육성 시작'}<ArrowRight data-icon="inline-end" aria-hidden /></Button>
+      <Button size="lg" disabled={!selected || busy} onClick={() => selected && void careerStore.select(selected, homeCountry, starterJockeyId)}>{busy ? '저장 중…' : '이 말로 육성 시작'}<ArrowRight data-icon="inline-end" aria-hidden /></Button>
     </div>
   </>
 }

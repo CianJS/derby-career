@@ -10,7 +10,18 @@ import { Flag } from 'lucide-react'
 import type { View, CareerHorse } from './legacy-types'
 import { Section } from './presentation'
 import { Management } from './management'
-import { jockeys, STABLE_CONTRACTED_JOCKEY_IDS } from './legacy-catalog'
+import { jockeys } from './legacy-catalog'
+
+function savedJockeyContracts(snapshot: ReturnType<typeof useCareer>): readonly string[] | null {
+  if (!snapshot.ready) {
+    return null
+  }
+  return snapshot.mode === 'server'
+    ? (snapshot.workspace?.stable?.contractedJockeyIds ??
+        snapshot.career?.contractedJockeyIds ??
+        null)
+    : (snapshot.career?.contractedJockeyIds ?? snapshot.lifecycle?.contractedJockeyIds ?? [])
+}
 
 export function Jockeys({
   setView,
@@ -22,28 +33,39 @@ export function Jockeys({
   const snapshot = useCareer()
   const { career } = snapshot
   const [tab, setTab] = useState('contract')
-  const contractedIds = career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS
-  const list = jockeys.filter((j) => contractedIds.includes(j.id) === (tab === 'contract'))
+  const contractedIds = savedJockeyContracts(snapshot)
+  const list = contractedIds
+    ? jockeys.filter((j) => contractedIds?.includes(j.id) === (tab === 'contract'))
+    : []
   return (
     <Management
       title="기수"
       eyebrow="JOCKEYS"
-      description="계약 기수와 계약 가능한 기수를 관리합니다. 최대 3명."
+      description="저장된 계약 기수와 전체 기수 도감을 확인합니다. 추가 영입은 추후 지원 예정입니다."
     >
       <div className="flex w-fit gap-1 rounded-xl border border-border bg-card p-1">
         <button
           onClick={() => setTab('contract')}
           className={`rounded-lg px-4 py-2 text-xs ${tab === 'contract' ? 'bg-primary text-primary-foreground' : ''}`}
         >
-          계약 기수 {contractedIds.length} / 3
+          계약 기수 {contractedIds?.length ?? '확인 중'}
         </button>
         <button
           onClick={() => setTab('available')}
           className={`rounded-lg px-4 py-2 text-xs ${tab === 'available' ? 'bg-primary text-primary-foreground' : ''}`}
         >
-          계약 가능 기수
+          미계약 기수
         </button>
       </div>
+      {list.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          {contractedIds === null
+            ? '기수 계약 정보를 불러오는 중…'
+            : tab === 'contract'
+              ? '계약 기수가 없습니다.'
+              : '미계약 기수가 없습니다.'}
+        </p>
+      )}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {list.map((j) => (
           <button
@@ -65,7 +87,7 @@ export function Jockeys({
             </div>
             <p className="mt-4 text-xs text-muted-foreground">{j.style}</p>
             <p className="mt-1 text-xs text-primary">
-              {contractedIds.includes(j.id) ? '계약 중' : '계약 가능'}
+              {contractedIds?.includes(j.id) ? '계약 중' : '미계약 · 추후 영입 예정'}
             </p>
             <p className="mt-1 text-xs">
               {career?.horse ? `${career.horse.name}와 신뢰도 · ` : '신뢰도 · '}
@@ -97,7 +119,14 @@ export function Jockey({
 }) {
   const snapshot = useCareer()
   const { career } = snapshot
-  const j = jockeys.find((j) => j.id === jockeyId) ?? jockeys[0]
+  const j = jockeys.find((j) => j.id === jockeyId)
+  if (!j) {
+    return (
+      <Management title="기수" eyebrow="JOCKEY RECORD" description="기수 정보를 찾을 수 없습니다.">
+        <button onClick={() => setView('jockeys')}>← 기수 목록</button>
+      </Management>
+    )
+  }
   const riddenHorses = horses.filter((h) => h.raceRecords?.some((r) => r.jockeyId === j.id))
   const records = riddenHorses.flatMap((h) =>
     (h.raceRecords ?? [])
@@ -124,15 +153,15 @@ export function Jockey({
             ['주요 스타일', j.style],
             [
               '계약 상태',
-              (career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS).includes(j.id)
+              savedJockeyContracts(snapshot)?.includes(j.id)
                 ? '계약 중'
-                : '미계약',
+                : savedJockeyContracts(snapshot) === null
+                  ? '계약 정보 없음'
+                  : '미계약',
             ],
             [
               '계약 만료일',
-              (career?.contractedJockeyIds ?? STABLE_CONTRACTED_JOCKEY_IDS).includes(j.id)
-                ? '만료일 정보 없음'
-                : '—',
+              savedJockeyContracts(snapshot)?.includes(j.id) ? '만료일 정보 없음' : '—',
             ],
           ].map(([a, b]) => (
             <div key={a} className="border-b border-r border-border px-4 py-3">

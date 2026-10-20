@@ -680,7 +680,16 @@ export const careerStore = {
           },
         })
       : mutate(
-          (saved) => withMonthEvent(startLocalCareer(horseId, saved, starterJockeyId)),
+          (saved, lifecycle) => {
+            if (
+              lifecycle.contractedJockeyIds === undefined &&
+              lifecycle.starterJockeyId !== undefined &&
+              lifecycle.starterJockeyId !== starterJockeyId
+            ) {
+              throw new Error('초기 기수 선택이 변경되었습니다. 다시 불러와 주세요.')
+            }
+            return withMonthEvent(startLocalCareer(horseId, saved, starterJockeyId))
+          },
           (_saved, next, lifecycle) => ({
             ...lifecycle,
             contractedJockeyIds: [...next!.contractedJockeyIds],

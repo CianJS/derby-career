@@ -1,4 +1,4 @@
-import { contractedJockeys, freeAgentJockeys } from '@/lib/career/race-entry'
+import { jockeyCatalog } from '@/packages/shared/src/domain'
 
 export const races = [
   {
@@ -51,11 +51,8 @@ export const races = [
   },
 ]
 
-export const jockeys = [...contractedJockeys, ...freeAgentJockeys].map((j) => ({
+export const jockeys = jockeyCatalog.map((j) => ({
   ...j,
   meta: j.style,
-  contract: '—',
   abilities: [j.start, j.pace, j.path, j.timing, j.stability],
 }))
-
-export const STABLE_CONTRACTED_JOCKEY_IDS = ['HAN_DOYUN', 'SEO_JIAN', 'YOON_TAESUNG']

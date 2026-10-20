@@ -6,6 +6,7 @@ import { JSDOM } from 'jsdom'
 import { act, createElement } from 'react'
 import type { Root } from 'react-dom/client'
 import type { components } from '../packages/shared/src/generated/api'
+import { horses } from '../lib/career/model'
 import { buildFixture } from '../lib/career/fixtures'
 import { parseSaveWorkspace, type SaveWorkspace } from '../lib/server-save/workspace'
 import { validateRaceEntryOptions } from '../packages/shared/src/generated/save-validation.mjs'
@@ -494,6 +495,184 @@ test('actual App keeps a public detail route when a server race exists, includin
     await h.waitFor(() => h.container.querySelector('h1')?.textContent === name)
     assert.equal(new URLSearchParams(h.dom.window.location.search).get('raceId'), raceId)
     assert.ok(!h.requests.some((path) => path.includes('/race-runs/')))
+  } finally {
+    await h.close()
+  }
+})
+
+test('actual App: new Local starter is explicit, recovers failed draft saves/reload and reaches one-jockey race entry', async () => {
+  const h = await harness('local', '/', undefined, () =>
+    writeBrowserSave({
+      career: null,
+      lifecycle: { stableName: '초기 선택 마방', country: '대한민국', archive: [] },
+    }),
+  )
+  const clickText = async (text: string) => {
+    const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes(text),
+    )
+    assert.ok(button, text)
+    await act(async () => button.click())
+  }
+  const storagePrototype = h.dom.window.Storage.prototype
+  const originalWrite = storagePrototype.setItem
+  try {
+    await clickText('새 육성마 시작')
+    await h.waitFor(() => h.container.querySelectorAll('input[name="starter-jockey"]').length === 4)
+    assert.equal(h.container.querySelectorAll('input[name="starter-jockey"]:checked').length, 0)
+    assert.equal(h.container.querySelectorAll('input[name="horse"]').length, 0)
+    await act(async () =>
+      h.container.querySelector<HTMLInputElement>('input[value="KANG_HAJUN"]')!.click(),
+    )
+    const before = readBrowserSave()
+    storagePrototype.setItem = () => {
+      throw new h.dom.window.DOMException('Full', 'QuotaExceededError')
+    }
+    await clickText('이 기수 선택 확정')
+    assert.match(h.container.querySelector('[role="alert"]')!.textContent!, /저장 공간/)
+    assert.deepEqual(readBrowserSave(), before)
+    assert.equal(h.container.querySelectorAll('input[name="starter-jockey"]:checked').length, 1)
+    storagePrototype.setItem = originalWrite
+    await clickText('이 기수 선택 확정')
+    await h.waitFor(() => h.container.querySelectorAll('input[name="horse"]').length === 3)
+    assert.equal(readBrowserSave().lifecycle!.starterJockeyId, 'KANG_HAJUN')
+    assert.equal(readBrowserSave().lifecycle!.contractedJockeyIds, undefined)
+    assert.equal(readBrowserSave().career, null)
+    await h.reload()
+    await clickText('새 육성마 시작')
+    await h.waitFor(() => h.container.querySelectorAll('input[name="horse"]').length === 3)
+    await act(async () =>
+      h.container.querySelector<HTMLInputElement>('input[name="horse"]')!.click(),
+    )
+    await clickText('이 말로 육성 시작')
+    await h.waitFor(() => !!readBrowserSave().career)
+    assert.deepEqual(readBrowserSave().career!.contractedJockeyIds, ['KANG_HAJUN'])
+    assert.deepEqual(readBrowserSave().lifecycle!.contractedJockeyIds, ['KANG_HAJUN'])
+    await act(async () => {
+      for (const month of [1, 2]) {
+        await careerStore.commit('rest', month)
+        await careerStore.next(readBrowserSave().career!.action!.actionId)
+      }
+    })
+    await clickText('경주')
+    await clickText('경주 출전 준비')
+    assert.equal(h.container.querySelectorAll('input[name="entry-jockey"]').length, 1)
+    assert.equal(
+      h.container.querySelector<HTMLInputElement>('input[name="entry-jockey"]')!.value,
+      'KANG_HAJUN',
+    )
+    assert.equal(h.container.querySelectorAll('input[name="entry-tactic"]').length, 4)
+    assert.equal(readBrowserSave().career!.raceRun, undefined)
+    await clickText('DERBY CAREER')
+    await clickText('JOCKEYS')
+    assert.match(h.container.textContent!, /계약 기수 1/)
+    assert.match(h.container.textContent!, /강하준/)
+    assert.doesNotMatch(h.container.textContent!, /한도윤|서지안|윤태성|최대 3명/)
+    await clickText('미계약 기수')
+    assert.match(h.container.textContent!, /추후 영입 예정/)
+    assert.match(h.container.textContent!, /한도윤/)
+  } finally {
+    storagePrototype.setItem = originalWrite
+    await h.close()
+  }
+})
+
+test('actual App: a fresh Local lobby starts with stable creation before starter or horse selection', async () => {
+  const h = await harness('local', '/', undefined, () => {})
+  try {
+    const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('새 육성마 시작'),
+    )!
+    await act(async () => button.click())
+    await h.waitFor(() => h.container.textContent!.includes('마방을 시작합니다.'))
+    assert.equal(
+      h.container.querySelectorAll('input[name="starter-jockey"], input[name="horse"]').length,
+      0,
+    )
+    assert.equal(readBrowserSave().career, undefined)
+    const input = h.container.querySelector<HTMLInputElement>(
+      'input[placeholder="마방 이름을 입력하세요"]',
+    )!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(h.dom.window.HTMLInputElement.prototype, 'value')!.set!.call(
+        input,
+        '첫 계약 마방',
+      )
+      input.dispatchEvent(new h.dom.window.Event('input', { bubbles: true }))
+    })
+    const create = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === '마방 생성',
+    )!
+    assert.equal(create.disabled, false)
+    await act(async () => create.click())
+    await h.waitFor(() => h.container.querySelectorAll('input[name="starter-jockey"]').length === 4)
+    assert.equal(readBrowserSave().lifecycle!.stableName, '첫 계약 마방')
+    assert.equal(readBrowserSave().lifecycle!.contractedJockeyIds, undefined)
+    assert.equal(h.container.querySelectorAll('input[name="horse"]').length, 0)
+  } finally {
+    await h.close()
+  }
+})
+
+test('actual App: developer Server creation submits the explicit starter and preserves the same journal request after response loss', async () => {
+  const workspace = parseSaveWorkspace({
+    stable: null,
+    career: null,
+    confirmedActionId: null,
+    retirements: [],
+    pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+  })
+  const h = await harness('server', '/', workspace)
+  const delegate = activeFetch
+  const bodies: Models['CreateCareer'][] = []
+  activeFetch = async (input, init) => {
+    if (String(input).endsWith('/catalog/horses')) {
+      return Response.json({
+        data: horses.map((definition) => ({ sourceKind: 'development_fixture', definition })),
+      })
+    }
+    if (init?.method === 'POST' && String(input).endsWith('/careers')) {
+      bodies.push(JSON.parse(String(init.body)))
+      throw new TypeError('Response lost')
+    }
+    return delegate(input, init)
+  }
+  const clickText = async (text: string) => {
+    const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes(text),
+    )
+    assert.ok(button, text)
+    await act(async () => button.click())
+  }
+  try {
+    await act(async () => {
+      await careerStore.refresh()
+    })
+    await clickText('새 육성마 시작')
+    await h.waitFor(() => h.container.querySelectorAll('input[name="starter-jockey"]').length === 4)
+    assert.equal(h.container.querySelectorAll('input[name="starter-jockey"]:checked').length, 0)
+    await act(async () =>
+      h.container.querySelector<HTMLInputElement>('input[value="CHOI_MINJAE"]')!.click(),
+    )
+    await clickText('이 기수 선택 확정')
+    assert.equal(h.container.querySelectorAll('input[name="horse"]').length, 3)
+    assert.equal(bodies.length, 0)
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
+    await h.reload()
+    await clickText('새 육성마 시작')
+    await h.waitFor(() => h.container.querySelectorAll('input[name="horse"]').length === 3)
+    await act(async () =>
+      h.container.querySelector<HTMLInputElement>('input[name="horse"]')!.click(),
+    )
+    await clickText('이 말로 육성 시작')
+    await h.waitFor(() => bodies.length === 1)
+    assert.equal(bodies[0].starterJockeyId, 'CHOI_MINJAE')
+    assert.equal(bodies[0].horseDefinitionId, horses[0].id)
+    assert.equal(bodies[0].homeCountry, 'KOR')
+    await clickText('같은 요청으로 다시 확인')
+    await h.waitFor(() => bodies.length === 2)
+    assert.deepEqual(bodies[1], bodies[0])
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
   } finally {
     await h.close()
   }

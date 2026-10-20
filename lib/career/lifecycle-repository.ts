@@ -56,10 +56,20 @@ export function readLifecycleSave(): unknown {
 export function writeLifecycleSave(value: unknown): void {
   assertLifecycleSave(value)
   const saved = readBrowserSave()
+  if (
+    saved.lifecycle?.starterJockeyId !== undefined &&
+    value.starterJockeyId !== undefined &&
+    saved.lifecycle.starterJockeyId !== value.starterJockeyId
+  ) {
+    throw new Error('다른 탭에서 초기 기수 선택을 확정했습니다. 다시 불러와 주세요.')
+  }
   const economy = migrateEconomy(saved.lifecycle ?? value)
   // A stale tab may update presentation metadata, but cannot erase an immutable archive.
   let next = {
     ...value,
+    ...(saved.lifecycle?.starterJockeyId
+      ? { starterJockeyId: saved.lifecycle.starterJockeyId }
+      : {}),
     ...(saved.lifecycle?.contractedJockeyIds
       ? { contractedJockeyIds: saved.lifecycle.contractedJockeyIds }
       : {}),
