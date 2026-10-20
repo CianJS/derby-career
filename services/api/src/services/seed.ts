@@ -21,7 +21,7 @@ export async function seedDevelopmentCatalog(db: Database, includeExpansion = tr
     }
     for (const jockey of jockeyCatalog) {
       await tx.query(
-        "INSERT INTO jockey_definitions(id,payload,source_kind) VALUES($1,$2,'development_fixture') ON CONFLICT DO NOTHING",
+        "INSERT INTO jockey_definitions(id,payload,source_kind) VALUES($1,$2,'catalog') ON CONFLICT DO NOTHING",
         [jockey.id, JSON.stringify(jockey)],
       )
     }

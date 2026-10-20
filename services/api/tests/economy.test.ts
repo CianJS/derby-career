@@ -1,6 +1,7 @@
+import { legacyCareer as startCareer } from '../../../tests/helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { startCareer, raceEligibility, raceDefinitions } from '../../../packages/shared/src/domain'
+import { raceEligibility, raceDefinitions } from '../../../packages/shared/src/domain'
 import { registerEconomyTests } from './economy-cases'
 
 test('shared eligibility keeps the Local Save fee gate and checks authoritative Server Save funds', () => {

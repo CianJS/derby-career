@@ -1,3 +1,4 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import { browserStorage } from './helpers/browser-storage'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -6,7 +7,6 @@ import {
   applyRaceResult,
   completeRace,
   horses,
-  startCareer,
   type Career,
 } from '../lib/career/model'
 import {

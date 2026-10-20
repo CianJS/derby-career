@@ -1,3 +1,4 @@
+import { legacyCareer as startCareer } from '../../../tests/helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -12,7 +13,7 @@ import { EventRepository } from '../src/repositories/events'
 import { fixture } from './helpers'
 import { resolveServerAction } from '../../../packages/shared/src/server-domain'
 import { applyImmediateEffects } from '../src/modules/events/resolver'
-import { startCareer } from '../../../packages/shared/src/domain'
+
 import {
   eventCategories,
   riskOutcomes,

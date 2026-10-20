@@ -192,7 +192,11 @@ test('server-save bridge and controller recover a lost response across reload an
     assert.equal(
       await controller.send({
         kind: 'create',
-        body: { careerId: id, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+        body: {
+          careerId: id,
+          horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+          starterJockeyId: 'HAN_DOYUN' as const,
+        },
       }),
       true,
     )
@@ -258,7 +262,11 @@ test('server-save bridge and controller recover a lost response across reload an
     assert.equal(
       await controller.send({
         kind: 'create',
-        body: { careerId: nextId, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+        body: {
+          careerId: nextId,
+          horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+          starterJockeyId: 'HAN_DOYUN' as const,
+        },
       }),
       true,
     )
@@ -335,7 +343,11 @@ test('server result events restore separately from browser fixtures and block ad
     assert.equal(
       await controller.send({
         kind: 'create',
-        body: { careerId: id, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+        body: {
+          careerId: id,
+          horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+          starterJockeyId: 'HAN_DOYUN' as const,
+        },
       }),
       true,
     )

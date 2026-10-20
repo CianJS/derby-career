@@ -1,3 +1,4 @@
+import { legacyCareer as startCareer } from '../../../tests/helpers/legacy-career'
 import { readFile } from 'node:fs/promises'
 import { applyCareer, archiveActiveHorse, type LifecycleHorse } from '../../../lib/career/lifecycle'
 import test from 'node:test'
@@ -6,7 +7,6 @@ import { randomUUID } from 'node:crypto'
 import {
   horses,
   tactics,
-  startCareer,
   completeRace,
   applyRaceResult,
   createRaceRun,

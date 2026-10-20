@@ -13,6 +13,56 @@ import { fixture } from './helpers'
 import { createApp } from '../src/app'
 import { oidcConfig, testIssuer } from './oidc-helpers'
 
+test('real PostgreSQL owner locking commits one starter contract under competing first-career requests', async () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
+  }
+  const f = await fixture({ db: postgresDatabase(url) })
+  try {
+    const body = {
+      careerId: randomUUID(),
+      horseDefinitionId: 'DEV_HORSE_RED_COMET',
+      starterJockeyId: 'KANG_HAJUN',
+    }
+    const replies = await Promise.all(
+      Array.from({ length: 4 }, () => f.call('POST', '/v1/careers', body)),
+    )
+    assert.ok(
+      replies.every((r) => r.statusCode === 201),
+      replies.map((r) => r.body).join('\n'),
+    )
+    for (const reply of replies) {
+      assert.deepEqual(reply.json(), replies[0].json())
+    }
+    const conflict = await f.call('POST', '/v1/careers', {
+      ...body,
+      careerId: randomUUID(),
+      starterJockeyId: 'HAN_DOYUN',
+    })
+    assert.equal(conflict.statusCode, 409)
+    const stableId = replies[0].json().career.stableId
+    assert.deepEqual(
+      (await f.db.query('SELECT jockey_id FROM jockey_contracts WHERE stable_id=$1', [stableId]))
+        .rows,
+      [{ jockey_id: 'KANG_HAJUN' }],
+    )
+    assert.equal(
+      Number(
+        (
+          await f.db.query('SELECT count(*) AS n FROM commands WHERE principal_id=$1', [
+            f.user.principalId,
+          ])
+        ).rows[0].n,
+      ),
+      1,
+    )
+    assert.deepEqual(replies[0].json().career.state.jockeyTrust.KANG_HAJUN, { starts: 0, trust: 0 })
+  } finally {
+    await f.close()
+  }
+})
+
 test('real PostgreSQL row locks serialize concurrent monthly actions and race payouts', async () => {
   const url = process.env.TEST_DATABASE_URL
   if (!url || !new URL(url).pathname.endsWith('_test')) {
@@ -172,7 +222,11 @@ test('real PostgreSQL maps simultaneous refreshed production JWTs to one owner a
           method: 'POST',
           url: '/v1/careers',
           headers: { authorization: `Bearer ${token}` },
-          payload: { careerId, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+          payload: {
+            careerId,
+            horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+            starterJockeyId: 'HAN_DOYUN',
+          },
         }),
       ),
     )

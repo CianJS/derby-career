@@ -1,3 +1,4 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
@@ -7,7 +8,6 @@ import {
   commitAction,
   horses,
   resolveAction,
-  startCareer,
 } from '../lib/career/model'
 import {
   contractedJockeys,

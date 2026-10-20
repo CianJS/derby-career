@@ -1,4 +1,5 @@
-import { startCareer } from '../../lib/career/model'
+import { legacyCareer as startCareer } from './legacy-career'
+
 import { applyCareer } from '../../lib/career/lifecycle'
 import { fixtureLifecycle } from '../../lib/career/fixtures'
 import type { CareerHorse } from '../../components/career/legacy-types'

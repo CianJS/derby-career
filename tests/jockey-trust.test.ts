@@ -1,10 +1,11 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { jockeyTrust, raceEntryJockeyTrust } from '../lib/career/jockey-trust-presentation'
 import { JockeyTrustValue } from '../components/career/jockey-trust'
-import { startCareer } from '../lib/career/model'
+
 import { contractedJockeys } from '../lib/career/race-entry'
 import { parseSaveWorkspace } from '../lib/server-save/workspace'
 import { randomUUID } from 'node:crypto'

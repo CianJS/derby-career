@@ -2259,6 +2259,19 @@ components:
       - chemistry
       - style
       additionalProperties: false
+    StarterJockeyId:
+      type: string
+      enum: [HAN_DOYUN, PARK_SEOYUN, CHOI_MINJAE, KANG_HAJUN]
+    StarterJockeyOption:
+      type: object
+      additionalProperties: false
+      properties:
+        jockeyId:
+          $ref: '#/components/schemas/StarterJockeyId'
+        specialty:
+          type: string
+          enum: [도주, 선행, 선입, 추입]
+      required: [jockeyId, specialty]
     HorseSnapshot:
       type: object
       properties:
@@ -2574,6 +2587,12 @@ components:
           additionalProperties: false
           required: [id, funds, calendarDate]
           properties:
+            contractedJockeyIds:
+              type: array
+              description: Actual saved stable contracts, including when no active career exists. Legacy responses may omit it.
+              uniqueItems: true
+              items:
+                type: string
             travel:
               $ref: '#/components/schemas/StableTravel'
             id: *id003
@@ -2711,6 +2730,10 @@ components:
     CreateCareer:
       type: object
       properties:
+        starterJockeyId:
+          allOf:
+          - $ref: '#/components/schemas/StarterJockeyId'
+          description: Required only when creating the owner's first stable. Existing stables retain saved contracts; this field cannot add or replace a contract.
         homeCountry:
           $ref: '#/components/schemas/CountryCode'
         careerId: *id003
@@ -3242,6 +3265,11 @@ components:
     JockeyCatalog:
       type: object
       properties:
+        starterOptions:
+          type: array
+          description: Selection candidates only; never the stable's actual contracts. All candidates can use all tactics.
+          items:
+            $ref: '#/components/schemas/StarterJockeyOption'
         data:
           type: array
           items:

@@ -50,6 +50,7 @@ test('actual responses conform to OpenAPI and the public adapter works without t
     const created = await client.createCareer({
       careerId: id,
       horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+      starterJockeyId: 'HAN_DOYUN',
     })
     validate('/v1/careers', 'post', created, '201')
     validate('/v1/careers/{careerId}', 'get', await client.getCareer(id))

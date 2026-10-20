@@ -14,6 +14,7 @@ import { careerRoutes } from './routes/careers'
 import { ApiError } from './errors'
 import { RacingCatalogRepository } from './repositories/racing-catalog'
 import { racingCatalogRoutes } from './routes/racing-catalog'
+import { starterJockeyOptions } from '../../../packages/shared/src/domain'
 
 const CLIENT_ERROR_CODES: Record<number, string> = {
   400: 'INVALID_REQUEST',
@@ -155,6 +156,7 @@ export async function createApp(
       `/v1/catalog/${name}`,
       { schema: routeSchema(spec, `/v1/catalog/${name}`, 'get') },
       async () => ({
+        ...(name === 'jockeys' ? { starterOptions: starterJockeyOptions } : {}),
         data: (
           await db.query(
             `SELECT payload,source_kind${name === 'races' ? ',country_code' : ''} FROM ${table} ORDER BY id`,

@@ -1,3 +1,4 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -6,7 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import postcss from 'postcss'
 import { RaceStrip, GapLane, PositionBoard, RaceFocus } from '../components/career/race-playback'
 import { PositionHistory } from '../components/career/race-position-history'
-import { startCareer } from '../lib/career/model'
+
 import { contractedJockeys, createRaceRun, raceDefinitions } from '../lib/career/race-entry'
 import { simulateRace, type RaceFrame } from '../lib/career/race-simulation'
 import { analyzeRace, situationFrom } from '../lib/career/race-spectate'

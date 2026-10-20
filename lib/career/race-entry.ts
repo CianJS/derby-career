@@ -1,4 +1,6 @@
 import { travelRestriction, type StableTravel } from './local-travel'
+import { jockeyCatalog } from './jockey-catalog'
+export { jockeyCatalog, starterJockeyOptions } from './jockey-catalog'
 import {
   jockeyTrust,
   createTrustContext,
@@ -51,16 +53,10 @@ export const localRacesForTurn = (turn: number) => [...raceDefinitions.map(r => 
 export const raceMonths = [...new Set(raceDefinitions.map(r => r.month))].sort((a, b) => a - b)
 export const isRaceTurn = (turn: number) => raceMonths.includes(turn)
 export const racesForTurn = (turn: number) => raceDefinitions.filter(r => r.month === turn)
-export const contractedJockeys: JockeySnapshot[] = [
-  { id: 'HAN_DOYUN', name: '한도윤', start: 86, pace: 78, path: 63, timing: 68, stability: 76, chemistry: 0, style: '도주·선행 / 초반 강점' },
-  { id: 'SEO_JIAN', name: '서지안', start: 70, pace: 76, path: 88, timing: 84, stability: 72, chemistry: 0, style: '선입·추입 / 진로·승부 강점' },
-  { id: 'YOON_TAESUNG', name: '윤태성', start: 74, pace: 82, path: 76, timing: 76, stability: 88, chemistry: 0, style: '균형 / 안정' },
-]
-export const freeAgentJockeys: JockeySnapshot[] = [
-  { id: 'PARK_SEOYUN', name: '박서윤', start: 80, pace: 72, path: 70, timing: 74, stability: 79, chemistry: 0, style: '선행 / 안정적인 기승' },
-  { id: 'CHOI_MINJAE', name: '최민재', start: 66, pace: 80, path: 82, timing: 79, stability: 70, chemistry: 0, style: '선입 / 페이스 판단 강점' },
-  { id: 'KANG_HAJUN', name: '강하준', start: 72, pace: 69, path: 74, timing: 88, stability: 68, chemistry: 0, style: '추입 / 승부 타이밍 강점' },
-]
+/** @deprecated Compatibility catalog subsets only. Read actual contracts with contractedRoster. */
+export const contractedJockeys = jockeyCatalog.slice(0, 3)
+/** @deprecated A catalog subset, not an authoritative free-agent/contract list. */
+export const freeAgentJockeys = jockeyCatalog.slice(3)
 export const jockeyProfiles: Record<string, { age: number; nationality: string }> = {
   HAN_DOYUN: { age: 29, nationality: '대한민국' },
   SEO_JIAN: { age: 33, nationality: '대한민국' },
@@ -73,7 +69,6 @@ export const jockeyProfiles: Record<string, { age: number; nationality: string }
 export const stressRaceDefinitions: RaceDefinitionSnapshot[] = [
   { id: 'DEV_M3_FULL_GATE_1600', name: '풀게이트 마일', month: 3, surface: 'Turf', distance: 1600, raceClass: '미승리', runners: 18, courseProfile: '표준 직선 / 표준 코너', prize: 8000000, entryFee: 0, maxWins: 0 },
 ]
-export const jockeyCatalog: JockeySnapshot[] = [...contractedJockeys, ...freeAgentJockeys]
 export const contractedRoster = (career: Career) =>
   jockeyCatalog
     .filter(j => career.contractedJockeyIds.includes(j.id))

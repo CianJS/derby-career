@@ -1,3 +1,4 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { compressToEncodedURIComponent } from 'lz-string'
@@ -6,13 +7,7 @@ import { readCareer, writeCareer, clearCareer } from '../lib/career/repository'
 import { readLifecycleSave, writeLifecycleSave } from '../lib/career/lifecycle-repository'
 import { startLocalCareer, retireLocalCareer } from '../lib/career/local-career'
 import { applyCareer } from '../lib/career/lifecycle'
-import {
-  assertCareer,
-  startCareer,
-  commitAction,
-  resolveAction,
-  advanceMonth,
-} from '../lib/career/model'
+import { assertCareer, commitAction, resolveAction, advanceMonth } from '../lib/career/model'
 import { buildFixture, fixtureLifecycle } from '../lib/career/fixtures'
 import { readRaceLog, writeRaceLog } from '../lib/career/race-log-repository'
 import { raceLogDigest } from '../lib/career/race-simulation'

@@ -75,7 +75,7 @@ for (const targetCountry of ['JPN', 'USA'] as const) {
           kind: 'create',
           body: {
             careerId: randomUUID(),
-            horseDefinitionId: 'DEV_HORSE_RED_COMET',
+            horseDefinitionId: 'DEV_HORSE_RED_COMET', starterJockeyId: 'HAN_DOYUN' as const,
             homeCountry: 'KOR',
           },
         }),

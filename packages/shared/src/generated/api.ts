@@ -848,6 +848,13 @@ export interface components {
             chemistry: number;
             style: string;
         };
+        /** @enum {string} */
+        StarterJockeyId: "HAN_DOYUN" | "PARK_SEOYUN" | "CHOI_MINJAE" | "KANG_HAJUN";
+        StarterJockeyOption: {
+            jockeyId: components["schemas"]["StarterJockeyId"];
+            /** @enum {string} */
+            specialty: "도주" | "선행" | "선입" | "추입";
+        };
         HorseSnapshot: {
             id: string;
             name: string;
@@ -971,6 +978,8 @@ export interface components {
         };
         CareerWorkspace: {
             stable: {
+                /** @description Actual saved stable contracts, including when no active career exists. Legacy responses may omit it. */
+                contractedJockeyIds?: string[];
                 travel?: components["schemas"]["StableTravel"];
                 /** Format: uuid */
                 id: string;
@@ -1044,6 +1053,8 @@ export interface components {
             retirement: components["schemas"]["RetirementRecord"];
         };
         CreateCareer: {
+            /** @description Required only when creating the owner's first stable. Existing stables retain saved contracts; this field cannot add or replace a contract. */
+            starterJockeyId?: components["schemas"]["StarterJockeyId"];
             homeCountry?: components["schemas"]["CountryCode"];
             /** Format: uuid */
             careerId: string;
@@ -1245,6 +1256,8 @@ export interface components {
             }[];
         };
         JockeyCatalog: {
+            /** @description Selection candidates only; never the stable's actual contracts. All candidates can use all tactics. */
+            starterOptions?: components["schemas"]["StarterJockeyOption"][];
             data: {
                 /** @enum {string} */
                 sourceKind: "development_fixture" | "catalog";

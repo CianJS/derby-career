@@ -1,7 +1,8 @@
+import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { canTrain, healthSeverity, normalizeHealth } from '../lib/career/health'
-import { assertCareer, commitAction, resolveAction, startCareer } from '../lib/career/model'
+import { assertCareer, commitAction, resolveAction } from '../lib/career/model'
 
 test('unknown health names cannot resolve to inherited object properties or silently heal', () => {
   for (const name of ['toString', 'constructor', '__proto__', 'unknown']) {

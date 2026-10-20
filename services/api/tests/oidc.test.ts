@@ -122,7 +122,11 @@ test('production JWT maps issuer and subject to one owner without merging email 
       url: '/v1/careers',
       remoteAddress: '203.0.113.1',
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: { careerId, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+      payload: {
+        careerId,
+        horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+        starterJockeyId: 'HAN_DOYUN' as const,
+      },
     })
     assert.equal(created.statusCode, 201, created.body)
     assert.equal(created.json().career.authority, 'server')

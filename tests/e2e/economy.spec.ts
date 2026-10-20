@@ -200,6 +200,17 @@ for (const width of [390, 1440]) {
     ).toContainText('자금이 부족')
     await page.locator('input[value="DEV_M6_ONE_WIN_1800"]').check()
     await page.getByRole('button', { name: '출전 확정', exact: true }).click()
+    await expect(page.getByText('출전 정보 저장 완료 · 선택 잠김', { exact: true })).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate((key) => {
+          const saved = JSON.parse(localStorage.getItem(key)!)
+          const run = saved.career?.raceRun
+          const entry = saved.lifecycle?.economyLedger?.[0]
+          return Boolean(run && entry?.kind === 'entry_fee' && entry.raceRunId === run.raceRunId)
+        }, BROWSER_SAVE_KEY),
+      )
+      .toBe(true)
     await expect(page.locator('[data-entry-balance]')).toContainText('₩0')
     expect(
       await page.evaluate(

@@ -435,6 +435,7 @@ export function registerExpeditionTests(label: string, database?: () => Database
       const created = await f.call('POST', '/v1/careers', {
         careerId: id,
         horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+        starterJockeyId: 'HAN_DOYUN' as const,
         homeCountry: 'JPN',
       })
       assert.equal(created.statusCode, 201, created.body)
@@ -503,6 +504,7 @@ export function registerExpeditionTests(label: string, database?: () => Database
       const created = await f.call('POST', '/v1/careers', {
         careerId: id,
         horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+        starterJockeyId: 'HAN_DOYUN' as const,
         homeCountry: 'USA',
       })
       assert.equal(created.statusCode, 201, created.body)
@@ -510,7 +512,12 @@ export function registerExpeditionTests(label: string, database?: () => Database
       const unsupported = await f.call(
         'POST',
         '/v1/careers',
-        { careerId: randomUUID(), horseDefinitionId: 'DEV_HORSE_SERENE_STEP', homeCountry: 'GBR' },
+        {
+          careerId: randomUUID(),
+          horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+          starterJockeyId: 'HAN_DOYUN' as const,
+          homeCountry: 'GBR',
+        },
         f.other.token,
       )
       assert.equal(unsupported.statusCode, 422, unsupported.body)
@@ -606,6 +613,7 @@ export function registerExpeditionTests(label: string, database?: () => Database
           await f.call('POST', '/v1/careers', {
             careerId: randomUUID(),
             horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+            starterJockeyId: 'HAN_DOYUN' as const,
             homeCountry: 'KOR',
           })
         ).statusCode,

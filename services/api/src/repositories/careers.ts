@@ -31,7 +31,7 @@ import { conflict, notFound, ApiError } from '../errors'
 import { digest } from '../services/identity'
 import { modifyActionDeltas, finalizeActionRecord } from '../modules/events/resolver'
 import {
-  startCareer,
+  isStarterJockeyId,
   canRace,
   createRaceRun,
   createTrustContext,
@@ -146,18 +146,45 @@ export class CareerRepository {
           throw conflict('기존 마방의 소속 국가는 변경할 수 없습니다.')
         }
         if (!stable) {
+          if (!isStarterJockeyId(body.starterJockeyId)) {
+            throw new ApiError(
+              422,
+              'STARTER_JOCKEY_REQUIRED',
+              '초기 후보 기수 중 한 명을 선택해 주세요.',
+            )
+          }
+          if (
+            !(
+              await tx.query('SELECT id FROM jockey_definitions WHERE id=$1', [
+                body.starterJockeyId,
+              ])
+            ).rows.length
+          ) {
+            throw new ApiError(
+              503,
+              'JOCKEY_CATALOG_UNAVAILABLE',
+              '초기 기수 카탈로그가 준비되지 않았습니다.',
+            )
+          }
           stable = (
             await tx.query(
               'INSERT INTO stables(id,owner_id,home_country) VALUES($1,$2,$3) RETURNING *',
               [randomUUID(), owner, body.homeCountry ?? 'KOR'],
             )
           ).rows[0]
-          for (const id of startCareer(body.horseDefinitionId).contractedJockeyIds) {
-            await tx.query('INSERT INTO jockey_contracts(stable_id,jockey_id) VALUES($1,$2)', [
-              stable.id,
-              id,
-            ])
-          }
+          await tx.query('INSERT INTO jockey_contracts(stable_id,jockey_id) VALUES($1,$2)', [
+            stable.id,
+            body.starterJockeyId,
+          ])
+        }
+        const contracts = (
+          await tx.query(
+            'SELECT jockey_id FROM jockey_contracts WHERE stable_id=$1 ORDER BY jockey_id',
+            [stable.id],
+          )
+        ).rows.map((x) => x.jockey_id as string)
+        if (body.starterJockeyId !== undefined && !contracts.includes(body.starterJockeyId)) {
+          throw conflict('기존 마방의 기수 계약은 초기 선택으로 변경할 수 없습니다.')
         }
         if (
           (
@@ -169,15 +196,9 @@ export class CareerRepository {
           throw conflict('마방에 이미 활성 Career가 있습니다.')
         }
         const horseId = randomUUID()
-        const state = startServerCareer(body.horseDefinitionId)
+        const state = startServerCareer(body.horseDefinitionId, { contractedJockeyIds: contracts })
         state.horse = { ...state.horse, id: horseId }
         state.calendarDate = { year: stable.calendar_year, month: stable.calendar_month }
-        state.contractedJockeyIds = (
-          await tx.query(
-            'SELECT jockey_id FROM jockey_contracts WHERE stable_id=$1 ORDER BY jockey_id',
-            [stable.id],
-          )
-        ).rows.map((x) => x.jockey_id)
         await tx.query(
           'INSERT INTO owned_horses(id,stable_id,definition_id,definition_snapshot) VALUES($1,$2,$3,$4)',
           [horseId, stable.id, body.horseDefinitionId, JSON.stringify(definition.payload)],
@@ -262,6 +283,12 @@ export class CareerRepository {
               travel: await readTravel(tx, stable.id),
               funds: Number(stable.funds),
               calendarDate: { year: stable.calendar_year, month: stable.calendar_month },
+              contractedJockeyIds: (
+                await tx.query(
+                  'SELECT jockey_id FROM jockey_contracts WHERE stable_id=$1 ORDER BY jockey_id',
+                  [stable.id],
+                )
+              ).rows.map((x) => x.jockey_id as string),
             }
           : null,
         career: active ? await this.dto(tx, active) : null,
