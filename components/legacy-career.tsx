@@ -135,10 +135,27 @@ function StableSetup({
   onCreate,
 }: {
   setView: (v: View) => void;
-  onCreate: (name: string, country: string) => void;
+  onCreate: (name: string, country: string) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [country, setCountry] = useState("대한민국");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const savingRef = useRef(false);
+  const create = async () => {
+    if (savingRef.current || !name.trim()) return;
+    savingRef.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      await onCreate(name.trim(), country);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "마방을 저장하지 못했습니다.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
   return (
     <div className="lab-stable-setup flex min-h-[calc(100vh-57px)] items-center justify-center px-6 py-12 md:py-16">
       <div className="w-full max-w-xl">
@@ -155,6 +172,7 @@ function StableSetup({
           <label className="block text-xs text-muted-foreground">
             마방명
             <input
+              disabled={saving}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="마방 이름을 입력하세요"
@@ -164,6 +182,7 @@ function StableSetup({
           <label className="mt-7 block text-xs text-muted-foreground">
             본거지
             <select
+              disabled={saving}
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               className="mt-2 w-full border-b border-border bg-transparent py-3 text-sm outline-none"
@@ -175,12 +194,13 @@ function StableSetup({
             </select>
           </label>
         </div>
+        {error && <p role="alert" className="ui-error-state mt-4">{error}</p>}
         <button
-          disabled={!name.trim()}
-          onClick={() => onCreate(name.trim(), country)}
+          disabled={!name.trim() || saving}
+          onClick={() => void create()}
           className="mt-8 rounded-lg bg-primary px-5 py-3 text-xs text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
-          마방 생성
+          {saving ? "마방 저장 중…" : "마방 생성"}
         </button>
       </div>
     </div>
@@ -241,10 +261,12 @@ function Home({
   setView,
   hasActiveHorse,
   onNewCareer,
+  onStart,
 }: {
   setView: (v: View) => void;
   hasActiveHorse: boolean;
   onNewCareer: () => void;
+  onStart: () => void;
 }) {
   return (
     <div className="lab-home relative flex min-h-[calc(100vh-57px)] items-center justify-center overflow-hidden px-6 py-16">
@@ -266,7 +288,7 @@ function Home({
           남깁니다.
         </p>
         <button
-          onClick={() => setView(hasActiveHorse ? "training" : "candidates")}
+          onClick={onStart}
           className="lab-home-primary group mx-auto mt-12 flex items-center gap-4 border-b border-primary pb-3 font-serif text-2xl hover:gap-6"
         >
           {hasActiveHorse ? "육성 계속" : "새 육성마 시작"}
@@ -526,14 +548,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   }, [state, hydrated, saveMode, compatibleMode]);
   const canCreateStable = saveMode === 'local' && hydrated && ready && !busy && !pending && !error && !saveError &&
     !state.stableName && !state.activeHorse && !career && state.archive.length === 0;
-  const createStable = (name: string, country: string) => {
-    if (!canCreateStable) return;
-    setState((current) => ({
-      ...current,
-      stableName: name,
-      country,
-      lifecycleView: "candidates",
-    }));
+  const createStable = async (name: string, country: string) => {
+    if (!canCreateStable) throw new Error("마방 기록을 다시 불러와 주세요.");
+    await careerStore.saveLifecycle({ ...state, stableName: name, country, lifecycleView: "candidates" });
+    setState({ ...initialLifecycle, ...careerStore.getSnapshot().lifecycle } as LifecycleState);
     setView("candidates");
   };
   const retire = () => {
@@ -613,7 +631,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           {(view === 'settings' || (view === 'setup' && !canCreateStable)) && (
             <StableSettings setView={setView} stableName={saveMode === 'local' ? state.stableName : ''} country={state.country} mode={saveMode} canCreate={canCreateStable} />
           )}
-          {view === "setup" && canCreateStable && (
+          {(view === "setup" || (["training", "candidates"].includes(view) && !state.stableName && !career)) && canCreateStable && (
             <StableSetup setView={setView} onCreate={createStable} />
           )}{" "}
           {view === "careerComplete" && (
@@ -653,9 +671,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               setView={setView}
               hasActiveHorse={Boolean(state.activeHorse || career)}
               onNewCareer={() => setView("retirementConfirm")}
+              onStart={() => setView(career || state.activeHorse ? "training" : saveMode === "local" && !state.stableName ? "setup" : "candidates")}
             />
           )}{" "}
-          {(view === "training" || view === "candidates") && (
+          {(view === "training" || view === "candidates") && (saveMode === "server" || !!state.stableName || !!career) && (
             <CareerCheckpoint
                   onHome={() => setView("home")}
                   onHorse={() => setView("horse")}

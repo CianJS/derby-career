@@ -85,3 +85,32 @@ test('local starter and first career commit together, survive retirement and nex
   assert.deepEqual(readBrowserSave().career!.contractedJockeyIds, ['KANG_HAJUN'])
   assert.equal(contractedRoster(readBrowserSave().career!)[0].chemistry, 0)
 })
+
+test('Local confirmed starter draft survives stale projections and cannot be silently replaced by another tab', async () => {
+  browserStorage()
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: { locks: { request: async (_name: string, work: () => unknown) => work() } },
+  })
+  writeBrowserSave({ career: null, lifecycle: { stableName: '선택 저장 마방', archive: [] } })
+  careerStore.configure('local')
+  await careerStore.refresh()
+  const before = readBrowserSave().lifecycle!
+  await careerStore.saveLifecycle({ ...before, starterJockeyId: 'PARK_SEOYUN' })
+  await assert.rejects(
+    careerStore.saveLifecycle({ ...before, starterJockeyId: 'KANG_HAJUN' }),
+    /다른 탭/,
+  )
+  assert.equal(readBrowserSave().lifecycle!.starterJockeyId, 'PARK_SEOYUN')
+  assert.equal(readBrowserSave().lifecycle!.contractedJockeyIds, undefined)
+  assert.equal(await careerStore.select('DEV_HORSE_RED_COMET', undefined, 'KANG_HAJUN'), false)
+  assert.equal(readBrowserSave().career, null)
+  assert.equal(await careerStore.select('DEV_HORSE_RED_COMET', undefined, 'PARK_SEOYUN'), true)
+  const saved = readBrowserSave()
+  assert.deepEqual(saved.career!.contractedJockeyIds, ['PARK_SEOYUN'])
+  await assert.rejects(
+    careerStore.saveLifecycle({ ...saved.lifecycle, starterJockeyId: 'SEO_JIAN' }),
+    /유효하지/,
+  )
+  assert.deepEqual(readBrowserSave(), saved)
+})
