@@ -222,7 +222,11 @@ test('real PostgreSQL maps simultaneous refreshed production JWTs to one owner a
           method: 'POST',
           url: '/v1/careers',
           headers: { authorization: `Bearer ${token}` },
-          payload: { careerId, horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+          payload: {
+            careerId,
+            horseDefinitionId: 'DEV_HORSE_SERENE_STEP',
+            starterJockeyId: 'HAN_DOYUN',
+          },
         }),
       ),
     )
