@@ -59,7 +59,7 @@ for (const width of [390, 1440]) {
         .getByRole('button', { name: '경주 연출을 건너뛰고 결과 보기', exact: true })
         .click()
       await expect(page.locator('[data-trust-change]')).toHaveText('신뢰도 변화 정보 없음')
-      await page.getByRole('button', { name: '결과 확정 · 다음 달 시작', exact: true }).click()
+      await page.getByRole('button', { name: '결과 저장', exact: true }).click()
       const receipt = page.locator('[data-trust-change="confirmed"]')
       await expect(receipt).toHaveText(
         change.delta === 0

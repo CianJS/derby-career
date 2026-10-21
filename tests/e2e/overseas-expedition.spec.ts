@@ -24,7 +24,7 @@ async function openEntry(page: Page) {
 async function finish(page: Page) {
   await page.getByRole('button', { name: '레이스 시작', exact: true }).click()
   await page.getByRole('button', { name: '경주 연출을 건너뛰고 결과 보기', exact: true }).click()
-  await page.getByRole('button', { name: '결과 확정 · 다음 달 시작', exact: true }).click()
+  await page.getByRole('button', { name: '결과 저장', exact: true }).click()
   await expect(page.getByText('상금 지급 완료', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: '다음 달 육성으로', exact: true }).click()
 }
@@ -261,7 +261,7 @@ for (const [target, width] of [
     })
     await page.reload()
     await page.getByRole('button', { name: '경주 연출을 건너뛰고 결과 보기', exact: true }).click()
-    await page.getByRole('button', { name: '결과 확정 · 다음 달 시작', exact: true }).click()
+    await page.getByRole('button', { name: '결과 저장', exact: true }).click()
     await expect(page.getByText('상금 지급 완료', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: '다음 달 육성으로', exact: true }).click()
     current = await get()

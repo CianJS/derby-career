@@ -485,6 +485,17 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(
     null,
   );
+  const [selectedRaceRunId, setSelectedRaceRunId] = useState<string | undefined>(undefined);
+  const openHorseRecord = (horseId: string, raceRunId?: string) => {
+    if (state.archive.some((horse) => horse.id === horseId)) {
+      setSelectedArchiveId(horseId);
+      setSelectedRaceRunId(raceRunId);
+      setView("horseArchive");
+    } else if (state.activeHorse?.id === horseId) {
+      setSelectedRaceRunId(raceRunId);
+      setView("horse");
+    }
+  };
   const [hydrated, setHydrated] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   useEffect(() => {
@@ -711,7 +722,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
             <Stable
               setView={setView}
               archive={state.archive}
-              onArchiveSelect={setSelectedArchiveId}
+              onArchiveSelect={(id) => { setSelectedArchiveId(id); setSelectedRaceRunId(undefined); }}
             />
           )}{" "}
           {saveMode === 'server' && view === 'stable' && workspace && workspace.pagination.page < workspace.pagination.totalPages && (
@@ -722,10 +733,12 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               setView={setView}
               onRetire={retire}
               horse={state.activeHorse}
+              selectedRaceRunId={selectedRaceRunId}
             />
           )}{" "}
           {view === "horseArchive" && state.archive.some((item) => item.id === selectedArchiveId) && (
             <ArchivedHorseRecord
+              selectedRaceRunId={selectedRaceRunId}
               setView={setView}
               horse={
                 state.archive.find((item) => item.id === selectedArchiveId)!
@@ -736,7 +749,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
             <div className="p-6"><p role="status">선택한 은퇴 기록을 찾을 수 없습니다.</p><button onClick={() => setView('stable')} className="mt-3 min-h-11 text-primary underline">마구간으로 돌아가기</button></div>
           )}
           {view === "jockeys" && <Jockeys setView={setView} onSelect={setSelectedJockeyId} />}{" "}
-          {view === "jockey" && <Jockey setView={setView} jockeyId={selectedJockeyId} horses={[...(state.activeHorse ? [state.activeHorse] : []), ...state.archive]} />}
+          {view === "jockey" && <Jockey setView={setView} onSelectHorse={openHorseRecord} jockeyId={selectedJockeyId} horses={[...(state.activeHorse ? [state.activeHorse] : []), ...state.archive]} />}
           </>}
           {view === 'races' && <Races setView={setView} />}
           {view === 'race' && <Race setView={setView} />}

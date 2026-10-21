@@ -110,7 +110,7 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
       )
     }
     const advances = posts.filter((p) => p.path.endsWith('/advance')).length
-    await page.getByRole('button', { name: '결과 확정 · 다음 달 시작', exact: true }).click()
+    await page.getByRole('button', { name: '결과 저장', exact: true }).click()
     if (month === 3) {
       await expect(
         page.getByRole('button', { name: '완료 요청 다시 확인', exact: true }),

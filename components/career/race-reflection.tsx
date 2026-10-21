@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useRaceData } from '@/lib/career/use-race-data'
 import { PositionHistory } from '@/components/career/race-position-history'
@@ -33,6 +33,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
   const confirmed = snapshot.career?.raceRecords.find(
     (record) => record.raceRunId === run?.raceRunId,
   )
+  const submission = useRef(false)
   const [submitting, setSubmitting] = useState(false)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -96,6 +97,10 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
   const nextMonth = career.calendarDate.month === 12 ? 1 : career.calendarDate.month + 1
 
   const advance = async () => {
+    if (submission.current || busy || confirmed) {
+      return
+    }
+    submission.current = true
     setSubmitting(true)
     try {
       setReceipt({ career, data: loaded.data!, mode, sourceId })
@@ -105,6 +110,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
         await careerStore.completeRace(run.raceRunId, result)
       }
     } finally {
+      submission.current = false
       setSubmitting(false)
     }
   }
@@ -225,8 +231,8 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
           {confirmed
             ? '결과가 저장되었습니다. 신뢰도는 다음 출전부터 적용됩니다.'
             : mode === 'server'
-              ? '결과를 확정하면 서버에 저장된 상금·전적·건강과 다음 달 상태를 불러옵니다.'
-              : `결과를 확정하면 ${nextMonth}월로 넘어가며 출전 기록이 경주 기록에 추가됩니다.`}
+              ? '결과를 저장하면 서버의 상금·전적·건강과 다음 달 상태가 확정됩니다. 저장 완료 후 다음 달 육성 화면으로 이동하세요.'
+              : `결과를 저장하면 ${nextMonth}월 상태와 상금·전적이 함께 확정됩니다. 저장 완료 후 다음 달 육성 화면으로 이동하세요.`}
         </p>
       </section>
       <details className="border border-border">
@@ -269,7 +275,7 @@ export function RaceReflection({ onNext, onBack }: { onNext: () => void; onBack:
               ? '다음 달 육성으로'
               : pending
                 ? '완료 요청 다시 확인'
-                : '결과 확정 · 다음 달 시작'}
+                : '결과 저장'}
         </Button>
       </div>
     </div>
