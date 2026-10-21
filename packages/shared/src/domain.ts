@@ -1,6 +1,8 @@
 // One implementation for both browser and server. Never duplicate balance or engine code here.
 // These modules are pure; browser stores/repositories are intentionally not exported.
 export * from '../../../lib/career/model'
+export * from '../../../lib/career/career-time'
+export * from '../../../lib/career/outlook'
 export * from '../../../lib/career/balance'
 export * from '../../../lib/career/status'
 export * from '../../../lib/career/race-entry'

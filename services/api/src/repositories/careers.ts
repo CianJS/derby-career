@@ -36,6 +36,9 @@ import {
   createRaceRun,
   createTrustContext,
   raceEligibility,
+  raceOccurrenceForTurn,
+  careerProgress,
+  normalizeCareerAge,
   simulateRace,
   summarizeRaceLog,
   tactics,
@@ -79,6 +82,9 @@ export class CareerRepository {
   }
   private async dto(tx: Query, row: CareerRow) {
     await hydrateJockeyRelations(tx, row)
+    if (row.status === 'active') {
+      row.state = normalizeCareerAge(row.state)
+    }
     const stable = (await tx.query('SELECT funds FROM stables WHERE id=$1', [row.stable_id]))
       .rows[0]
     return {
@@ -530,7 +536,7 @@ export class CareerRepository {
           source_kind: components['schemas']['RaceCatalog']['data'][number]['sourceKind']
         }>(
           "SELECT payload,source_kind,country_code FROM race_definitions WHERE (payload->>'month')::integer=$1 ORDER BY id",
-          [row.turn],
+          [careerProgress(row.turn).seasonTurn],
         )
       ).rows
       const jockeys = (
@@ -553,12 +559,13 @@ export class CareerRepository {
         defaultEngineVersion: API_RACE_ENGINE_VERSION,
         restrictionReason,
         races: definitions.map(({ payload, source_kind, country_code }) => {
+          const race = raceOccurrenceForTurn(withRaceCountry(payload, country_code), row.turn)!
           const reason =
             restrictionReason ??
             countryRestriction(travel, country_code, row.id) ??
-            raceEligibility(row.state, payload, funds)
+            raceEligibility(row.state, race, funds)
           return {
-            definition: withRaceCountry(payload, country_code),
+            definition: race,
             sourceKind: source_kind,
             eligible: reason === null,
             restrictionReason: reason,
@@ -596,7 +603,10 @@ export class CareerRepository {
           )
         ).rows[0]
         const race = definition
-          ? withRaceCountry(definition.payload, definition.country_code)
+          ? raceOccurrenceForTurn(
+              withRaceCountry(definition.payload, definition.country_code),
+              row.turn,
+            )
           : undefined
         if (!race || race.month !== row.turn) {
           throw new ApiError(422, 'RACE_RESTRICTED', '현재 월에 출전할 수 있는 경주가 아닙니다.')
@@ -789,7 +799,7 @@ export class CareerRepository {
           if (
             !race ||
             race.country_code !== body.targetCountry ||
-            race.payload.month !== row.turn
+            !raceOccurrenceForTurn(race.payload, row.turn)
           ) {
             throw new ApiError(
               422,

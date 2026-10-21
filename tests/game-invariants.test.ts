@@ -16,11 +16,34 @@ import { defaultEventCatalog } from '../lib/career/events/repository'
 import { isHealthy } from '../lib/career/status'
 import { buildFixture, fixtureIds } from '../lib/career/fixtures'
 import { validateRaceLog, raceLogDigest } from '../lib/career/race-simulation'
+import { careerProgress } from '../lib/career/career-time'
+import { careerOutlook } from '../lib/career/outlook'
+import { racesForTurn, isRaceTurn } from '../lib/career/race-entry'
 
 test('84 months per horse preserve bounded stats, calendar order, replay idempotency and injury recovery', () => {
   for (const horse of horses) {
     let career = startCareer(horse.id)
     for (let turn = 1; turn <= 84; turn++) {
+      const progress = careerProgress(turn)
+      assert.equal(progress.baseTurns, 60)
+      assert.equal(progress.extended, turn > 60)
+      assert.equal(career.age, progress.age)
+      assert.equal(progress.seasonIndex, Math.floor((turn - 1) / 12) + 1)
+      assert.equal(progress.seasonTurn, ((turn - 1) % 12) + 1)
+      assert.equal(isRaceTurn(turn), [3, 6, 9, 12].includes(progress.seasonTurn))
+      assert.deepEqual(
+        racesForTurn(turn),
+        racesForTurn(progress.seasonTurn).map((race) => ({ ...race, month: turn })),
+      )
+      const outlook = careerOutlook(career)
+      assert.deepEqual(outlook.progress, progress)
+      assert.equal(outlook.nextRace?.month, Math.ceil(turn / 3) * 3)
+      assert.equal(
+        outlook.nextRace?.openRaces,
+        outlook.readiness.level === 'blocked'
+          ? 0
+          : [3, 2, 2, 1][Math.ceil(progress.seasonTurn / 3) - 1],
+      )
       career = withMonthEvent(career)
       if (
         career.event?.status === 'offered' &&
@@ -49,6 +72,7 @@ test('84 months per horse preserve bounded stats, calendar order, replay idempot
       const next = advanceMonth(result, result.action!.actionId)
       assert.equal(next.careerTurnIndex, turn + 1)
       assert.equal(next.month, turn + 1)
+      assert.equal(next.age, careerProgress(turn + 1).age)
       assert.equal(
         next.calendarDate.year * 12 + next.calendarDate.month,
         career.calendarDate.year * 12 + career.calendarDate.month + 1,

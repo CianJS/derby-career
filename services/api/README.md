@@ -80,6 +80,8 @@ OIDC_MAX_TOKEN_AGE_SECONDS=3600
 
 ## 계약과 연동
 
+기본 60턴·연령 증가·다년 시즌 경주는 [육성 시간과 시즌 경주 계약](docs/career-seasons.md)을 따른다. 기존 API 구조와 저장 버전은 유지하며 출전 후보의 `month`는 실제 절대 턴으로 반환한다.
+
 초기 기수는 신규 마방에서 선택한 1명만 무료 계약한다. CreateCareer의 `starterJockeyId`, 공통 도감/후보, 기존 저장 승계 및 후속 Frontend 연결은 [초기 기수 계약](docs/starter-jockeys.md)을 따른다. 기존 3명 계약은 축소하지 않는다.
 
 `contracts/openapi.yaml`이 HTTP 계약의 기준이다. 서버는 이 파일로 요청을 검증하고 응답을 직렬화하며, 공유 타입과 공개 이벤트·서버 저장 요청/응답 검증기도 여기서 생성한다.

@@ -15,6 +15,8 @@ import {
   lockRaceEntry,
   raceDefinitions,
   raceEligibility,
+  racesForTurn,
+  lockRaceEntryWithLog,
   ridingFit,
   type RaceEntryDraft,
 } from '../lib/career/race-entry'
@@ -22,6 +24,8 @@ import { readCareer, writeCareer } from '../lib/career/repository'
 import { applyCareer } from '../lib/career/lifecycle'
 import { summarizeRecords } from '../lib/career/records'
 import { browserStorage } from './helpers/browser-storage'
+import { nextRaceOutlook } from '../lib/career/outlook'
+import { validateRaceLog } from '../lib/career/race-simulation'
 
 const draft: RaceEntryDraft = {
   raceId: raceDefinitions[1].id,
@@ -48,6 +52,34 @@ test('only healthy maiden horses in month three may enter, irrespective of aptit
   assert.throws(() => lockRaceEntry({ ...month3(), month: 2, careerTurnIndex: 2 }, draft))
   assert.throws(() => lockRaceEntry({ ...month3(), health: '중상' }, draft))
   assert.ok(lockRaceEntry({ ...month3(), health: '경상' }, draft).raceRun)
+  for (const turn of [15, 24, 60, 63, 120]) {
+    const state = { ...month3(), month: turn, careerTurnIndex: turn }
+    const race = racesForTurn(turn).find((candidate) => candidate.maxWins === 0)!
+    assert.equal(race.month, turn)
+    assert.equal(raceEligibility(state, race), null)
+    assert.match(raceEligibility(state, { ...race, month: turn - 12 })!, /현재 월/)
+    const locked = lockRaceEntryWithLog(state, { ...draft, raceId: race.id })
+    assert.equal(locked.career.raceRun!.month, turn)
+    assert.equal(locked.career.raceRun!.raceDefinitionSnapshot.month, turn)
+    assert.equal(locked.career.raceRun!.player.horseSnapshot.age, 2 + Math.floor((turn - 1) / 12))
+    assertCareer(locked.career)
+    validateRaceLog(locked.log, locked.career.raceRun!)
+    assert.equal(nextRaceOutlook(locked.career)?.month, turn + 3)
+    assert.equal(nextRaceOutlook({ ...state, contractedJockeyIds: [] })?.openRaces, 0)
+    assert.equal(
+      raceDefinitions.find((definition) => definition.id === race.id)?.month,
+      ((turn - 1) % 12) + 1,
+    )
+    assert.throws(() =>
+      assertCareer({
+        ...locked.career,
+        raceRun: {
+          ...locked.career.raceRun!,
+          raceDefinitionSnapshot: { ...race, month: turn - 12 },
+        },
+      }),
+    )
+  }
 })
 test('draft selection is not a monthly commitment and incomplete selections are rejected', () => {
   const state = month3()

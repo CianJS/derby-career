@@ -4,6 +4,8 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export const FRONTEND_FILES = [
+  'lib/career/career-time.ts',
+  'lib/career/outlook.ts',
   'lib/career/jockey-catalog.ts',
   'tests/jockey-starter.test.ts',
   'tests/helpers/legacy-career.ts',

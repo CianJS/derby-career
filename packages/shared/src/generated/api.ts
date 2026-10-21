@@ -824,6 +824,7 @@ export interface components {
             countryCode?: components["schemas"]["CountryCode"];
             id: string;
             name: string;
+            /** @description Catalog definitions use a recurring season slot (1-12). Career entry options and locked RaceRun snapshots use the actual absolute career turn. */
             month: number;
             /** @enum {string} */
             surface: "Turf";
@@ -904,9 +905,12 @@ export interface components {
             /** @enum {integer} */
             version: 1;
             horse: components["schemas"]["HorseDefinition"];
+            /** @description Live Career age is 2 + floor((careerTurnIndex - 1) / 12). Historical retirement and race snapshots retain their saved age. */
             age: number;
+            /** @description Legacy absolute career turn alias; this is not the stable calendar month. */
             month: number;
             calendarDate: components["schemas"]["CalendarDate"];
+            /** @description Absolute 1-based monthly turn. The baseline is 60 turns; play continues beyond 60 without automatic retirement. */
             careerTurnIndex: number;
             contractedJockeyIds: string[];
             values: components["schemas"]["Values"];

@@ -1,5 +1,6 @@
 import { travelRestriction, type StableTravel } from './local-travel'
 import { jockeyCatalog } from './jockey-catalog'
+import { careerProgress, CAREER_SEASON_TURNS } from './career-time'
 export { jockeyCatalog, starterJockeyOptions } from './jockey-catalog'
 import {
   jockeyTrust,
@@ -49,10 +50,33 @@ export const localOverseasRaces: RaceDefinitionSnapshot[] = ['JPN', 'USA'].map(c
   id: `DEV_${countryCode}_M3_MILE_1600`,
   name: `${countryCode === 'JPN' ? '일본' : '미국'} 원정 마일 (개발용)`, countryCode,
 }))
-export const localRacesForTurn = (turn: number) => [...raceDefinitions.map(r => ({...r, countryCode: r.countryCode ?? 'KOR'})), ...localOverseasRaces].filter(r => r.month === turn)
+/** Catalog month is a seasonal slot; returned/saved month is the absolute Career turn. */
+export function raceOccurrenceForTurn(
+  race: RaceDefinitionSnapshot,
+  turn: number,
+): RaceDefinitionSnapshot | null {
+  if (
+    !Number.isSafeInteger(turn) || turn < 1 ||
+    !Number.isInteger(race.month) || race.month < 1 || race.month > CAREER_SEASON_TURNS ||
+    race.month !== careerProgress(turn).seasonTurn
+  ) {
+    return null
+  }
+  return race.month === turn ? race : { ...race, month: turn }
+}
+const occurrences = (definitions: readonly RaceDefinitionSnapshot[], turn: number) =>
+  definitions.flatMap((race) => {
+    const occurrence = raceOccurrenceForTurn(race, turn)
+    return occurrence ? [occurrence] : []
+  })
+export const localRacesForTurn = (turn: number) => occurrences([
+  ...raceDefinitions.map(r => ({ ...r, countryCode: r.countryCode ?? 'KOR' })),
+  ...localOverseasRaces,
+], turn)
 export const raceMonths = [...new Set(raceDefinitions.map(r => r.month))].sort((a, b) => a - b)
-export const isRaceTurn = (turn: number) => raceMonths.includes(turn)
-export const racesForTurn = (turn: number) => raceDefinitions.filter(r => r.month === turn)
+export const isRaceTurn = (turn: number) =>
+  Number.isSafeInteger(turn) && turn > 0 && raceMonths.includes(careerProgress(turn).seasonTurn)
+export const racesForTurn = (turn: number) => occurrences(raceDefinitions, turn)
 /** @deprecated Compatibility catalog subsets only. Read actual contracts with contractedRoster. */
 export const contractedJockeys = jockeyCatalog.slice(0, 3)
 /** @deprecated A catalog subset, not an authoritative free-agent/contract list. */
@@ -79,8 +103,8 @@ export function raceEligibility(career: Career, race: RaceDefinitionSnapshot, av
   if (travel) {
     const reason = travelRestriction(travel, race.countryCode ?? (raceDefinitions.some(r => r.id === race.id) ? 'KOR' : undefined))
     if (reason) return reason
-    if (race.month !== career.careerTurnIndex) return '현재 월에 개최되는 경주가 아닙니다.'
   }
+  if (race.month !== career.careerTurnIndex) return '현재 월에 개최되는 경주가 아닙니다.'
   const wins = winCount(career)
   if (race.maxWins !== undefined && wins > race.maxWins) return '미승리 경주마만 출전할 수 있습니다.'
   if (race.minWins !== undefined && wins < race.minWins) return `${race.minWins}승 이상 경주마만 출전할 수 있습니다.`
@@ -132,7 +156,7 @@ export function buildOpponents(race: RaceDefinitionSnapshot): RaceRunnerInput[] 
 // Builds the immutable RaceRun snapshot only; callers are responsible for eligibility checks.
 export function createRaceRun(career: Career, race: RaceDefinitionSnapshot, jockey: JockeySnapshot, tactic: RunningTactic, identity: () => string): RaceRunInput {
   const { health, recovery } = careerHealth(career)
-  const horseSnapshot: HorseSnapshot = { id: career.horse.id, name: career.horse.name, age: career.age, values: { ...career.values }, aptitude: career.horse.aptitude, health, healthRecovery: recovery, condition: career.condition, record: career.record }
+  const horseSnapshot: HorseSnapshot = { id: career.horse.id, name: career.horse.name, age: careerProgress(career.careerTurnIndex).age, values: { ...career.values }, aptitude: career.horse.aptitude, health, healthRecovery: recovery, condition: career.condition, record: career.record }
   const player: RaceRunnerInput = { horseSnapshot, jockeySnapshot: jockey, tactic }
   return structuredClone({ raceRunId: identity(), month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(race)], raceSeed: identity(), engineVersion: 'entry-contract-v1' })
 }
@@ -143,7 +167,7 @@ export function lockRaceEntryWithLog(career: Career, draft: RaceEntryDraft, iden
   if (career.raceRun) return { career, log: null }
   const reason = entryRestriction(career, availableFunds, travel)
   if (reason) throw new Error(reason)
-  const race = (travel ? localRacesForTurn(career.careerTurnIndex) : raceDefinitions).find(r => r.id === draft.raceId && r.month === career.careerTurnIndex)
+  const race = (travel ? localRacesForTurn(career.careerTurnIndex) : racesForTurn(career.careerTurnIndex)).find(r => r.id === draft.raceId)
   if (!race || !draft.jockeyId || !draft.tactic || !tactics.includes(draft.tactic)) throw new Error('경주·기수·전술을 모두 선택해 주세요.')
   const ineligible = raceEligibility(career, race, availableFunds, travel)
   if (ineligible) throw new Error(ineligible)
@@ -162,7 +186,8 @@ export function lockRaceEntryWithLog(career: Career, draft: RaceEntryDraft, iden
 }
 export function assertRaceRun(run: RaceRunInput, career: Career) {
   const fail = () => { throw new Error('저장된 출전 정보를 읽을 수 없습니다. 기존 저장은 유지됩니다.') }
-  const known = [...raceDefinitions, ...localOverseasRaces, ...stressRaceDefinitions].find(r => r.id === run?.raceDefinitionSnapshot?.id)
+  const definition = [...raceDefinitions, ...localOverseasRaces, ...stressRaceDefinitions].find(r => r.id === run?.raceDefinitionSnapshot?.id)
+  const known = definition && raceOccurrenceForTurn(definition, run.month)
   if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || !known || run.month !== known.month || career.careerTurnIndex !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || run.raceDefinitionSnapshot.month !== known.month || run.raceDefinitionSnapshot.runners !== known.runners || !Array.isArray(run.runners) || run.runners.length !== known.runners) fail()
   if (
     run.trustContext !== undefined && (

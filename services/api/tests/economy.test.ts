@@ -5,7 +5,7 @@ import { raceEligibility, raceDefinitions } from '../../../packages/shared/src/d
 import { registerEconomyTests } from './economy-cases'
 
 test('shared eligibility keeps the Local Save fee gate and checks authoritative Server Save funds', () => {
-  const career = startCareer('DEV_HORSE_SERENE_STEP')
+  const career = { ...startCareer('DEV_HORSE_SERENE_STEP'), month: 3, careerTurnIndex: 3 }
   const race = { ...raceDefinitions[1], entryFee: 500000 }
   assert.match(raceEligibility(career, race)!, /후속 Economy/)
   assert.equal(raceEligibility(career, race, 500000), null)

@@ -6,6 +6,7 @@ import {
   type JockeyRelations,
 } from './jockey-trust'
 import { initialJockeyContracts, type CareerJockeySelection } from './jockey-catalog'
+import { careerProgress } from './career-time'
 import { assertRaceRun, type RaceRunInput } from './race-entry'
 import { BALANCE } from './balance'
 import { deriveCondition, isHealthy, rollsInjury } from './status'
@@ -234,10 +235,11 @@ export function completeRace(
 }
 function nextTime(
   state: Career,
-): Pick<Career, 'month' | 'calendarDate' | 'careerTurnIndex'> &
+): Pick<Career, 'month' | 'calendarDate' | 'careerTurnIndex' | 'age'> &
   Partial<Pick<Career, 'event' | 'eventLog' | 'eventMisses'>> {
   const rollsYear = state.calendarDate.month === 12
   return {
+    age: careerProgress(state.careerTurnIndex + 1).age,
     month: state.month + 1,
     careerTurnIndex: state.careerTurnIndex + 1,
     calendarDate: {

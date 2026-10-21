@@ -1,5 +1,7 @@
 # 공유 코드
 
+- 육성 시간/시즌: `domain.ts`의 `careerProgress`, `nextSeasonRaceTurn`, `raceOccurrenceForTurn`, `careerOutlook`을 사용한다. 기본 60턴 이후도 계속 진행하며, 경주 후보·Snapshot의 month는 실제 절대 턴이다. [시간·시즌·FE 계약](../../services/api/docs/career-seasons.md)을 따른다.
+
 초기 기수: `domain.ts`에서 전체 `jockeyCatalog`, 네 `starterJockeyOptions`, `StarterJockeyId`/`StarterJockeyOption`/`JockeyContracts`/`CareerJockeySelection`을 제공한다. 후보와 실제 저장된 계약은 구분한다. 최초 생성은 선택 1명, 기존 마방은 저장 계약을 승계한다. [API·Local 연동](../../services/api/docs/starter-jockeys.md)을 따른다.
 
 - `src/domain.ts`: 기존 `lib/career`의 순수 도메인 재내보내기. 브라우저 store/repository는 제외한다.

@@ -96,12 +96,13 @@ test('browser storage and quota failures never claim a successful save or replac
 
 test('old compressed career and multi-cookie lifecycle migrate without modifying any cookie', () => {
   const storage = browserStorage()
-  const career = resolveAction(commitAction(base(), 'power'))
+  const legacy = resolveAction(commitAction({ ...base(), month: 13, careerTurnIndex: 13 }, 'power'))
+  const career = { ...legacy, age: 3 }
   const lifecycle = { ...fixtureLifecycle(true), year: 2031, month: 12 }
   legacyChunks(
     storage,
     'derby-career-lifecycle-checkpoint-1',
-    'z1:' + compressToEncodedURIComponent(JSON.stringify(career)),
+    'z1:' + compressToEncodedURIComponent(JSON.stringify(legacy)),
   )
   legacyChunks(
     storage,
@@ -111,10 +112,16 @@ test('old compressed career and multi-cookie lifecycle migrate without modifying
   const previous = new Map(storage.cookies)
   assert.deepEqual(readLifecycleSave(), lifecycle)
   assert.deepEqual(readCareer(), career)
+  const primary = { ...JSON.parse(storage.data.get(BROWSER_SAVE_KEY)!), career: legacy }
+  const raw = JSON.stringify(primary)
+  storage.data.set(BROWSER_SAVE_KEY, raw)
+  assert.deepEqual(readCareer(), career)
+  assert.equal(storage.data.get(BROWSER_SAVE_KEY), raw)
   writeLifecycleSave(lifecycle)
   assert.deepEqual(storage.cookies, previous)
   assert.equal(readBrowserSave().career!.action!.actionId, career.action!.actionId)
   assert.equal(readBrowserSave().lifecycle!.archive!.length, 2)
+  assert.deepEqual(readBrowserSave().lifecycle!.archive, lifecycle.archive)
 })
 
 test('retirement tombstone prevents legacy active horse resurrection', () => {

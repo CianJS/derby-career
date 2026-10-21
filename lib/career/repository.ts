@@ -4,6 +4,7 @@ import { readLifecycleSave } from './lifecycle-repository'
 import { decompressFromEncodedURIComponent } from 'lz-string'
 import { readBrowserSave, writeBrowserSave, legacyCookie } from './browser-save'
 import { assertRaceRecords, assertLifecycleSave } from './lifecycle-save'
+import { normalizeCareerAge, careerProgress } from './career-time'
 
 const key = 'derby-career-lifecycle-checkpoint-1'
 export function clearCareer(): void {
@@ -60,7 +61,7 @@ function normalizeSavedCareer(value: unknown): Career {
   const state = value as Partial<Career> & { month?: number }
   assertRaceRecords(state.raceRecords ?? [])
   const { record, prize } = summarizeRecords(state.raceRecords)
-  return {
+  return normalizeCareerAge({
     ...state,
     record,
     prize,
@@ -68,7 +69,7 @@ function normalizeSavedCareer(value: unknown): Career {
     careerTurnIndex: state.careerTurnIndex ?? state.month ?? 1,
     contractedJockeyIds: state.contractedJockeyIds ?? ['HAN_DOYUN', 'SEO_JIAN', 'YOON_TAESUNG'],
     raceRecords: state.raceRecords ?? [],
-  } as Career
+  } as Career)
 }
 function migrateLegacy(): Career | null {
   const legacy = readLifecycleSave()
@@ -100,7 +101,7 @@ function migrateLegacy(): Career | null {
   const state: Career = {
     version: 1,
     horse,
-    age: parseInt(old.age) || 2,
+    age: careerProgress(legacy.month || 1).age,
     month: legacy.month || 1,
     calendarDate,
     careerTurnIndex: legacy.month || 1,
