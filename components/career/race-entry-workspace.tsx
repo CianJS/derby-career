@@ -199,32 +199,34 @@ export function RaceEntryForm({
             : '경주·기수·전술을 비교하고 선택하세요. 확정 전에는 자유롭게 변경할 수 있습니다.'}
         </p>
       </header>
-      <section
-        aria-label="현재 육성마"
-        className="flex flex-wrap items-center gap-x-6 gap-y-3 border-y border-border py-3 text-xs tabular-nums"
-      >
-        <div>
-          <h2 className="font-serif text-lg">{horse?.name ?? career.horse.name}</h2>
-          <p className="text-muted-foreground">{horse?.age ?? career.age}세</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {statKeys.map((key) => (
-            <span key={key}>
-              {labels[key]} <b>{values[key]}</b>
-            </span>
-          ))}
-        </div>
-        <p>
-          피로 {values.fatigue} · 신체 부하 {values.bodyLoad} · 컨디션{' '}
-          {horse?.condition ?? career.condition}
-        </p>
-        <p className="w-full text-muted-foreground">
-          {aptitude
-            .filter(([name]) => name !== '잔디')
-            .map(([name, g]) => `${name} ${g}`)
-            .join(' · ')}
-        </p>
-      </section>
+      {!locked && (
+        <section
+          aria-label="현재 육성마"
+          className="flex flex-wrap items-center gap-x-6 gap-y-3 border-y border-border py-3 text-xs tabular-nums"
+        >
+          <div>
+            <h2 className="font-serif text-lg">{horse?.name ?? career.horse.name}</h2>
+            <p className="text-muted-foreground">{horse?.age ?? career.age}세</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {statKeys.map((key) => (
+              <span key={key}>
+                {labels[key]} <b>{values[key]}</b>
+              </span>
+            ))}
+          </div>
+          <p>
+            피로 {values.fatigue} · 신체 부하 {values.bodyLoad} · 컨디션{' '}
+            {horse?.condition ?? career.condition}
+          </p>
+          <p className="w-full text-muted-foreground">
+            {aptitude
+              .filter(([name]) => name !== '잔디')
+              .map(([name, g]) => `${name} ${g}`)
+              .join(' · ')}
+          </p>
+        </section>
+      )}
       <p role="status" className="text-sm tabular-nums" data-entry-balance>
         마방 잔액 · {balance === null ? '확인 중' : `₩${balance.toLocaleString('ko-KR')}`}
         {locked && ' · 등록비 정산 후'}
@@ -240,125 +242,133 @@ export function RaceEntryForm({
         </p>
       )}
       {!locked && <TravelRaceNotice races={turnRaces} travel={travel} />}
-      <fieldset disabled={!!locked || busy || !!restriction} className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-semibold">이번 달 출전 가능한 경주</legend>
-        {turnRaces.map((r) => {
-          const reason = locked
-            ? null
-            : serverOptions === undefined
-              ? raceEligibility(career, r, availableFunds, travel)
-              : (serverOptions?.races.find((row) => row.definition.id === r.id)
-                  ?.restrictionReason ?? null)
-          return (
-            <label
-              key={r.id}
-              aria-disabled={
-                !!reason ||
-                (serverOptions !== undefined &&
-                  !serverOptions?.races.find((row) => row.definition.id === r.id)?.eligible)
-              }
-              className={cn(
-                rowClass(r.id === race?.id),
-                reason && 'cursor-not-allowed opacity-50 hover:bg-transparent',
-              )}
-            >
-              <input
-                type="radio"
-                name="entry-race"
-                value={r.id}
-                className="accent-primary"
-                disabled={
-                  !!reason ||
-                  (serverOptions !== undefined &&
-                    !serverOptions?.races.find((row) => row.definition.id === r.id)?.eligible)
-                }
-                checked={r.id === race?.id}
-                onChange={() => update({ raceId: r.id })}
-              />
-              <span className="min-w-36 flex-1 font-serif">
-                {r.name}
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {countryName(
-                    r.countryCode ?? (serverOptions === undefined ? 'KOR' : '국가 미확인'),
+      {!locked && (
+        <>
+          <fieldset disabled={busy || !!restriction} className="flex flex-col gap-2">
+            <legend className="mb-2 text-sm font-semibold">이번 달 출전 가능한 경주</legend>
+            {turnRaces.map((r) => {
+              const reason = locked
+                ? null
+                : serverOptions === undefined
+                  ? raceEligibility(career, r, availableFunds, travel)
+                  : (serverOptions?.races.find((row) => row.definition.id === r.id)
+                      ?.restrictionReason ?? null)
+              return (
+                <label
+                  key={r.id}
+                  aria-disabled={
+                    !!reason ||
+                    (serverOptions !== undefined &&
+                      !serverOptions?.races.find((row) => row.definition.id === r.id)?.eligible)
+                  }
+                  className={cn(
+                    rowClass(r.id === race?.id),
+                    reason && 'cursor-not-allowed opacity-50 hover:bg-transparent',
                   )}
-                </span>
-              </span>
-              <span className="min-w-44 text-xs tabular-nums">
-                {r.surface} {r.distance}m · {r.raceClass} · {r.runners}두
-              </span>
-              <span className="min-w-44 text-xs text-muted-foreground">{r.courseProfile}</span>
-              <span className="text-xs tabular-nums">
-                1착 ₩{r.prize.toLocaleString('ko-KR')} · 등록비 ₩
-                {r.entryFee.toLocaleString('ko-KR')}
-              </span>
-              {reason && (
-                <span className="w-full text-[11px] leading-5 text-muted-foreground">
-                  출전 불가 · {reason}
-                </span>
-              )}
-            </label>
-          )
-        })}
-      </fieldset>
-      <fieldset disabled={!!locked || busy || !!restriction}>
-        <legend className="mb-2 text-sm font-semibold">계약 기수</legend>
-        <div className="grid gap-3 md:grid-cols-3">
-          {availableJockeys.map((j) => {
-            const fit = ridingFit(career, race, j, tactic)
-            return (
-              <label key={j.id} className={cn(rowClass(j.id === jockey?.id), 'items-start')}>
-                <span className="flex w-full items-center gap-2">
+                >
                   <input
                     type="radio"
-                    name="entry-jockey"
-                    value={j.id}
+                    name="entry-race"
+                    value={r.id}
                     className="accent-primary"
-                    checked={j.id === jockey?.id}
-                    onChange={() => update({ jockeyId: j.id })}
+                    disabled={
+                      !!reason ||
+                      (serverOptions !== undefined &&
+                        !serverOptions?.races.find((row) => row.definition.id === r.id)?.eligible)
+                    }
+                    checked={r.id === race?.id}
+                    onChange={() => update({ raceId: r.id })}
                   />
-                  <span className="font-serif text-base">{j.name}</span>
-                  <span className="ml-auto text-[11px] text-sage">계약 중</span>
-                </span>
-                <span className="text-xs text-muted-foreground">{j.style}</span>
-                <span className="grid w-full grid-cols-2 gap-x-5 gap-y-2 text-xs tabular-nums">
-                  {(['start', 'pace', 'path', 'timing', 'stability'] as const).map((key) => (
-                    <span key={key} className="flex justify-between border-b border-border pb-1">
-                      <span className="capitalize text-muted-foreground">{key}</span>
-                      <b>{j[key]}</b>
+                  <span className="min-w-36 flex-1 font-serif">
+                    {r.name}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {countryName(
+                        r.countryCode ?? (serverOptions === undefined ? 'KOR' : '국가 미확인'),
+                      )}
                     </span>
-                  ))}
-                </span>
-                <span className="w-full text-xs">
-                  {career.horse.name}와 신뢰도 · <JockeyTrustValue trust={trustForJockey(j.id)} />
-                </span>
-                <span className="text-xs text-primary">기승 적합도 · {fit.label}</span>
-                <span className="text-[11px] leading-5 text-muted-foreground">
-                  {fit.explanation}
-                </span>
-              </label>
-            )
-          })}
-        </div>
-      </fieldset>
-      <fieldset disabled={!!locked || busy || !!restriction}>
-        <legend className="mb-2 text-sm font-semibold">전술 · 현재 말의 적성</legend>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {(serverOptions === undefined ? tactics : (serverOptions?.tactics ?? [])).map((t) => (
-            <label key={t} className={rowClass(t === tactic)}>
-              <input
-                type="radio"
-                name="entry-tactic"
-                value={t}
-                className="accent-primary"
-                checked={t === tactic}
-                onChange={() => update({ tactic: t })}
-              />
-              <span className="text-sm">{t}</span>
-              <b className="ml-auto text-sm text-primary">{grade(aptitude, t)}</b>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+                  </span>
+                  <span className="min-w-44 text-xs tabular-nums">
+                    {r.surface} {r.distance}m · {r.raceClass} · {r.runners}두
+                  </span>
+                  <span className="min-w-44 text-xs text-muted-foreground">{r.courseProfile}</span>
+                  <span className="text-xs tabular-nums">
+                    1착 ₩{r.prize.toLocaleString('ko-KR')} · 등록비 ₩
+                    {r.entryFee.toLocaleString('ko-KR')}
+                  </span>
+                  {reason && (
+                    <span className="w-full text-[11px] leading-5 text-muted-foreground">
+                      출전 불가 · {reason}
+                    </span>
+                  )}
+                </label>
+              )
+            })}
+          </fieldset>
+          <fieldset disabled={!!locked || busy || !!restriction}>
+            <legend className="mb-2 text-sm font-semibold">계약 기수</legend>
+            <div className="grid gap-3 md:grid-cols-3">
+              {availableJockeys.map((j) => {
+                const fit = ridingFit(career, race, j, tactic)
+                return (
+                  <label key={j.id} className={cn(rowClass(j.id === jockey?.id), 'items-start')}>
+                    <span className="flex w-full items-center gap-2">
+                      <input
+                        type="radio"
+                        name="entry-jockey"
+                        value={j.id}
+                        className="accent-primary"
+                        checked={j.id === jockey?.id}
+                        onChange={() => update({ jockeyId: j.id })}
+                      />
+                      <span className="font-serif text-base">{j.name}</span>
+                      <span className="ml-auto text-[11px] text-sage">계약 중</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">{j.style}</span>
+                    <span className="grid w-full grid-cols-2 gap-x-5 gap-y-2 text-xs tabular-nums">
+                      {(['start', 'pace', 'path', 'timing', 'stability'] as const).map((key) => (
+                        <span
+                          key={key}
+                          className="flex justify-between border-b border-border pb-1"
+                        >
+                          <span className="capitalize text-muted-foreground">{key}</span>
+                          <b>{j[key]}</b>
+                        </span>
+                      ))}
+                    </span>
+                    <span className="w-full text-xs">
+                      {career.horse.name}와 신뢰도 ·{' '}
+                      <JockeyTrustValue trust={trustForJockey(j.id)} />
+                    </span>
+                    <span className="text-xs text-primary">기승 적합도 · {fit.label}</span>
+                    <span className="text-[11px] leading-5 text-muted-foreground">
+                      {fit.explanation}
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          </fieldset>
+          <fieldset disabled={!!locked || busy || !!restriction}>
+            <legend className="mb-2 text-sm font-semibold">전술 · 현재 말의 적성</legend>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(serverOptions === undefined ? tactics : (serverOptions?.tactics ?? [])).map((t) => (
+                <label key={t} className={rowClass(t === tactic)}>
+                  <input
+                    type="radio"
+                    name="entry-tactic"
+                    value={t}
+                    className="accent-primary"
+                    checked={t === tactic}
+                    onChange={() => update({ tactic: t })}
+                  />
+                  <span className="text-sm">{t}</span>
+                  <b className="ml-auto text-sm text-primary">{grade(aptitude, t)}</b>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </>
+      )}
       <section
         aria-label="출전 요약"
         aria-live="polite"
