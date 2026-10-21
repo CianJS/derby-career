@@ -1,6 +1,8 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { careerProgress } from '@/packages/shared/src/domain'
+import { SeasonSummary } from './career-progress'
 import { actionName, actionSummary } from '@/lib/career/model'
 import { careerStore, useCareer } from '@/lib/career/store'
 import { InitialJockeyGate } from './starter-jockey-selection'
@@ -19,7 +21,7 @@ export function CareerCheckpoint({ onHome, onHorse, raceEntry, horseSummary }: {
     <button onClick={onHome} className="mb-2 text-xs text-muted-foreground hover:text-foreground">← 홈</button>
     {error && <div role="alert" className="ui-error-state mb-5"><span>{error}</span><button disabled={busy} onClick={() => void careerStore.refresh()} className="ui-secondary-control rounded-lg border border-border px-4 py-2 text-xs">다시 불러오기</button><a href="/" target="_blank" rel="noreferrer" className="text-xs underline">새 탭에서 열기</a></div>}
     {!ready ? <p role="status" className="py-16 text-center text-sm text-muted-foreground">육성 기록을 불러오는 중…</p> : !career ? error ? null : <InitialJockeyGate busy={busy || pending}>{(starterJockeyId) => <HorseSelection busy={busy || pending} starterJockeyId={starterJockeyId} />}</InitialJockeyGate> : <>
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1"><div className="flex flex-wrap items-baseline gap-x-4 gap-y-1"><h1 className="text-2xl font-bold">이번 달 육성</h1><p className="text-sm text-muted-foreground">{career.calendarDate.year}년 {career.calendarDate.month}월 · 육성 {career.careerTurnIndex}개월차 · {career.raceRun ? '출전 확정 · 관전 대기' : career.action?.result ? '결과 저장 · 다음 달 진행' : career.action ? '행동 확정 · 저장 결과 확인 중' : '행동 하나를 선택하세요'}</p></div><button onClick={onHorse} className="text-xs font-semibold text-primary hover:underline">현재 육성마 상세</button></div>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1"><div className="flex flex-wrap items-baseline gap-x-4 gap-y-1"><h1 className="text-2xl font-bold">이번 달 육성</h1><p className="text-sm text-muted-foreground">{career.calendarDate.year}년 {career.calendarDate.month}월 · 육성 {career.careerTurnIndex}턴 · <SeasonSummary progress={careerProgress(career.careerTurnIndex)} /> · {career.raceRun ? '출전 확정 · 관전 대기' : career.action?.result ? '결과 저장 · 다음 달 진행' : career.action ? '행동 확정 · 저장 결과 확인 중' : '행동 하나를 선택하세요'}</p></div><button onClick={onHorse} className="text-xs font-semibold text-primary hover:underline">현재 육성마 상세</button></div>
       <div className="flex flex-col gap-3">
         {horseSummary ?? <HorseFocus career={career} />}
         <MonthOutlook career={career} />

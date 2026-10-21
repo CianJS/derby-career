@@ -374,7 +374,7 @@ function Cockpit({
       <div className="ui-focus-grid grid items-start gap-x-6 gap-y-3 lg:grid-cols-[minmax(11rem,.9fr)_minmax(0,1.7fr)_minmax(0,1.1fr)]">
         <div>
           <p className="text-xs text-muted-foreground">
-            {horse?.age} · 성장형 {horse?.growth} · 통산 {horse?.record || "0전 0승"} · 누적 {horse?.prize || "₩0"}
+            {career ? `${career.age}세` : horse?.age} · 성장형 {horse?.growth} · 통산 {horse?.record || "0전 0승"} · 누적 {horse?.prize || "₩0"}
           </p>
           <p className="mt-1 text-xs text-primary">
             최고 성적 {horse?.best ?? "미출전"}
