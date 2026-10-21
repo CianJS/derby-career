@@ -120,7 +120,7 @@ test('server entry form shows locked selections while new entry cannot be confir
     createElement(RaceEntryForm, { career, busy: false, error: null, canConfirm: false }),
   )
   assert.match(markup, /출전 정보 저장 완료/)
-  assert.match(markup, /disabled=""/)
+  assert.doesNotMatch(markup, /<input|<fieldset/)
   const unlocked = { ...career, raceRun: undefined }
   const draft = renderToStaticMarkup(
     createElement(RaceEntryForm, { career: unlocked, busy: false, error: null, canConfirm: false }),

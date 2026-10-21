@@ -101,7 +101,7 @@ for (const width of [390, 1440]) {
         return original.call(this, name, value)
       }
     }, BROWSER_SAVE_KEY)
-    await page.getByRole('button', { name: '결과 확정 · 다음 달 시작', exact: true }).click()
+    await page.getByRole('button', { name: '결과 저장', exact: true }).click()
     await expect(page.getByRole('alert').filter({ hasText: '저장 공간' })).toBeVisible()
     expect((await read()).career).toEqual(entered.career)
     expect((await read()).lifecycle.economyLedger).toEqual(entered.lifecycle.economyLedger)
@@ -112,7 +112,7 @@ for (const width of [390, 1440]) {
       ),
     ).toBe(true)
     await page.evaluate(() => Reflect.set(window, 'rejectEconomySave', false))
-    await page.getByRole('button', { name: '결과 확정 · 다음 달 시작', exact: true }).click()
+    await page.getByRole('button', { name: '결과 저장', exact: true }).click()
     const text = `₩${(19_500_000 + prize).toLocaleString('ko-KR')}`
     await expect(page.locator('[data-settlement-balance]')).toHaveText(text)
     await expect(page.getByText('상금 지급 완료', { exact: true })).toBeVisible()

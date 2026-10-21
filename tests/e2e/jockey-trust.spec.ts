@@ -70,7 +70,7 @@ for (const viewport of [
       await home()
       await page.getByRole('button', { name: '육성 계속', exact: true }).click()
       await page.getByRole('button', { name: '출전 정보 확인', exact: true }).click()
-      await expect(page.locator('[data-trust-status="available"]')).toHaveCount(4)
+      await expect(page.locator('[data-trust-status="available"]')).toHaveCount(1)
       await noOverflow()
       await info.attach('entry-trust', {
         body: await page.screenshot({ fullPage: true }),

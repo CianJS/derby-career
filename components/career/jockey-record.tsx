@@ -112,10 +112,12 @@ export function Jockey({
   setView,
   jockeyId,
   horses,
+  onSelectHorse,
 }: {
   setView: (v: View) => void
   jockeyId: string
   horses: CareerHorse[]
+  onSelectHorse?: (horseId: string, raceRunId?: string) => void
 }) {
   const snapshot = useCareer()
   const { career } = snapshot
@@ -128,11 +130,23 @@ export function Jockey({
     )
   }
   const riddenHorses = horses.filter((h) => h.raceRecords?.some((r) => r.jockeyId === j.id))
-  const records = riddenHorses.flatMap((h) =>
-    (h.raceRecords ?? [])
-      .filter((r) => r.jockeyId === j.id)
-      .map((r) => [r.date, h.name, r.race, r.grade ?? '—', r.result]),
-  )
+  const records = riddenHorses
+    .flatMap((h) =>
+      (h.raceRecords ?? [])
+        .filter((r) => r.jockeyId === j.id)
+        .map((r) => ({ ...r, horseId: h.id, horseName: h.name })),
+    )
+    .sort((a, b) => {
+      const left = a.date.match(/\d+/g)?.map(Number) ?? []
+      const right = b.date.match(/\d+/g)?.map(Number) ?? []
+      for (let i = 0; i < Math.max(left.length, right.length); i++) {
+        const delta = (right[i] ?? 0) - (left[i] ?? 0)
+        if (delta) {
+          return delta
+        }
+      }
+      return 0
+    })
   return (
     <Management
       title={j.name}
@@ -205,30 +219,44 @@ export function Jockey({
           {records.length === 0 && (
             <p className="py-4 text-sm text-muted-foreground">최근 기승 기록이 없습니다.</p>
           )}
-          {records.map((r) => (
+          {records.map((r, index) => (
             <div
-              key={r.join('-')}
+              key={`${r.horseId}:${r.raceRunId ?? index}`}
+              data-riding-record
+              data-horse-id={r.horseId}
+              data-race-run-id={r.raceRunId}
               className="grid min-w-[620px] grid-cols-[100px_1.2fr_1.3fr_70px_70px] border-b border-border px-3 py-3 text-xs"
             >
-              <button onClick={() => setView('horse')} className="text-left">
-                {r[0]}
-              </button>
-              <button
-                onClick={() => setView('horse')}
-                className="text-left font-serif hover:text-primary"
-              >
-                {r[1]}
-              </button>
-              <button
-                onClick={() => setView('race')}
-                className="text-left font-serif hover:text-primary"
-              >
-                {r[2]}
-              </button>
-              <span>{r[3]}</span>
-              <span className="text-primary">{r[4]}</span>
+              {(
+                [
+                  ['date', r.date],
+                  ['horse', r.horseName],
+                  ['race', r.race],
+                ] as const
+              ).map(([kind, text]) =>
+                onSelectHorse ? (
+                  <button
+                    key={kind}
+                    data-record-link={kind}
+                    onClick={() => onSelectHorse(r.horseId, r.raceRunId)}
+                    title="이 말의 저장된 경주 기록 보기"
+                    className="text-left hover:text-primary"
+                  >
+                    {text}
+                  </button>
+                ) : (
+                  <span key={kind}>{text}</span>
+                ),
+              )}
+              <span>{r.grade ?? '—'}</span>
+              <span className="text-primary">{r.result}</span>
             </div>
           ))}
+          {records.length > 0 && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              게임용 경주는 해당 말의 저장된 경주 기록으로 연결됩니다.
+            </p>
+          )}
         </div>
       </Section>
       <Section eyebrow="HORSES" title="함께한 말">
