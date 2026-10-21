@@ -1,13 +1,22 @@
 import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { TrainingPreview } from '../components/career/training-preview'
+import { AppliedEventNote } from '../components/career/month-event'
+import { createEventCatalog } from '../lib/career/events/repository'
+import type { EventDefinition } from '../lib/career/events/types'
 import {
   advanceMonth,
+  chooseEvent,
   commitAction,
   horses,
   resolveAction,
   statKeys,
   trainings,
+  trainingPreview,
+  type Career,
 } from '../lib/career/model'
 import { clearCareer, readCareer, writeCareer } from '../lib/career/repository'
 import { applyCareer } from '../lib/career/lifecycle'
@@ -78,6 +87,133 @@ test('all five trainings are deterministic and lock once per month', () => {
       assert.equal(advanceMonth(next, result.action!.actionId), next)
     }
   }
+})
+test('training previews follow the current choice and match saved event costs for all five trainings', () => {
+  const offered: Career = {
+    ...startCareer(horses[0].id),
+    event: { eventId: 'COM-0033', month: 1, seed: 42, status: 'offered' },
+  }
+  const unchanged = structuredClone(offered)
+  const a = chooseEvent(offered, 'COM-0033', 'A')
+  const b = chooseEvent(offered, 'COM-0033', 'B')
+  for (const type of statKeys) {
+    assert.deepEqual(trainingPreview(offered, type).effects, [])
+    for (const state of [a, b]) {
+      const before = structuredClone(state)
+      const preview = trainingPreview(state, type)
+      const resolved = resolveAction(commitAction(state, type))
+      for (const cost of preview.costs) {
+        assert.equal(cost.after, resolved.values[cost.key])
+        assert.equal(cost.final, cost.base + cost.event)
+        assert.equal(cost.event, resolved.action!.event?.[cost.key] ?? 0)
+      }
+      assert.deepEqual(state, before, 'preview does not commit, draw, consume, or mutate the event')
+    }
+    assert.equal(trainingPreview(b, type).costs[1].event, -2)
+  }
+  const cost = trainingPreview(b, 'speed').costs[1]
+  assert.deepEqual(cost, { key: 'bodyLoad', base: 13, event: -2, final: 11, before: 5, after: 16 })
+  assert.deepEqual(offered, unchanged)
+  assert.equal(
+    trainingPreview(a, 'speed').effects.length,
+    0,
+    'power-only option does not affect speed',
+  )
+  assert.equal(trainingPreview(a, 'power').effects.length, 1)
+  for (const event of [
+    undefined,
+    null,
+    { ...b.event!, eventId: 'unknown' },
+    { ...b.event!, status: 'expired' as const },
+    { ...b.event!, status: 'applied' as const },
+  ]) {
+    assert.deepEqual(trainingPreview({ ...offered, event }, 'speed').effects, [])
+  }
+  const immediate = chooseEvent(
+    { ...offered, event: { ...offered.event!, eventId: 'COM-0034' } },
+    'COM-0034',
+    'A',
+  )
+  assert.equal(immediate.values.fatigue, 2)
+  assert.equal(trainingPreview(immediate, 'speed').costs[0].before, 2)
+  assert.equal(
+    trainingPreview(immediate, 'speed').costs[0].event,
+    0,
+    'immediate effects are not applied twice',
+  )
+})
+test('training previews reuse effect accumulation, rounding and zero bounds without capping status at 100', () => {
+  const definition: EventDefinition = {
+    id: 'preview-effects',
+    name: 'test',
+    description: '',
+    kind: 'focus',
+    timing: 'month-start',
+    condition: {},
+    weight: 1,
+    limitedToMonth: true,
+    effects: [
+      { scope: 'training', growth: { multiplier: 1.25 }, fatigue: -100, bodyLoad: -1 },
+      { scope: 'speed', growth: { ratio: 0.15, flat: -1 }, fatigue: 2, bodyLoad: -1 },
+      { scope: 'immediate', fatigue: 99 },
+      { scope: 'rest', bodyLoad: 99 },
+    ],
+  }
+  const catalog = createEventCatalog([definition])
+  for (const type of statKeys) {
+    for (const bodyLoad of [0, 99, 150]) {
+      const state: Career = {
+        ...startCareer(horses[0].id),
+        event: { eventId: definition.id, month: 1, seed: 1, status: 'offered' },
+      }
+      state.values = { ...state.values, fatigue: 0, bodyLoad }
+      const preview = trainingPreview(state, type, catalog)
+      const committed = commitAction(state, type)
+      const resolved = resolveAction(committed, catalog)
+      assert.equal(preview.costs[0].final, 0)
+      for (const cost of preview.costs) {
+        assert.equal(resolved.values[cost.key], cost.after)
+        assert.equal(resolved.action!.event![cost.key], cost.event)
+      }
+      const primary = 14 + (committed.action!.seed % 5)
+      assert.equal(
+        resolved.values[type] - state.values[type],
+        primary + Math.round(primary * 0.25 + (type === 'speed' ? primary * 0.15 - 1 : 0)),
+      )
+    }
+  }
+})
+test('training cost UI and applied note agree while server previews never assert Local modifiers', () => {
+  const career = chooseEvent(
+    {
+      ...startCareer(horses[0].id),
+      event: { eventId: 'COM-0033', month: 1, seed: 42, status: 'offered' },
+    },
+    'COM-0033',
+    'B',
+  )
+  const render = (state: Career, serverMode: boolean) =>
+    renderToStaticMarkup(
+      createElement(TrainingPreview, { career: state, type: 'speed', serverMode }),
+    )
+  const local = render(career, false)
+  assert.match(local, /5 → 16 \(\+11\)/)
+  assert.match(local, /기본 \+13 · 이벤트 -2/)
+  assert.match(local, /최종 \+11/)
+  const applied = resolveAction(commitAction(career, 'speed'))
+  assert.match(
+    renderToStaticMarkup(createElement(AppliedEventNote, { action: applied.action! })),
+    /신체 부하 -2/,
+  )
+  const server = render(career, true)
+  assert.match(server, /이벤트 미확인/)
+  assert.match(server, /최종 미확인/)
+  assert.match(server, /서버 확정 시 변동 가능/)
+  assert.doesNotMatch(server, /이벤트 -2|최종 \+11|이벤트 반영 최종 예상/)
+  assert.notEqual(
+    render({ ...career, event: { ...career.event!, status: 'expired' } }, false),
+    local,
+  )
 })
 test('rest clamps at zero, omits unchanged values, and recent history stays compact', () => {
   let state = startCareer(horses[0].id)

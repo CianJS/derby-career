@@ -2,8 +2,7 @@
 
 import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { labels, type ActionRecord, type Career, type Stat } from '@/lib/career/model'
-import { appliesToAction, isEventActive, pendingEffects } from '@/lib/career/events/effects'
+import { labels, type ActionRecord, type Career } from '@/lib/career/model'
 import { defaultEventCatalog } from '@/lib/career/events/repository'
 import { choiceText, effectText } from '@/lib/career/events/text'
 import { eventKindLabels, type EventDefinition } from '@/lib/career/events/types'
@@ -17,13 +16,6 @@ export function visibleMonthEvent(career: Career): { definition: EventDefinition
   if (!event || event.status === 'expired') return null
   const definition = defaultEventCatalog.find(event.eventId)
   return definition ? { definition, event } : null
-}
-
-/** Effect lines that will change the plain card of this training, so the card can be compared with and without the event. */
-export function trainingEventPreview(career: Career, type: Stat): string[] {
-  const shown = visibleMonthEvent(career)
-  if (!shown || !isEventActive(shown.definition, shown.event)) return []
-  return pendingEffects(shown.definition, shown.event).filter(effect => appliesToAction(effect, { actionType: 'training', trainingType: type })).map(effectText)
 }
 
 export function MonthEventCard({ career, busy }: { career: Career; busy: boolean }) {

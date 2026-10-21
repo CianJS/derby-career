@@ -14,7 +14,13 @@ import { raceAftermath } from './post-race'
 import { canonicalHealth, canTrain, careerHealth, injure, recoverBy } from './health'
 import { assertRaceRecords } from './lifecycle-save'
 import { nextEventState, planActionEvent } from './events/director'
-import { applyActionEffects, immediateEffects, pendingEffects } from './events/effects'
+import {
+  appliesToAction,
+  applyActionEffects,
+  immediateEffects,
+  isEventActive,
+  pendingEffects,
+} from './events/effects'
 import { defaultEventCatalog, type EventCatalog } from './events/repository'
 import type { AppliedEvent, CareerEvent, EventChoiceId, EventLogEntry } from './events/types'
 
@@ -333,6 +339,43 @@ export function commitAction(state: Career, choice: Choice): Career {
     },
   }
 }
+/** Shared state bounds for resolved actions and read-only previews. Status costs have no upper cap. */
+function actionValueAfter(key: keyof Values, before: number, delta: number): number {
+  return Math.min(
+    statKeys.includes(key as Stat) ? BALANCE.maxStat : Infinity,
+    Math.max(0, before + delta),
+  )
+}
+
+/** Only already-visible, active Local effects are previewed. Never draws result events or consumes a seed. */
+export function trainingPreview(
+  state: Pick<Career, 'values' | 'event'>,
+  type: Stat,
+  catalog: EventCatalog = defaultEventCatalog,
+) {
+  const event = state.event
+  const definition = event ? catalog.find(event.eventId) : undefined
+  const action = { actionType: 'training', trainingType: type } as const
+  const effects =
+    event && definition && isEventActive(definition, event)
+      ? pendingEffects(definition, event).filter((effect) => appliesToAction(effect, action))
+      : []
+  // Costs are independent of the seeded primary gain; growth is intentionally not predicted here.
+  const base = { primary: 0, fatigue: trainings[type].fatigue, bodyLoad: trainings[type].bodyLoad }
+  const applied = applyActionEffects(effects, action, base)
+  return {
+    effects,
+    costs: (['fatigue', 'bodyLoad'] as const).map((key) => ({
+      key,
+      base: base[key],
+      event: applied[key] - base[key],
+      final: applied[key],
+      before: state.values[key],
+      after: actionValueAfter(key, state.values[key], applied[key]),
+    })),
+  }
+}
+
 export function resolveAction(
   state: Career,
   catalog: EventCatalog = defaultEventCatalog,
@@ -400,10 +443,7 @@ export function resolveAction(
   const result: Change[] = []
   for (const key of Object.keys(finalDeltas) as (keyof Values)[]) {
     const before = values[key]
-    const after = Math.min(
-      statKeys.includes(key as Stat) ? BALANCE.maxStat : Infinity,
-      Math.max(0, before + finalDeltas[key]!),
-    )
+    const after = actionValueAfter(key, before, finalDeltas[key]!)
     values[key] = after
     if (before !== after) {
       result.push({ key, before, after })
