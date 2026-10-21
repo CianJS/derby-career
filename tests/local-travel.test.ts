@@ -98,6 +98,8 @@ for (const country of ['JPN', 'USA'] as const) {
       }),
     )
     assert.match(notice, /등록 게임 경주가 0개/)
+    assert.match(notice, /게임용 임시 경주/)
+    assert.match(notice, /공식 개최 경주가 아닌 게임 시뮬레이션용 경기/)
     assert.match(notice, /15/)
     assert.deepEqual(readBrowserSave(), completed)
     assert.equal(

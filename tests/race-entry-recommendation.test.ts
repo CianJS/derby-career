@@ -4,12 +4,14 @@ import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { RaceEntryForm } from '../components/career/race-entry-workspace'
+import { GameRaceSource, gameRaceOption } from '../components/career/game-race-source'
 import { commitAction, horses, type Career } from '../lib/career/model'
 import {
   contractedRoster,
   distanceAptitude,
   grade,
   lockRaceEntry,
+  localRacesForTurn,
   raceEligibility,
   racesForTurn,
   ridingFit,
@@ -33,6 +35,24 @@ function careerFor(horseId: string, turn: number, wins = 0): Career {
   }
 }
 const empty = { raceId: null, jockeyId: null, tactic: null }
+
+test('game race disclosures preserve definitions and never classify unknown server IDs as official', () => {
+  const races = localRacesForTurn(3)
+  const saved = structuredClone(races)
+  assert.ok(races.some((race) => race.countryCode === 'JPN'))
+  assert.ok(races.some((race) => race.countryCode === 'USA'))
+  for (const race of races) {
+    assert.equal(gameRaceOption(race), `${race.name} · 게임용 임시 경주`)
+    assert.match(
+      renderToStaticMarkup(createElement(GameRaceSource, { raceId: race.id })),
+      /게임용 임시 경주/,
+    )
+  }
+  assert.deepEqual(races, saved)
+  const unknown = renderToStaticMarkup(createElement(GameRaceSource, { raceId: 'SERVER_RACE_1' }))
+  assert.match(unknown, /게임 출전 경주/)
+  assert.doesNotMatch(unknown, /공식|게임용 임시 경주/)
+})
 
 test('the shown one-win career opens with the strongest eligible distance and riding-fit combination', () => {
   const career = careerFor('DEV_HORSE_SERENE_STEP', 6, 1)
@@ -167,6 +187,8 @@ test('the real entry form renders all three recommended radio choices checked an
     createElement(RaceEntryForm, { career, busy: false, error: null }),
   )
   assert.equal(selected(html, 'entry-race'), 'DEV_M6_ONE_WIN_1800')
+  assert.match(html, /게임용 임시 경주/)
+  assert.match(html, /공식 개최 경주가 아닌 게임 시뮬레이션용 경기/)
   assert.equal(selected(html, 'entry-jockey'), 'HAN_DOYUN')
   assert.equal(selected(html, 'entry-tactic'), '선행')
   assert.ok(/<button\b[^>]*>출전 확정<\/button>/.test(html))
@@ -194,6 +216,7 @@ test('the real confirmed form displays saved choices, disables edits and never s
     }),
   )
   assert.ok(html.includes('윤태성'))
+  assert.match(html, /선택 경주.*게임용 임시 경주/)
   assert.ok(html.includes('도주'))
   assert.doesNotMatch(html, /<input|<fieldset/)
   assert.ok(html.includes('레이스 시작'))
