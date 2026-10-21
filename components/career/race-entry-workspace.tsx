@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { countryMismatch, TravelRaceNotice } from './expedition-availability'
 import { Button } from '@/components/ui/button'
 import { labels, statKeys, type Career } from '@/lib/career/model'
 import {
@@ -44,13 +45,24 @@ export function RaceAction({ onOpen }: { onOpen: () => void }) {
           (r) =>
             !raceEligibility(career, r, funds ?? undefined, stableTravel(snapshot) ?? undefined),
         ).length
+  const races =
+    mode === 'server'
+      ? (raceOptions?.races.map((row) => row.definition) ?? [])
+      : localRacesForTurn(career.careerTurnIndex)
+  const mismatch =
+    !career.action && !career.raceRun ? countryMismatch(stableTravel(snapshot), races) : null
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-xs text-muted-foreground">
         {career.raceRun
           ? '저장된 출전 정보를 확인할 수 있습니다.'
-          : (restriction ?? `현재 전적으로 출전 가능한 경주 ${open}개`)}
+          : (mismatch ?? restriction ?? `현재 전적으로 출전 가능한 경주 ${open}개`)}
       </p>
+      {mismatch && (
+        <a className="text-xs text-primary underline" href="#career-expedition">
+          {stableTravel(snapshot)?.activeExpedition ? '귀국·원정 상태 보기' : '원정 상태 보기'}
+        </a>
+      )}
       <Button
         disabled={busy || pending || (mode === 'local' && !career.raceRun && !!restriction)}
         onClick={onOpen}
@@ -95,7 +107,7 @@ export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }
       onStartRace={onStartRace}
       canConfirm={mode === 'local' ? stableFunds(snapshot) !== null : !!raceOptions}
       availableFunds={mode === 'local' ? (stableFunds(snapshot) ?? undefined) : undefined}
-      travel={mode === 'local' ? (stableTravel(snapshot) ?? undefined) : undefined}
+      travel={stableTravel(snapshot) ?? undefined}
       balance={stableFunds(snapshot)}
       serverOptions={mode === 'server' ? raceOptions : undefined}
       trustForJockey={(id) => jockeyTrust(snapshot, id)}
@@ -224,11 +236,12 @@ export function RaceEntryForm({
           {error}
         </p>
       )}
-      {!locked && restriction && (
+      {!locked && restriction && !countryMismatch(travel, turnRaces) && (
         <p role="alert" className="text-sm text-muted-foreground">
           {restriction}
         </p>
       )}
+      {!locked && <TravelRaceNotice races={turnRaces} travel={travel} />}
       {!locked && (
         <>
           <fieldset disabled={busy || !!restriction} className="flex flex-col gap-2">

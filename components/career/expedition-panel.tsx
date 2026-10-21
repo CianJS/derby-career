@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { careerStore, stableTravel, useCareer } from '@/lib/career/store'
+import { careerStore, stableTravel, stableFunds, useCareer } from '@/lib/career/store'
 import {
   countryName,
   supportedCountries,
   supportedCountry,
   type SupportedCountry,
 } from '@/lib/career/local-travel'
+import { ExpeditionAvailability } from './expedition-availability'
 import { localRacesForTurn } from '@/lib/career/race-entry'
 
 export function ExpeditionPanel({ readOnly = false }: { readOnly?: boolean }) {
@@ -40,6 +41,7 @@ export function ExpeditionPanel({ readOnly = false }: { readOnly?: boolean }) {
   const targetRace = races.find((r) => r.id === active?.targetRaceDefinitionId)
   return (
     <section
+      id="career-expedition"
       aria-label="해외 원정"
       aria-busy={busy}
       className="m-4 rounded-lg border border-border bg-card p-4 text-sm"
@@ -54,6 +56,17 @@ export function ExpeditionPanel({ readOnly = false }: { readOnly?: boolean }) {
           ? `원정 중 · ${countryName(active.targetCountry)} · 대상 경주 ${targetRace?.name ?? active.targetRaceDefinitionId ?? '미선택'}`
           : '국내 체류 중'}
       </p>
+      {career && (
+        <ExpeditionAvailability
+          career={career}
+          travel={travel}
+          country={active?.targetCountry ?? destination}
+          funds={stableFunds(snapshot) ?? undefined}
+          serverRaces={
+            snapshot.mode === 'server' ? (snapshot.raceOptions?.races ?? null) : undefined
+          }
+        />
+      )}
       {!allowed && (
         <p role="alert" className="mt-2">
           이 마방의 소속 국가는 현재 신규 육성·출전·원정을 지원하지 않습니다. 기존 기록은
