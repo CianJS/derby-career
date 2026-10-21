@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { JSDOM } from 'jsdom'
 import { act, createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { NoticeCenter, NoticeList, NoticeDetails } from '../components/notices/notice-center'
+import { updateNotices, noticeCenterDescription } from '../lib/notices/updates'
 import type { Root } from 'react-dom/client'
 import type { components } from '../packages/shared/src/generated/api'
 import { horses } from '../lib/career/model'
@@ -16,6 +19,30 @@ import { managementFixture } from './helpers/management-fixture'
 import { contractedJockeys, racesForTurn } from '../lib/career/race-entry'
 
 type Models = components['schemas']
+
+test('notice content is undated feature guidance, with no fabricated release feed or unread indicator', () => {
+  const list = renderToStaticMarkup(createElement(NoticeList, { onSelect: () => {} }))
+  assert.equal((list.match(/class="lab-notice-item"/g) ?? []).length, updateNotices.length)
+  assert.ok(updateNotices.length > 1, 'list and detail navigation remain available')
+  for (const notice of updateNotices) {
+    assert.equal(notice.category, '이용 안내')
+    assert.equal('date' in notice, false)
+    const detail = renderToStaticMarkup(createElement(NoticeDetails, { notice }))
+    for (const text of notice.details) {
+      assert.ok(detail.includes(text))
+    }
+    assert.doesNotMatch(
+      detail,
+      /ChatGPT Sites|API 서버가.*배포되어 있지|임시 예시|화면 확인용|2026-10-/,
+    )
+  }
+  assert.doesNotMatch(list, /<time|2026-10-/)
+  assert.match(noticeCenterDescription, /운영 공지·업데이트 내역이 없습니다/)
+  const center = renderToStaticMarkup(createElement(NoticeCenter))
+  assert.match(center, /aria-haspopup="dialog"/)
+  assert.match(center, /aria-describedby=/)
+  assert.doesNotMatch(center, /<i\b|size-1\.5|화면 확인용/)
+})
 const catalog: {
   races: Models['RaceSchedule'][]
   racecourses: Models['Racecourse'][]

@@ -13,6 +13,7 @@ import {
 } from '@/packages/shared/src/domain'
 import { countryName, type StableTravel } from '@/lib/career/local-travel'
 import { stableTravel, useCareer } from '@/lib/career/store'
+import { GameRaceSource, GameRaceDisclosure } from './game-race-source'
 import { SeasonSummary } from './career-progress'
 
 /** Presentation only. No hypothetical arrival or future eligibility is ever written to a Save. */
@@ -162,6 +163,7 @@ export function ExpeditionAvailability({
           ? '현재 턴은 서버 출전 API의 현재 체류 기준입니다. 이후 일정은 공통 게임 정의의 참고 전망이며 서버의 미래 등록·자격은 확인되지 않았습니다.'
           : '등록된 Local 게임 경주 기준입니다. 자격은 도착 후를 가정한 현재 전적·잔액·건강·계약 기준이며 미래의 변화는 예측하지 않습니다.'}
       </p>
+      <GameRaceDisclosure />
       <ul className="mt-2 space-y-3">
         {groups.map((group) => (
           <li key={group.turn}>
@@ -182,8 +184,9 @@ export function ExpeditionAvailability({
                 {group.rows.map(({ race, reason }) => (
                   <li key={race.id}>
                     <p>
-                      {race.name} · {countryName(race.countryCode ?? 'KOR')} · {race.distance}m ·
-                      등록비 ₩{race.entryFee.toLocaleString('ko-KR')}
+                      {race.name} <GameRaceSource raceId={race.id} /> ·{' '}
+                      {countryName(race.countryCode ?? 'KOR')} · {race.distance}m · 등록비 ₩
+                      {race.entryFee.toLocaleString('ko-KR')}
                     </p>
                     <p className="text-muted-foreground">
                       {server && group.turn !== plan.currentTurn

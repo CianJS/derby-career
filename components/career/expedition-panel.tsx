@@ -9,6 +9,7 @@ import {
   supportedCountry,
   type SupportedCountry,
 } from '@/lib/career/local-travel'
+import { GameRaceSource, gameRaceOption } from './game-race-source'
 import { ExpeditionAvailability } from './expedition-availability'
 import { localRacesForTurn } from '@/lib/career/race-entry'
 
@@ -55,6 +56,9 @@ export function ExpeditionPanel({ readOnly = false }: { readOnly?: boolean }) {
         {active
           ? `원정 중 · ${countryName(active.targetCountry)} · 대상 경주 ${targetRace?.name ?? active.targetRaceDefinitionId ?? '미선택'}`
           : '국내 체류 중'}
+        {active?.targetRaceDefinitionId && (
+          <GameRaceSource raceId={active.targetRaceDefinitionId} />
+        )}
       </p>
       {career && (
         <ExpeditionAvailability
@@ -121,7 +125,7 @@ export function ExpeditionPanel({ readOnly = false }: { readOnly?: boolean }) {
                 <option value="">현지에서 선택</option>
                 {candidates.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.name}
+                    {gameRaceOption(r)}
                   </option>
                 ))}
               </select>

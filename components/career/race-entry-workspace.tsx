@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { GameRaceSource, GameRaceDisclosure } from './game-race-source'
 import { countryMismatch, TravelRaceNotice } from './expedition-availability'
 import { Button } from '@/components/ui/button'
 import { labels, statKeys, type Career } from '@/lib/career/model'
@@ -198,6 +199,7 @@ export function RaceEntryForm({
             ? '출전 정보가 저장되었습니다. 이번 달의 선택은 변경할 수 없습니다.'
             : '경주·기수·전술을 비교하고 선택하세요. 확정 전에는 자유롭게 변경할 수 있습니다.'}
         </p>
+        <GameRaceDisclosure />
       </header>
       {!locked && (
         <section
@@ -280,7 +282,7 @@ export function RaceEntryForm({
                     onChange={() => update({ raceId: r.id })}
                   />
                   <span className="min-w-36 flex-1 font-serif">
-                    {r.name}
+                    {r.name} <GameRaceSource raceId={r.id} />
                     <span className="ml-2 text-xs text-muted-foreground">
                       {countryName(
                         r.countryCode ?? (serverOptions === undefined ? 'KOR' : '국가 미확인'),
@@ -374,6 +376,11 @@ export function RaceEntryForm({
         aria-live="polite"
         className="flex flex-col gap-4 border-t border-border pt-4"
       >
+        {race && (
+          <p className="text-xs">
+            선택 경주 <GameRaceSource raceId={race.id} />
+          </p>
+        )}
         <dl className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-5">
           {[
             ['Horse', horse?.name ?? career.horse.name],
