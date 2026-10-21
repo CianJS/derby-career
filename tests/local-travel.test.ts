@@ -1,5 +1,12 @@
 import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import {
+  ExpeditionAvailability,
+  expeditionSchedule,
+  countryMismatch,
+} from '../components/career/expedition-availability'
 import assert from 'node:assert/strict'
 import { browserStorage } from './helpers/browser-storage'
 import { BROWSER_SAVE_KEY, readBrowserSave, writeBrowserSave } from '../lib/career/browser-save'
@@ -39,6 +46,14 @@ async function setup(country = '대한민국') {
 for (const country of ['JPN', 'USA'] as const) {
   test(`Local ${country}: actual log/prize/trust, country gates, locked return, reload and retirement inheritance`, async () => {
     const { career } = await setup()
+    const beforePreview = readBrowserSave()
+    const initialTravel = beforePreview.lifecycle!.travel!
+    const preview = expeditionSchedule(career, initialTravel, country, 20_000_000)
+    assert.equal(preview.at(career.careerTurnIndex).length, 1)
+    assert.equal(preview.at(career.careerTurnIndex)[0].reason, null)
+    assert.equal(preview.nextLocal, 15)
+    assert.equal(preview.at(preview.nextLocal!).length, 1)
+    assert.deepEqual(readBrowserSave(), beforePreview)
     const raceId = `DEV_${country}_M3_MILE_1600`
     const draft = { raceId, jockeyId: 'HAN_DOYUN', tactic: '선행' } as const
     assert.equal(await careerStore.lockRace(draft, career.horse.id, 3), false)
@@ -64,6 +79,27 @@ for (const country of ['JPN', 'USA'] as const) {
     const completed = readBrowserSave()
     assert.equal(completed.lifecycle!.fundsKRW, 20_000_000 + log.result.prizeMoney)
     assert.equal(completed.career!.raceRecords.length, 1)
+    const upcoming = expeditionSchedule(
+      completed.career!,
+      completed.lifecycle!.travel!,
+      country,
+      completed.lifecycle!.fundsKRW,
+    )
+    assert.equal(upcoming.nextGlobal, 6)
+    assert.equal(upcoming.at(6).length, 0)
+    assert.equal(upcoming.nextLocal, 15)
+    assert.match(countryMismatch(completed.lifecycle!.travel, localRacesForTurn(6))!, /체류 국가/)
+    const notice = renderToStaticMarkup(
+      createElement(ExpeditionAvailability, {
+        career: completed.career!,
+        travel: completed.lifecycle!.travel!,
+        country,
+        funds: completed.lifecycle!.fundsKRW,
+      }),
+    )
+    assert.match(notice, /등록 게임 경주가 0개/)
+    assert.match(notice, /15/)
+    assert.deepEqual(readBrowserSave(), completed)
     assert.equal(
       await careerStore.returnExpedition(travel.activeExpedition!.id, travel.revision),
       true,

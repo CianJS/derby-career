@@ -12,6 +12,7 @@ import {
   careerOutlook,
   type Readiness,
 } from '@/packages/shared/src/domain'
+import { TravelRaceNotice } from './expedition-availability'
 import { countryName } from '@/lib/career/local-travel'
 import { CareerProgressView, SeasonSummary } from './career-progress'
 import { CalendarClock, Flag, HeartPulse, TrendingUp } from 'lucide-react'
@@ -102,6 +103,15 @@ export function MonthOutlook({ career }: { career: Career }) {
                   : '출전 조건 확인 중…'
                 : `현재 조건 기준 전망 ${nextRace.openRaces} / ${nextRace.totalRaces}개 · 출전 시 국가·전적·잔액 조건을 다시 확인합니다.`}
             </p>
+          )}
+          {nextRace && (
+            <TravelRaceNotice
+              races={
+                state.mode === 'server' && current
+                  ? (state.raceOptions?.races.map((row) => row.definition) ?? [])
+                  : localRacesForTurn(nextRace.month)
+              }
+            />
           )}
         </div>
         <div className="min-w-0">
