@@ -1,5 +1,9 @@
 import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MonthOutlook } from '../components/career/month-outlook'
+import { HorseFocus } from '../components/career/horse-focus'
 import assert from 'node:assert/strict'
 import {
   horses,
@@ -37,6 +41,31 @@ test('84 months per horse preserve bounded stats, calendar order, replay idempot
       )
       const outlook = careerOutlook(career)
       assert.deepEqual(outlook.progress, progress)
+      if ([12, 13, 60, 61].includes(turn)) {
+        const beforeRender = structuredClone(career)
+        const markup = renderToStaticMarkup(createElement(MonthOutlook, { career }))
+        const text = markup.replace(/<[^>]+>/g, '')
+        assert.ok(text.includes(progress.extended ? `${turn}턴 · 연장 육성` : `${turn} / 60턴`))
+        assert.ok(
+          text.includes(
+            `${progress.seasonIndex}년 차 · ${progress.seasonTurn}/12개월 · ${career.age}세`,
+          ),
+        )
+        assert.ok(text.includes(`${outlook.nextRace!.month}턴`))
+        assert.ok(text.includes('다음 시즌 게임용 경주 일정'))
+        assert.ok(text.includes('개최국 대한민국'))
+        assert.ok(text.includes('일본') && text.includes('미국'))
+        assert.doesNotMatch(text, /예정된 경주가 없습니다/)
+        assert.doesNotMatch(markup, /aria-valuenow="(?:6[1-9]|[7-9]\d)"|width:10[1-9]%/)
+        if (turn >= 60) {
+          assert.match(markup, /aria-valuenow="60"/)
+          assert.match(markup, /width:100%/)
+          assert.ok(text.includes('63턴'))
+        }
+        const focus = renderToStaticMarkup(createElement(HorseFocus, { career }))
+        assert.ok(focus.includes(`${career.age}세`))
+        assert.deepEqual(career, beforeRender)
+      }
       assert.equal(outlook.nextRace?.month, Math.ceil(turn / 3) * 3)
       assert.equal(
         outlook.nextRace?.openRaces,

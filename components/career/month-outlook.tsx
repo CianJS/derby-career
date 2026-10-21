@@ -1,9 +1,20 @@
 'use client'
 
 import { useCareer, stableTravel, stableFunds } from '@/lib/career/store'
-import { localRacesForTurn, raceEligibility, entryRestriction } from '@/lib/career/race-entry'
+import {
+  localRacesForTurn,
+  raceEligibility,
+  entryRestriction,
+  raceMonths,
+  nextSeasonRaceTurn,
+  careerProgress,
+  CAREER_SEASON_TURNS,
+  careerOutlook,
+  type Readiness,
+} from '@/packages/shared/src/domain'
+import { countryName } from '@/lib/career/local-travel'
+import { CareerProgressView, SeasonSummary } from './career-progress'
 import { CalendarClock, Flag, HeartPulse, TrendingUp } from 'lucide-react'
-import { careerOutlook, type Readiness } from '@/lib/career/outlook'
 import type { Career } from '@/lib/career/model'
 import { cn } from '@/lib/utils'
 
@@ -14,9 +25,12 @@ const readinessTone: Record<Readiness['level'], string> = {
 }
 
 export function MonthOutlook({ career }: { career: Career }) {
-  const { month, yearMonths, nextRace, readiness, growth } = careerOutlook(career)
   const state = useCareer()
   const travel = stableTravel(state)
+  const { progress, nextRace, readiness, growth } = careerOutlook(career, {
+    availableFunds: stableFunds(state) ?? undefined,
+    travel: travel ?? undefined,
+  })
   const current = nextRace?.monthsAway === 0
   const localRaces = localRacesForTurn(career.careerTurnIndex)
   const count =
@@ -31,7 +45,18 @@ export function MonthOutlook({ career }: { career: Career }) {
         : nextRace
           ? `${nextRace.openRaces} / ${nextRace.totalRaces}`
           : null
-  const progress = Math.min(100, (month / yearMonths) * 100)
+  const raceCountries = (turn: number) =>
+    [
+      ...new Set(
+        (state.mode === 'server' && turn === career.careerTurnIndex && state.raceOptions
+          ? state.raceOptions.races.map((row) => row.definition)
+          : localRacesForTurn(turn)
+        ).map((race) => countryName(race.countryCode ?? 'KOR')),
+      ),
+    ].join(' · ')
+  const nextSeasonStart = nextSeasonRaceTurn(progress.turn, [CAREER_SEASON_TURNS])! + 1
+  const nextSeason = careerProgress(nextSeasonStart)
+  const seasonSchedule = raceMonths.map((month) => nextSeasonRaceTurn(nextSeasonStart, [month])!)
   const raceLine = !nextRace
     ? '예정된 경주가 없습니다.'
     : nextRace.monthsAway === 0
@@ -51,12 +76,9 @@ export function MonthOutlook({ career }: { career: Career }) {
             <CalendarClock size={13} aria-hidden />
             육성 진행
           </dt>
-          <dd className="mt-1 text-sm font-semibold tabular-nums">
-            {month} / {yearMonths}개월
+          <dd>
+            <CareerProgressView progress={progress} />
           </dd>
-          <div aria-hidden className="lab-meter mt-1.5">
-            <i style={{ width: `${progress}%` }} />
-          </div>
         </div>
         <div className="min-w-0">
           <dt className="flex items-center gap-1.5 text-muted-foreground">
@@ -64,15 +86,21 @@ export function MonthOutlook({ career }: { career: Career }) {
             다음 경주
           </dt>
           <dd className="mt-1 text-sm font-semibold tabular-nums">
-            {nextRace ? `${nextRace.month}개월 차 · ${raceLine}` : raceLine}
+            {nextRace ? `${nextRace.month}턴 · ${raceLine}` : raceLine}
           </dd>
+          {nextRace && (
+            <p className="mt-0.5 text-muted-foreground">
+              <SeasonSummary progress={careerProgress(nextRace.month)} showAge={false} /> · 개최국{' '}
+              {raceCountries(nextRace.month)}
+            </p>
+          )}
           {nextRace && (
             <p className="mt-0.5 text-muted-foreground">
               {current
                 ? count
                   ? `현재 출전 가능 ${count}개`
                   : '출전 조건 확인 중…'
-                : '출전 시 국가·전적·잔액 조건을 확인합니다.'}
+                : `현재 조건 기준 전망 ${nextRace.openRaces} / ${nextRace.totalRaces}개 · 출전 시 국가·전적·잔액 조건을 다시 확인합니다.`}
             </p>
           )}
         </div>
@@ -107,6 +135,23 @@ export function MonthOutlook({ career }: { career: Career }) {
           )}
         </div>
       </dl>
+      <details className="mt-3 border-t border-border pt-3 text-xs">
+        <summary className="cursor-pointer font-semibold">
+          다음 시즌 게임용 경주 일정 · {nextSeason.seasonIndex}년 차
+        </summary>
+        <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+          {seasonSchedule.map((turn) => (
+            <li key={turn}>
+              {turn}턴 · <SeasonSummary progress={careerProgress(turn)} showAge={false} /> · 개최국{' '}
+              {raceCountries(turn)}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-muted-foreground">
+          기존 게임용 경주의 반복 일정입니다. 공식 참고 카탈로그와 별개이며 실제 출전 자격은 해당
+          턴의 건강·계약·전적·자금·체류 상태로 확인합니다.
+        </p>
+      </details>
     </section>
   )
 }

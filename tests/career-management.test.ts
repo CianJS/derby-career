@@ -43,6 +43,7 @@ test('management archive renders saved statistics and race history without subst
   const markup = renderToStaticMarkup(createElement(ArchivedHorseRecord, { horse, setView }))
   for (const text of [
     '보존된 경주마',
+    '4세',
     '621',
     '잔디',
     '2028.04',
@@ -56,6 +57,7 @@ test('management archive renders saved statistics and race history without subst
   }
   assert.doesNotMatch(markup, /출전 기록이 없습니다/)
   assert.equal(horse.raceRecords?.length, 1)
+  assert.equal(horse.age, '4세')
 })
 
 test('empty stable and horse history preserve their empty states', () => {

@@ -21,6 +21,7 @@ export function Horse({
 }) {
   const snapshot = useCareer()
   const { career } = snapshot
+  const age = career ? `${career.age}세` : horse.age
   const summary = summarizeRecords(horse.raceRecords)
   const stats = horse.stats
   const apt = horse.aptitude
@@ -29,13 +30,13 @@ export function Horse({
       <p className="ui-label text-primary">HORSE RECORD · FOCUS PLAY</p>
       <h1 className="ui-page-title mt-2 font-serif text-3xl">{horse.name}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        현재 육성마 · {horse.age} {horse.sex}
+        현재 육성마 · {age} {horse.sex}
       </p>
       <div className="mt-6">
         <Section eyebrow="BASIC / CAREER" title="기본 정보 · 커리어">
           <div className="grid grid-cols-2 md:grid-cols-4">
             {[
-              ['나이', horse.age],
+              ['나이', age],
               ['성별', horse.sex],
               ['출생지', '대한민국'],
               ['클래스', 'OPEN'],
