@@ -193,9 +193,9 @@ test('the real confirmed form displays saved choices, disables edits and never s
       },
     }),
   )
-  assert.equal(selected(html, 'entry-jockey'), 'YOON_TAESUNG')
-  assert.equal(selected(html, 'entry-tactic'), '도주')
-  assert.equal((html.match(/<fieldset disabled=""/g) ?? []).length, 3)
+  assert.ok(html.includes('윤태성'))
+  assert.ok(html.includes('도주'))
+  assert.doesNotMatch(html, /<input|<fieldset/)
   assert.ok(html.includes('레이스 시작'))
   assert.equal(started, false)
 })

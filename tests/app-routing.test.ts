@@ -352,6 +352,28 @@ test('actual App: settings preserves active career and duplicate-name archives; 
     await act(async () => jockey.click())
     assert.match(h.container.textContent!, /만료일 정보 없음/)
     assert.doesNotMatch(h.container.textContent!, /2029년|12월까지/)
+    const rows = [...h.container.querySelectorAll<HTMLElement>('[data-riding-record]')]
+    const archivedRow = rows.find((row) =>
+      fixture.lifecycle.archive.some((horse) => horse.id === row.dataset.horseId),
+    )!
+    assert.ok(archivedRow)
+    const originalHorse = fixture.lifecycle.archive.find(
+      (horse) => horse.id === archivedRow.dataset.horseId,
+    )!
+    const originalRun = archivedRow.dataset.raceRunId
+    await act(async () =>
+      archivedRow.querySelector<HTMLButtonElement>('[data-record-link="race"]')!.click(),
+    )
+    assert.equal(h.container.querySelector('h1')?.textContent, originalHorse.name)
+    assert.match(h.container.textContent!, /마구간에 보존된 은퇴 경주마/)
+    if (originalRun) {
+      assert.equal(
+        h.container.querySelector<HTMLElement>('[data-selected-record]')?.dataset.recordRaceRunId,
+        originalRun,
+      )
+    }
+    assert.doesNotMatch(h.container.textContent!, /선택한 경주 ID가 없습니다/)
+    assert.deepEqual(readBrowserSave().lifecycle?.archive, before.lifecycle?.archive)
     await h.reload()
     assert.deepEqual(readBrowserSave().career, before.career)
     assert.deepEqual(readBrowserSave().lifecycle?.archive, before.lifecycle?.archive)

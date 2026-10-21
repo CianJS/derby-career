@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useCareer } from '@/lib/career/store'
 import { summarizeRecords } from '@/lib/career/records'
 import type { View, CareerHorse } from './legacy-types'
@@ -10,18 +11,33 @@ import { storedTrust, jockeyTrust } from '@/lib/career/jockey-trust-presentation
 import { JockeyTrustValue, TrustChangeValue } from './jockey-trust'
 import { jockeys } from './legacy-catalog'
 
+function useRaceRecordFocus(raceRunId?: string) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!raceRunId || !ref.current) {
+      return
+    }
+    ref.current.focus({ preventScroll: true })
+    ref.current.scrollIntoView?.({ block: 'nearest' })
+  }, [raceRunId])
+  return ref
+}
+
 export function Horse({
   setView,
   onRetire,
   horse,
+  selectedRaceRunId,
 }: {
   setView: (v: View) => void
   onRetire: () => void
   horse: CareerHorse
+  selectedRaceRunId?: string
 }) {
   const snapshot = useCareer()
   const { career } = snapshot
   const age = career ? `${career.age}세` : horse.age
+  const selectedRecord = useRaceRecordFocus(selectedRaceRunId)
   const summary = summarizeRecords(horse.raceRecords)
   const stats = horse.stats
   const apt = horse.aptitude
@@ -110,29 +126,33 @@ export function Horse({
             {!horse.raceRecords?.length && (
               <p className="py-4 text-sm text-muted-foreground">경주 기록이 없습니다.</p>
             )}
-            {(horse.raceRecords ?? [])
-              .map((record) => [
-                record.date,
-                record.race,
-                record.grade ?? '—',
-                record.distance ? `${record.distance}m` : '—',
-                record.jockeyName ?? '—',
-                record.result,
-                `₩${(record.prizeMoney ?? 0).toLocaleString('ko-KR')}`,
-              ])
-              .map((r) => (
-                <button
-                  key={r[1]}
-                  onClick={() => setView('race')}
-                  className="grid min-w-[680px] w-full grid-cols-[100px_1.5fr_70px_80px_110px_70px_120px] border-b border-border px-3 py-3 text-left text-xs hover:bg-accent/40"
+            {(horse.raceRecords ?? []).map((record, index) => {
+              const selected = !!selectedRaceRunId && record.raceRunId === selectedRaceRunId
+              return (
+                <div
+                  key={record.raceRunId ?? index}
+                  data-record-race-run-id={record.raceRunId}
+                  data-selected-record={selected || undefined}
+                  ref={selected ? selectedRecord : undefined}
+                  tabIndex={selected ? -1 : undefined}
+                  className={`grid min-w-[680px] w-full grid-cols-[100px_1.5fr_70px_80px_110px_70px_120px] border-b border-border px-3 py-3 text-left text-xs ${selected ? 'bg-accent/40 ring-1 ring-primary' : ''}`}
                 >
-                  {r.map((v, i) => (
+                  {[
+                    record.date,
+                    record.race,
+                    record.grade ?? '—',
+                    record.distance ? `${record.distance}m` : '—',
+                    record.jockeyName ?? '—',
+                    record.result,
+                    `₩${(record.prizeMoney ?? 0).toLocaleString('ko-KR')}`,
+                  ].map((value, i) => (
                     <span key={i} className={i === 1 ? 'font-serif text-sm' : ''}>
-                      {v}
+                      {value}
                     </span>
                   ))}
-                </button>
-              ))}
+                </div>
+              )
+            })}
           </div>
         </Section>
         <div className="grid gap-5 md:grid-cols-2">
@@ -183,9 +203,11 @@ export function Horse({
 export function ArchivedHorseRecord({
   setView,
   horse,
+  selectedRaceRunId,
 }: {
   setView: (v: View) => void
   horse: CareerHorse
+  selectedRaceRunId?: string
 }) {
   return (
     <Management
@@ -255,12 +277,19 @@ export function ArchivedHorseRecord({
           ))}
         </div>
       </Section>
-      <ArchivedHorseHistory horse={horse} />
+      <ArchivedHorseHistory horse={horse} selectedRaceRunId={selectedRaceRunId} />
     </Management>
   )
 }
 
-function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
+function ArchivedHorseHistory({
+  horse,
+  selectedRaceRunId,
+}: {
+  horse: CareerHorse
+  selectedRaceRunId?: string
+}) {
+  const selectedRecord = useRaceRecordFocus(selectedRaceRunId)
   const trust = useArchivedRelations(horse.id, horse.jockeyTrust)
   const records = horse.raceRecords ?? []
   const relations = Array.from(
@@ -311,7 +340,17 @@ function ArchivedHorseHistory({ horse }: { horse: CareerHorse }) {
             {records.map((r, i) => (
               <div
                 key={r.raceRunId ?? `${r.date}-${i}`}
-                className="grid min-w-[680px] grid-cols-[80px_1.4fr_60px_70px_1fr_60px_1fr] gap-2 border-b border-border px-3 py-2.5 text-xs"
+                data-record-race-run-id={r.raceRunId}
+                data-selected-record={
+                  (!!selectedRaceRunId && r.raceRunId === selectedRaceRunId) || undefined
+                }
+                ref={
+                  selectedRaceRunId && r.raceRunId === selectedRaceRunId
+                    ? selectedRecord
+                    : undefined
+                }
+                tabIndex={selectedRaceRunId && r.raceRunId === selectedRaceRunId ? -1 : undefined}
+                className="focus:bg-accent/40 focus:ring-1 focus:ring-primary grid min-w-[680px] grid-cols-[80px_1.4fr_60px_70px_1fr_60px_1fr] gap-2 border-b border-border px-3 py-2.5 text-xs"
               >
                 <span className="tabular-nums text-muted-foreground">{r.date}</span>
                 <span className="font-serif">
