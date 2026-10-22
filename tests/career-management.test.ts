@@ -75,7 +75,7 @@ test('empty stable and horse history preserve their empty states', () => {
 })
 
 test('race catalog waits for public API and jockey UI never invents contracts', () => {
-  const races = renderToStaticMarkup(createElement(Races, { setView }))
+  const races = renderToStaticMarkup(createElement(Races, { setView, onGameplay: () => {} }))
   assert.match(races, /공개 경주 카탈로그 조회 중/)
   assert.doesNotMatch(races, /한신 컵|사츠키상|NHK 마일컵|오사카배/)
   const jockeys = renderToStaticMarkup(createElement(Jockeys, { setView, onSelect: () => {} }))

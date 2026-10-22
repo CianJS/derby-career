@@ -129,6 +129,17 @@ export function catalogUrl(href: string, query: Query, id: string | null = null)
   }
   return url
 }
+export type GameplayView = 'home' | 'training' | 'entry'
+export function readGameplayView(value: unknown): GameplayView | null {
+  return value === 'home' || value === 'training' || value === 'entry' ? value : null
+}
+/** Keep catalog filters for the return trip, but never forward a reference race ID into gameplay. */
+export function gameplayUrl(href: string) {
+  const url = new URL(href)
+  url.searchParams.delete('view')
+  url.searchParams.delete('raceId')
+  return url
+}
 export function dateText(race: Race) {
   return race.scheduleStatus === 'dated' && race.raceDate
     ? race.raceDate
