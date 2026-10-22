@@ -131,17 +131,21 @@ application; server credentials are never passed into browser requests or report
 
 ## Runtime baseline
 
-The successful [baseline run 39588622955](https://github.com/CianJS/derby-career/actions/runs/39588622955)
-uses the same code tree as the starting `develop` commit `f3d23aa`:
+The successful [baseline run 39619839636](https://github.com/CianJS/derby-career/actions/runs/39619839636)
+uses the same code tree as the merged `develop` commit `d9180c3`:
 
-| Measurement                    | Baseline                |
-| ------------------------------ | ----------------------- |
-| Whole `catalog-chromium` job   | 687 seconds (11m 27s)   |
-| Real HTTP E2E step             | 576 seconds (9m 36s)    |
-| Five fixed quota sleeps        | 305 seconds (5m 5s)     |
-| Container startup / Next build | 54 seconds / 13 seconds |
+| Measurement                  | Baseline              |
+| ---------------------------- | --------------------- |
+| Whole `catalog-chromium` job | 680 seconds (11m 20s) |
+| Real HTTP E2E step           | 582 seconds (9m 42s)  |
+| Five fixed quota sleeps      | 305 seconds (5m 5s)   |
 
-The fixed sleeps account for about 53% of the E2E step. Optimized full-suite timings
-are pending measurement; compare successful runs with all 72 tests and the same
-Chromium image. Do not equate a focused project, skipped tests or a local system
-Chromium run with full CI validation.
+The fixed sleeps account for about 52% of the E2E step. The optimized local suite
+passed all 72 tests with no skips or retries: Playwright took 232.4 seconds and the
+runner, including service startup and cleanup, took 244.5 seconds. That run used
+Node.js 24 and system Chromium, before the latest `develop` merge; it is functional
+evidence, not a like-for-like CI speed comparison.
+
+Compare successful full CI runs using the same Chromium image. The PR records the
+optimized CI run and its job/E2E-step timings; artifacts retain per-test and runner
+durations. Do not equate a focused project or skipped tests with full CI validation.
