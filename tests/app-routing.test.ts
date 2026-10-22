@@ -6,10 +6,12 @@ import { JSDOM } from 'jsdom'
 import { act, createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NoticeCenter, NoticeList, NoticeDetails } from '../components/notices/notice-center'
+import { catalogGameplayTarget } from '../components/career/catalog-gameplay-bridge'
+import { gameplayUrl, readGameplayView } from '../lib/race-catalog/model'
 import { updateNotices, noticeCenterDescription } from '../lib/notices/updates'
 import type { Root } from 'react-dom/client'
 import type { components } from '../packages/shared/src/generated/api'
-import { horses } from '../lib/career/model'
+import { horses, commitAction } from '../lib/career/model'
 import { buildFixture } from '../lib/career/fixtures'
 import { parseSaveWorkspace, type SaveWorkspace } from '../lib/server-save/workspace'
 import { validateRaceEntryOptions } from '../packages/shared/src/generated/save-validation.mjs'
@@ -516,6 +518,233 @@ function activeServerWorkspace() {
     confirmedActionId: null,
     retirements: [],
     pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+  })
+}
+
+test('catalog gameplay destinations use current Local/Server authority and keep unknown states unconfirmed', () => {
+  const fixture = managementFixture()
+  const career = { ...fixture.career, month: 3, careerTurnIndex: 3 }
+  const local: ReturnType<typeof careerStore.getSnapshot> = {
+    ready: true,
+    busy: false,
+    pending: false,
+    error: null,
+    mode: 'local',
+    career,
+    workspace: null,
+    raceOptions: null,
+    candidates: [],
+    localCareerId: 'local',
+    lifecycle: {
+      ...fixture.lifecycle,
+      lifecycleView: 'home',
+      fundsKRW: 20_000_000,
+      travel: {
+        homeCountry: 'KOR',
+        locationCountry: 'KOR',
+        activeExpedition: null,
+        revision: 0,
+      },
+    },
+  }
+  const before = JSON.stringify(local)
+  assert.equal(catalogGameplayTarget(local).view, 'entry')
+  assert.equal(
+    catalogGameplayTarget({ ...local, career: commitAction(career, 'rest') }).view,
+    'training',
+  )
+  assert.equal(catalogGameplayTarget({ ...local, career: null }).view, 'home')
+  assert.match(catalogGameplayTarget({ ...local, career: null }).reason, /육성마가 필요/)
+  assert.equal(
+    catalogGameplayTarget({ ...local, career: { ...career, month: 4, careerTurnIndex: 4 } }).view,
+    'training',
+  )
+  assert.equal(
+    catalogGameplayTarget({ ...local, career: { ...career, contractedJockeyIds: [] } }).view,
+    'training',
+  )
+  assert.equal(
+    catalogGameplayTarget({ ...local, career: { ...career, health: '중상' } }).view,
+    'training',
+  )
+  assert.equal(
+    catalogGameplayTarget({ ...local, career: buildFixture('playback-12').career! }).view,
+    'training',
+  )
+  assert.equal(catalogGameplayTarget({ ...local, ready: false }).disabled, true)
+  assert.equal(catalogGameplayTarget({ ...local, pending: true }).disabled, true)
+  const workspace = activeServerWorkspace()
+  delete workspace.career!.state.raceRun
+  const server = { ...local, mode: 'server' as const, workspace, career: workspace.career!.state }
+  assert.equal(catalogGameplayTarget(server).view, 'training')
+  assert.match(catalogGameplayTarget(server).reason, /아직 확인하지 못/)
+  const options: Models['RaceEntryOptions'] = {
+    career: workspace.career!,
+    defaultEngineVersion: 'race-sim-v3',
+    restrictionReason: null,
+    races: racesForTurn(3).map((definition) => ({
+      sourceKind: 'development_fixture',
+      definition,
+      eligible: true,
+      restrictionReason: null,
+    })),
+    jockeys: contractedJockeys,
+    tactics: ['도주', '선행', '선입', '추입'],
+  }
+  assert.equal(catalogGameplayTarget({ ...server, raceOptions: options }).view, 'entry')
+  assert.equal(
+    catalogGameplayTarget({
+      ...server,
+      raceOptions: { ...options, races: options.races.map((row) => ({ ...row, eligible: false })) },
+    }).view,
+    'training',
+  )
+  assert.equal(
+    catalogGameplayTarget({
+      ...server,
+      raceOptions: { ...options, restrictionReason: '서버 제한' },
+    }).reason,
+    '서버 제한',
+  )
+  assert.equal(catalogGameplayTarget({ ...server, workspace: null }).disabled, true)
+  assert.equal(
+    catalogGameplayTarget({ ...server, error: '연결 실패', raceOptions: options }).view,
+    'training',
+  )
+  assert.match(catalogGameplayTarget({ ...server, error: '연결 실패' }).reason, /연결 실패/)
+  assert.equal(JSON.stringify(local), before)
+  const url = gameplayUrl('https://derby.test' + detailPath)
+  assert.equal(url.searchParams.has('raceId'), false)
+  assert.equal(url.searchParams.has('view'), false)
+  assert.equal(url.searchParams.get('rc_page'), '9')
+  assert.equal(url.searchParams.get('other'), 'keep')
+  assert.equal(readGameplayView('race'), null)
+})
+
+for (const mode of ['local', 'server'] as const) {
+  test(`actual App ${mode}: reference list/detail bridge reaches real entry and restores catalog URL, focus and scroll`, async () => {
+    const fixture = managementFixture()
+    const career = { ...fixture.career, month: 3, careerTurnIndex: 3 }
+    const workspace = activeServerWorkspace()
+    workspace.career!.state = {
+      ...workspace.career!.state,
+      month: 3,
+      careerTurnIndex: 3,
+      action: null,
+    }
+    delete workspace.career!.state.raceRun
+    const options: Models['RaceEntryOptions'] = {
+      career: workspace.career!,
+      defaultEngineVersion: 'race-sim-v3',
+      restrictionReason: null,
+      races: racesForTurn(3).map((definition) => ({
+        sourceKind: 'development_fixture',
+        definition,
+        eligible: true,
+        restrictionReason: null,
+      })),
+      jockeys: contractedJockeys,
+      tactics: ['도주', '선행', '선입', '추입'],
+    }
+    const h = await harness(
+      mode,
+      '/?view=races&rc_page=9&rc_pageSize=100&other=keep',
+      mode === 'server' ? workspace : undefined,
+      mode === 'local'
+        ? () => writeBrowserSave({ career, lifecycle: fixture.lifecycle })
+        : undefined,
+      options,
+    )
+    try {
+      await h.waitFor(() => !!h.container.querySelector('tbody button'))
+      await h.waitFor(
+        () =>
+          h.container
+            .querySelector<HTMLButtonElement>('#catalog-gameplay-bridge')
+            ?.textContent?.trim() === '게임 경주 출전 준비',
+      )
+      const before = readBrowserSave()
+      const scrolls: number[] = []
+      h.dom.window.scrollTo = (_x?: number | ScrollToOptions, y?: number) => {
+        if (y !== undefined) {
+          scrolls.push(y)
+        }
+      }
+      Object.defineProperty(h.dom.window, 'scrollY', { value: 321, configurable: true })
+      h.container.querySelector<HTMLElement>('#race-catalog-table')!.scrollLeft = 27
+      await act(async () =>
+        h.container.querySelector<HTMLButtonElement>('#catalog-gameplay-bridge')!.click(),
+      )
+      await h.waitFor(() => !!h.container.querySelector('input[name="entry-race"]'))
+      assert.equal(new URLSearchParams(h.dom.window.location.search).has('raceId'), false)
+      assert.equal(new URLSearchParams(h.dom.window.location.search).get('rc_page'), '9')
+      assert.ok(
+        [...h.container.querySelectorAll<HTMLInputElement>('input[name="entry-race"]')].every(
+          (input) => input.value.startsWith('DEV_'),
+        ),
+      )
+      assert.deepEqual(readBrowserSave(), before)
+      await act(async () => {
+        h.dom.window.history.back()
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      await h.waitFor(() => !!h.container.querySelector('tbody button'))
+      await h.waitFor(() => h.dom.window.document.activeElement?.id === 'catalog-gameplay-bridge')
+      assert.equal(h.container.querySelector<HTMLElement>('#race-catalog-table')!.scrollLeft, 27)
+      assert.ok(scrolls.includes(321))
+      const selected = h.container.querySelector<HTMLButtonElement>('tbody button')!
+      const selectedId = selected.id.slice('catalog-'.length)
+      await act(async () => selected.click())
+      await h.waitFor(
+        () =>
+          h.container.querySelector('h1')?.textContent ===
+          catalog.races.find((row) => row.id === selectedId)!.name,
+      )
+      const detailUrl = h.dom.window.location.href
+      await act(async () =>
+        h.container.querySelector<HTMLButtonElement>('#catalog-gameplay-bridge')!.click(),
+      )
+      await h.waitFor(() => !!h.container.querySelector('input[name="entry-race"]'))
+      assert.equal(new URLSearchParams(h.dom.window.location.search).get('raceId'), null)
+      await act(async () => {
+        h.dom.window.history.back()
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      await h.waitFor(() => h.dom.window.document.activeElement?.id === 'catalog-gameplay-bridge')
+      assert.equal(h.dom.window.location.href, detailUrl)
+      await act(async () => {
+        h.dom.window.history.forward()
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      await h.waitFor(() => !!h.container.querySelector('input[name="entry-race"]'))
+      await h.reload()
+      await h.waitFor(() => !!h.container.querySelector('input[name="entry-race"]'))
+      assert.deepEqual(readBrowserSave(), before)
+      // Public catalog failure cannot block the independent, already-confirmed gameplay state.
+      await act(async () => {
+        h.dom.window.history.back()
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      await h.waitFor(() => !!h.container.querySelector('#catalog-gameplay-bridge'))
+      const delegate = activeFetch
+      activeFetch = async (input, init) =>
+        String(input).includes('/api/racing-catalog/')
+          ? Response.json(
+              { error: { code: 'CATALOG_UNAVAILABLE', message: '참고 도감 연결 실패' } },
+              { status: 503 },
+            )
+          : delegate(input, init)
+      await h.reload()
+      await h.waitFor(() => !!h.container.querySelector('[role="alert"]'))
+      assert.match(h.container.textContent!, /현재 게임 출전 대상 아님/)
+      const bridge = h.container.querySelector<HTMLButtonElement>('#catalog-gameplay-bridge')!
+      assert.equal(bridge.disabled, false)
+      await act(async () => bridge.click())
+      await h.waitFor(() => !!h.container.querySelector('input[name="entry-race"]'))
+      assert.deepEqual(readBrowserSave(), before)
+    } finally {
+      await h.close()
+    }
   })
 }
 

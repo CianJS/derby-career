@@ -13,6 +13,7 @@ import {
   dateText,
   readLocation,
   selectedCourse,
+  type GameplayView,
   surfaces,
   type Query,
   type Race as CatalogRace,
@@ -24,6 +25,7 @@ import type { View } from './legacy-types'
 import { Section } from './presentation'
 import { Management } from './management'
 import { RaceCatalogFilters } from './race-catalog-filters'
+import { CatalogGameplayBridge } from './catalog-gameplay-bridge'
 
 type Page = components['schemas']['RaceScheduleList']
 export function CatalogStatus({
@@ -69,7 +71,13 @@ function useLocation() {
   }, [])
   const change = (query: Query) => {
     history.pushState(
-      { ...history.state, raceCatalogScroll: 0, raceCatalogTableScroll: 0, raceCatalogFocus: null },
+      {
+        ...history.state,
+        raceCatalogScroll: 0,
+        raceCatalogTableScroll: 0,
+        raceCatalogFocus: null,
+        catalogGameplayFocus: false,
+      },
       '',
       catalogUrl(window.location.href, query),
     )
@@ -78,7 +86,13 @@ function useLocation() {
   }
   return { location, error, change }
 }
-export function Races({ setView }: { setView: (view: View) => void }) {
+export function Races({
+  setView,
+  onGameplay,
+}: {
+  setView: (view: View) => void
+  onGameplay: (view: GameplayView) => void
+}) {
   const { location, error, change } = useLocation()
   const query = location?.query ?? defaultQuery
   const load = useCallback((client: Client) => client.list(query), [query])
@@ -90,7 +104,11 @@ export function Races({ setView }: { setView: (view: View) => void }) {
   const venues = useResource(location ? `venues:${query.country ?? ''}` : null, loadVenues)
   const restored = useRef(false)
   useEffect(() => {
-    if (resource.status !== 'ready' || restored.current) {
+    if (
+      (resource.status !== 'ready' &&
+        !(resource.status === 'error' && history.state?.catalogGameplayFocus)) ||
+      restored.current
+    ) {
       return
     }
     const frame = requestAnimationFrame(() => {
@@ -100,7 +118,9 @@ export function Races({ setView }: { setView: (view: View) => void }) {
       if (table) {
         table.scrollLeft = Number(history.state?.raceCatalogTableScroll) || 0
       }
-      if (id) {
+      if (history.state?.catalogGameplayFocus) {
+        document.getElementById('catalog-gameplay-bridge')?.focus({ preventScroll: true })
+      } else if (id) {
         document.getElementById('catalog-' + id)?.focus({ preventScroll: true })
       }
       window.scrollTo(0, Number(history.state?.raceCatalogScroll) || 0)
@@ -113,6 +133,7 @@ export function Races({ setView }: { setView: (view: View) => void }) {
       eyebrow="RACE DATABASE"
       description="실제 개최 연도의 공개 참고 자료입니다. 육성마의 출전 후보 및 게임 달력과는 별개입니다."
     >
+      <CatalogGameplayBridge onNavigate={onGameplay} />
       {error ? (
         <div role="alert">
           {error}
@@ -147,6 +168,7 @@ export function Races({ setView }: { setView: (view: View) => void }) {
                     raceCatalogTableScroll:
                       document.getElementById('race-catalog-table')?.scrollLeft ?? 0,
                     raceCatalogFocus: race.id,
+                    catalogGameplayFocus: false,
                   },
                   '',
                 )
@@ -316,7 +338,13 @@ export function RaceCatalogList({
     </section>
   )
 }
-export function Race({ setView }: { setView: (view: View) => void }) {
+export function Race({
+  setView,
+  onGameplay,
+}: {
+  setView: (view: View) => void
+  onGameplay: (view: GameplayView) => void
+}) {
   const { location, error } = useLocation()
   const id = location?.id ?? null
   const load = useCallback((client: Client) => client.race(id!), [id])
@@ -324,16 +352,33 @@ export function Race({ setView }: { setView: (view: View) => void }) {
   const venueId = resource.status === 'ready' ? resource.data.racecourseId : null
   const loadVenue = useCallback((client: Client) => client.venue(venueId!), [venueId])
   const venue = useResource(venueId, loadVenue)
+  const restored = useRef(false)
+  useEffect(() => {
+    if (
+      restored.current ||
+      !history.state?.catalogGameplayFocus ||
+      (resource.status !== 'ready' && resource.status !== 'error')
+    ) {
+      return
+    }
+    const frame = requestAnimationFrame(() => {
+      restored.current = true
+      document.getElementById('catalog-gameplay-bridge')?.focus({ preventScroll: true })
+      window.scrollTo(0, Number(history.state?.raceCatalogDetailScroll) || 0)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [resource])
   return (
     <Management
       title={resource.status === 'ready' ? resource.data.name : '경주 상세'}
       eyebrow="RACE DETAIL"
       description="서버에 수집된 원문 조건과 코스 정보만 표시합니다. 게임 출전 대상이 아닙니다."
     >
+      <CatalogGameplayBridge onNavigate={onGameplay} />
       <button
         onClick={() => {
           history.replaceState(
-            history.state,
+            { ...history.state, catalogGameplayFocus: false },
             '',
             catalogUrl(window.location.href, location?.query ?? defaultQuery),
           )

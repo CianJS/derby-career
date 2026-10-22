@@ -20,6 +20,7 @@ import { jockeys } from './career/legacy-catalog'
 import { Stable } from './career/stable'
 import { StableSettings } from './career/stable-settings'
 import { Horse, ArchivedHorseRecord } from './career/horse-record'
+import { gameplayUrl, readGameplayView, type GameplayView } from '@/lib/race-catalog/model'
 import { Races, Race } from './career/race-catalog'
 import { Jockeys, Jockey } from './career/jockey-record'
 
@@ -463,13 +464,27 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
       url.searchParams.delete('view')
       url.searchParams.delete('raceId')
     }
-    if (url.href !== window.location.href) { history.replaceState(history.state, '', url) }
+    if (url.href !== window.location.href || history.state?.catalogGameplayView) { history.replaceState({ ...history.state, catalogGameplayView: null }, '', url) }
     updateView(next)
   }, []);
+  const openCatalogGameplay = useCallback((next: GameplayView) => {
+    const detail = new URLSearchParams(window.location.search).get('view') === 'race'
+    history.replaceState({
+      ...history.state,
+      catalogGameplayFocus: true,
+      ...(detail ? { raceCatalogDetailScroll: window.scrollY } : {
+        raceCatalogScroll: window.scrollY,
+        raceCatalogTableScroll: document.getElementById('race-catalog-table')?.scrollLeft ?? 0,
+      }),
+    }, '')
+    history.pushState({ ...history.state, catalogGameplayView: next, catalogGameplayFocus: false }, '', gameplayUrl(window.location.href))
+    updateView(next)
+    window.scrollTo(0, 0)
+  }, [])
   useEffect(() => {
     const restore = () => {
       const requested = new URLSearchParams(window.location.search).get('view')
-      updateView(requested === 'race' || requested === 'races' ? requested : 'home')
+      updateView(requested === 'race' || requested === 'races' ? requested : readGameplayView(history.state?.catalogGameplayView) ?? 'home')
     }
     window.addEventListener('popstate', restore)
     return () => window.removeEventListener('popstate', restore)
@@ -504,6 +519,8 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
     // Restore once without invoking navigation's URL cleanup. Public routes are mode-independent.
     if (requested === 'races' || requested === 'race') {
       updateView(requested)
+    } else if (readGameplayView(history.state?.catalogGameplayView)) {
+      updateView(readGameplayView(history.state?.catalogGameplayView)!)
     } else if (requested && (saveMode === 'server'
       ? ['training', 'candidates', 'stable', 'horse'].includes(requested)
       : process.env.NODE_ENV !== 'production' && (VIEW_NAMES as readonly string[]).includes(requested))) {
@@ -751,8 +768,8 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           {view === "jockeys" && <Jockeys setView={setView} onSelect={setSelectedJockeyId} />}{" "}
           {view === "jockey" && <Jockey setView={setView} onSelectHorse={openHorseRecord} jockeyId={selectedJockeyId} horses={[...(state.activeHorse ? [state.activeHorse] : []), ...state.archive]} />}
           </>}
-          {view === 'races' && <Races setView={setView} />}
-          {view === 'race' && <Race setView={setView} />}
+          {view === 'races' && <Races setView={setView} onGameplay={openCatalogGameplay} />}
+          {view === 'race' && <Race setView={setView} onGameplay={openCatalogGameplay} />}
         </main>
       </div>
     </div>
