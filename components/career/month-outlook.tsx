@@ -12,6 +12,7 @@ import {
   careerOutlook,
   type Readiness,
 } from '@/packages/shared/src/domain'
+import { GameRaceSources, GameRaceDisclosure } from './game-race-source'
 import { TravelRaceNotice } from './expedition-availability'
 import { countryName } from '@/lib/career/local-travel'
 import { CareerProgressView, SeasonSummary } from './career-progress'
@@ -46,15 +47,12 @@ export function MonthOutlook({ career }: { career: Career }) {
         : nextRace
           ? `${nextRace.openRaces} / ${nextRace.totalRaces}`
           : null
+  const racesAt = (turn: number) =>
+    state.mode === 'server' && turn === career.careerTurnIndex
+      ? (state.raceOptions?.races.map((row) => row.definition) ?? [])
+      : localRacesForTurn(turn)
   const raceCountries = (turn: number) =>
-    [
-      ...new Set(
-        (state.mode === 'server' && turn === career.careerTurnIndex && state.raceOptions
-          ? state.raceOptions.races.map((row) => row.definition)
-          : localRacesForTurn(turn)
-        ).map((race) => countryName(race.countryCode ?? 'KOR')),
-      ),
-    ].join(' · ')
+    [...new Set(racesAt(turn).map((race) => countryName(race.countryCode ?? 'KOR')))].join(' · ')
   const nextSeasonStart = nextSeasonRaceTurn(progress.turn, [CAREER_SEASON_TURNS])! + 1
   const nextSeason = careerProgress(nextSeasonStart)
   const seasonSchedule = raceMonths.map((month) => nextSeasonRaceTurn(nextSeasonStart, [month])!)
@@ -105,6 +103,11 @@ export function MonthOutlook({ career }: { career: Career }) {
             </p>
           )}
           {nextRace && (
+            <p className="mt-1">
+              <GameRaceSources races={racesAt(nextRace.month)} />
+            </p>
+          )}
+          {nextRace && (
             <TravelRaceNotice
               races={
                 state.mode === 'server' && current
@@ -145,6 +148,7 @@ export function MonthOutlook({ career }: { career: Career }) {
           )}
         </div>
       </dl>
+      <GameRaceDisclosure />
       <details className="mt-3 border-t border-border pt-3 text-xs">
         <summary className="cursor-pointer font-semibold">
           다음 시즌 게임용 경주 일정 · {nextSeason.seasonIndex}년 차
@@ -153,7 +157,7 @@ export function MonthOutlook({ career }: { career: Career }) {
           {seasonSchedule.map((turn) => (
             <li key={turn}>
               {turn}턴 · <SeasonSummary progress={careerProgress(turn)} showAge={false} /> · 개최국{' '}
-              {raceCountries(turn)}
+              {raceCountries(turn)} <GameRaceSources races={racesAt(turn)} />
             </li>
           ))}
         </ul>

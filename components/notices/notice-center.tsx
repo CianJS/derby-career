@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { Bell, ChevronRight, X } from 'lucide-react'
-import { updateNotices, type UpdateNotice } from '@/lib/notices/updates'
+import { updateNotices, noticeCenterDescription, type UpdateNotice } from '@/lib/notices/updates'
 
 export function NoticeList({ onSelect }: { onSelect: (notice: UpdateNotice) => void }) {
   return (
@@ -10,9 +10,7 @@ export function NoticeList({ onSelect }: { onSelect: (notice: UpdateNotice) => v
       {updateNotices.map((notice) => (
         <li key={notice.id}>
           <button type="button" onClick={() => onSelect(notice)} className="lab-notice-item">
-            <span className="lab-notice-meta">
-              {notice.category} · <time dateTime={notice.date}>{notice.date}</time>
-            </span>
+            <span className="lab-notice-meta">{notice.category}</span>
             <span className="lab-notice-item-title">
               {notice.title}
               <ChevronRight size={16} aria-hidden />
@@ -88,12 +86,12 @@ export function NoticeCenter() {
         className="relative rounded-lg p-2 hover:bg-accent"
       >
         <Bell size={17} aria-hidden />
-        <i aria-hidden className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />
       </button>
       <dialog
         id={id}
         ref={dialog}
         aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-description`}
         className={selected ? 'lab-notice-dialog' : 'lab-notice-dialog lab-notice-panel'}
         onKeyDown={(event) => {
           if (event.key !== 'Tab') {
@@ -141,7 +139,7 @@ export function NoticeCenter() {
             <div className="lab-notice-heading">
               <div>
                 <p className="ui-label text-primary">
-                  {selected ? `${selected.category} · ${selected.date}` : 'STABLE NOTICE'}
+                  {selected?.category ?? '공지·업데이트 / 이용 안내'}
                 </p>
                 <h2 ref={title} tabIndex={-1} id={`${id}-title`} className="mt-2 text-xl font-bold">
                   {selected?.title ?? '공지 & 업데이트'}
@@ -156,7 +154,9 @@ export function NoticeCenter() {
                 <X size={18} aria-hidden />
               </button>
             </div>
-            <p className="lab-notice-example">화면 확인용 임시 공지입니다.</p>
+            <p id={`${id}-description`} className="lab-notice-example">
+              {noticeCenterDescription}
+            </p>
             {selected ? (
               <>
                 <NoticeDetails notice={selected} />
