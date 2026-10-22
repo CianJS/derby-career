@@ -1,6 +1,6 @@
-import { setTimeout as delay } from 'node:timers/promises'
 import { test, expect } from '@playwright/test'
 import { BROWSER_SAVE_KEY } from '../../lib/career/browser-save'
+import { restartSaveApi } from './catalog-control'
 
 test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion receipt, duplicate completion and retirement', async ({
   page,
@@ -8,6 +8,7 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
   test.setTimeout(180_000)
   const base = process.env.E2E_SERVER_BASE_URL
   expect(base, 'Use the isolated development-session runner').toBeTruthy()
+  await restartSaveApi()
   const posts: { path: string; body: Record<string, unknown> }[] = []
   page.on('request', (request) => {
     if (
@@ -39,12 +40,9 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
   await expect(headerFunds()).toHaveText('₩20,000,000')
   for (let month = 1; month <= 6; month++) {
     if (month === 4) {
-      // Six months of accelerated clicks plus development StrictMode reads can exceed
-      // the real 120/minute API quota. Respect its window; never raise the server limit.
-      const cooldownUntil = Date.now() + 61_000
-      while (Date.now() < cooldownUntil) {
-        await delay(Math.min(10_000, cooldownUntil - Date.now()))
-      }
+      // Completed commands survive a fresh test API process without waiting out a
+      // quota window. The database/session and production 120/minute limit stay intact.
+      await restartSaveApi()
       await page.setViewportSize({ width: 1440, height: 900 })
     }
     if (month !== 3 && month !== 6) {
