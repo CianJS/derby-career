@@ -20,7 +20,8 @@ if (
 }
 const apiUrl = 'http://127.0.0.1:4000'
 const nextUrl = 'http://127.0.0.1:3000'
-const controlDir = resolve(artifacts, 'control')
+const runId = randomUUID()
+const controlRoot = resolve(artifacts, 'control', runId)
 const apiEnv = {
   ...process.env,
   NODE_ENV: 'production',
@@ -29,13 +30,32 @@ const apiEnv = {
   HOST: '127.0.0.1',
   PORT: '4000',
 }
-let api
+// Projects own separate APIs and mailboxes. An outage/reset in one project must
+// never stop the other's server or overwrite its pending control command.
+const apis = {
+  catalog: {
+    url: apiUrl,
+    env: apiEnv,
+    controlDir: resolve(controlRoot, 'catalog'),
+    starts: 0,
+    commandId: null,
+    process: null,
+  },
+  save: {
+    url: 'http://127.0.0.1:4001',
+    env: null,
+    controlDir: resolve(controlRoot, 'save'),
+    starts: 0,
+    commandId: null,
+    process: null,
+  },
+}
 let devToken
-let apiStarts = 0
-let controlId = null
 const children = []
 const streams = []
 const startedAt = new Date().toISOString()
+const started = performance.now()
+let testsStarted
 let stopping = false
 let interrupted = false
 
@@ -99,56 +119,69 @@ function assertServers() {
   }
 }
 
-function startApi() {
-  api = start(`api-${++apiStarts}`, ['dist/server.js'], resolve(root, 'services/api'), apiEnv)
+function startApi(target) {
+  target.process = start(
+    `api-${target === apis.catalog ? 'catalog' : 'save'}-${++target.starts}`,
+    ['dist/server.js'],
+    resolve(root, 'services/api'),
+    target.env,
+  )
 }
 
-// A file mailbox shared only with the spawned QA process, never an application endpoint.
-// Only this runner's anonymous fixture API can be stopped; PostgreSQL and original rows stay intact.
-async function controlApi() {
+async function stopApi(target) {
+  const api = target.process
+  if (!api || api.exited) {
+    throw new Error('QA API is not running')
+  }
+  api.expectedExit = true
+  api.child.kill('SIGKILL')
+  const deadline = Date.now() + 5000
+  while (!api.exited && Date.now() < deadline) {
+    await delay(50)
+  }
+  if (!api.exited) {
+    throw new Error('QA API did not stop')
+  }
+}
+
+// File controls exist only inside this test runner, never as application endpoints.
+// Restarts preserve PostgreSQL, sessions, saves and the real 120/minute API configuration.
+async function controlApi(target) {
   let command
   try {
-    command = JSON.parse(await readFile(resolve(controlDir, 'request.json'), 'utf8'))
+    command = JSON.parse(await readFile(resolve(target.controlDir, 'request.json'), 'utf8'))
   } catch (error) {
     if (error.code === 'ENOENT' || error instanceof SyntaxError) {
       return
     }
     throw error
   }
-  if (command.id === controlId) {
+  if (typeof command.id !== 'string' || command.id === target.commandId) {
     return
   }
-  controlId = command.id
+  target.commandId = command.id
   try {
-    if (command.action === 'stop') {
-      api.expectedExit = true
-      // Simulate an abrupt outage of this runner's read-only anonymous fixture API.
-      // SIGTERM can wait for pooled keep-alive connections across serial scenarios.
-      api.child.kill('SIGKILL')
-      const deadline = Date.now() + 5000
-      while (!api.exited && Date.now() < deadline) {
-        await delay(50)
-      }
-      if (!api.exited) {
-        throw new Error('QA API did not stop')
-      }
-    } else if (command.action === 'start') {
-      if (!api.exited) {
-        throw new Error('QA API is already running')
-      }
-      startApi()
-      await ready(`${apiUrl}/health/ready`)
-    } else {
+    if (!['stop', 'start', 'restart'].includes(command.action)) {
       throw new Error('Unsupported QA control action')
     }
+    if (command.action === 'stop' || command.action === 'restart') {
+      await stopApi(target)
+    }
+    if (command.action === 'start' || command.action === 'restart') {
+      if (target.process && !target.process.exited) {
+        throw new Error('QA API is already running')
+      }
+      startApi(target)
+      await ready(`${target.url}/health/ready`)
+    }
     await writeFile(
-      resolve(controlDir, 'response.json'),
-      JSON.stringify({ id: controlId, ok: true }),
+      resolve(target.controlDir, 'response.json'),
+      JSON.stringify({ id: command.id, ok: true }),
     )
   } catch (error) {
     await writeFile(
-      resolve(controlDir, 'response.json'),
-      JSON.stringify({ id: controlId, ok: false, error: sanitize(error.message) }),
+      resolve(target.controlDir, 'response.json'),
+      JSON.stringify({ id: command.id, ok: false, error: sanitize(error.message) }),
     )
     throw error
   }
@@ -215,10 +248,12 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 }
 
 await mkdir(resolve(artifacts, 'logs'), { recursive: true })
-await mkdir(controlDir, { recursive: true })
+await Promise.all(
+  Object.values(apis).map((target) => mkdir(target.controlDir, { recursive: true })),
+)
 let exitCode = 1
 try {
-  startApi()
+  startApi(apis.catalog)
   await ready(`${apiUrl}/health/ready`)
   await ready(`${apiUrl}/v1/race-schedule?pageSize=1`, 848)
   start(
@@ -250,7 +285,7 @@ try {
   }
   const session = spawnSync(
     process.execPath,
-    ['dist/cli.js', 'session-create', 'frontend-browser-qa', '1'],
+    ['dist/cli.js', 'session-create', `frontend-browser-qa-${runId}`, '1'],
     { cwd: resolve(root, 'services/api'), env: devEnv, encoding: 'utf8', timeout: 30000 },
   )
   if (session.status !== 0) {
@@ -269,14 +304,22 @@ try {
     try {
       await legacy.connect()
       await legacy.query('BEGIN')
-      const stable = (await legacy.query('SELECT id FROM stables WHERE owner_id=$1', [sessionData.principalId])).rows[0]
+      const stable = (
+        await legacy.query('SELECT id FROM stables WHERE owner_id=$1', [sessionData.principalId])
+      ).rows[0]
       if (!stable) {
         const id = randomUUID()
-        await legacy.query('INSERT INTO stables(id,owner_id) VALUES($1,$2)', [id, sessionData.principalId])
+        await legacy.query('INSERT INTO stables(id,owner_id) VALUES($1,$2)', [
+          id,
+          sessionData.principalId,
+        ])
         // The catalog's historical subset is selected by the exact saved IDs,
         // and exists exclusively as an explicit old-save test fixture.
         for (const jockeyId of ['HAN_DOYUN', 'SEO_JIAN', 'YOON_TAESUNG']) {
-          await legacy.query('INSERT INTO jockey_contracts(stable_id,jockey_id) VALUES($1,$2)', [id, jockeyId])
+          await legacy.query('INSERT INTO jockey_contracts(stable_id,jockey_id) VALUES($1,$2)', [
+            id,
+            jockeyId,
+          ])
         }
       }
       await legacy.query('COMMIT')
@@ -289,7 +332,8 @@ try {
   } catch {
     throw new Error('Could not read isolated development test session')
   }
-  start('api-dev-save', ['dist/server.js'], resolve(root, 'services/api'), devEnv)
+  apis.save.env = devEnv
+  startApi(apis.save)
   await ready('http://127.0.0.1:4001/health/ready')
   start(
     'next-dev-save',
@@ -306,15 +350,22 @@ try {
   )
   await ready('http://127.0.0.1:3001/api/server-save/v1/catalog/horses')
   await ready('http://127.0.0.1:3001/')
-  const test = start('playwright', ['node_modules/@playwright/test/cli.js', 'test'], root, {
-    ...process.env,
-    E2E_BASE_URL: nextUrl,
-    E2E_SERVER_BASE_URL: 'http://127.0.0.1:3001',
-    E2E_API_URL: apiUrl,
-    E2E_API_CONTROL_DIR: controlDir,
-  })
+  testsStarted = performance.now()
+  const test = start(
+    'playwright',
+    ['node_modules/@playwright/test/cli.js', 'test', ...process.argv.slice(2)],
+    root,
+    {
+      ...process.env,
+      E2E_BASE_URL: nextUrl,
+      E2E_SERVER_BASE_URL: 'http://127.0.0.1:3001',
+      E2E_API_URL: apiUrl,
+      E2E_API_CONTROL_DIR: apis.catalog.controlDir,
+      E2E_SERVER_CONTROL_DIR: apis.save.controlDir,
+    },
+  )
   while (!test.exited) {
-    await controlApi()
+    await Promise.all(Object.values(apis).map(controlApi))
     assertServers()
     if (test.error) {
       throw new Error(test.error)
@@ -326,11 +377,21 @@ try {
 } catch (error) {
   console.error(sanitize(error.stack ?? error.message))
 } finally {
+  const testsFinished = performance.now()
   await stop()
   await writeFile(
     resolve(artifacts, 'run.json'),
     JSON.stringify(
-      { startedAt, finishedAt: new Date().toISOString(), exitCode, node: process.version },
+      {
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        exitCode,
+        node: process.version,
+        durationMs: Math.round(performance.now() - started),
+        startupMs: Math.round((testsStarted ?? testsFinished) - started),
+        testsMs: testsStarted === undefined ? 0 : Math.round(testsFinished - testsStarted),
+        cleanupMs: Math.round(performance.now() - testsFinished),
+      },
       null,
       2,
     ),

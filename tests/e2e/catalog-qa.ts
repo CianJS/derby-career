@@ -13,8 +13,7 @@ export const test = base.extend<{ diagnostics: void }>({
     async ({ page, browser }, use, info) => {
       // Each serial scenario gets a fresh anonymous API process/rate-limit bucket.
       // The same PostgreSQL fixture data is retained; production limits remain unchanged.
-      await control('stop')
-      await control('start')
+      await control('restart')
       const network: { status: number; path: string; query: string }[] = []
       const errors: string[] = []
       page.on('pageerror', (error) => errors.push(error.message))

@@ -1,9 +1,8 @@
 import { legacyCareer as startCareer } from '../helpers/legacy-career'
-import { setTimeout as delay } from 'node:timers/promises'
 import { test, expect, type Page } from '@playwright/test'
 import { BROWSER_SAVE_KEY } from '../../lib/career/browser-save'
 import { fixtureLifecycle } from '../../lib/career/fixtures'
-
+import { restartSaveApi } from './catalog-control'
 
 async function rest(page: Page) {
   await page
@@ -176,8 +175,8 @@ for (const [target, width] of [
     test.setTimeout(240_000)
     const base = process.env.E2E_SERVER_BASE_URL
     expect(base).toBeTruthy()
-    // The preceding server scenario shares this isolated owner. Respect the real request quota.
-    await delay(61_000)
+    // Each serial case starts with a fresh test API process while preserving the owner/DB.
+    await restartSaveApi()
     await page.setViewportSize({ width, height: 900 })
     await page.goto(base!)
     const get = () =>
@@ -267,8 +266,9 @@ for (const [target, width] of [
     current = await get()
     expect(current.stable.funds).toBe(initialFunds + run.simulation.result.prizeMoney)
     expect(current.career.travel.locationCountry).toBe(target)
-    // Avoid the production API's 120/minute limit without changing it.
-    await delay(61_000)
+    // Continue from the stored foreign result after a bounded test API restart;
+    // no production rate-limit setting or saved travel/race state is changed.
+    await restartSaveApi()
     await page.getByRole('button', { name: '귀국', exact: true }).click()
     await expect(page.locator('[data-travel-location]')).toContainText('현재 체류 · 대한민국')
     await rest(page)
