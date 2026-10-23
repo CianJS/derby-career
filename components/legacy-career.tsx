@@ -735,16 +735,6 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               />
             </FocusShell>
           )}{" "}
-          {view === "stable" && (
-            <Stable
-              setView={setView}
-              archive={state.archive}
-              onArchiveSelect={(id) => { setSelectedArchiveId(id); setSelectedRaceRunId(undefined); }}
-            />
-          )}{" "}
-          {saveMode === 'server' && view === 'stable' && workspace && workspace.pagination.page < workspace.pagination.totalPages && (
-            <button disabled={busy || pending} onClick={() => void careerStore.loadMoreRetirements()} className="m-4 text-sm underline">이전 은퇴 기록 더 불러오기</button>
-          )}
           {view === "horse" && state.activeHorse && (
             <Horse
               setView={setView}
@@ -768,6 +758,21 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           {view === "jockeys" && <Jockeys setView={setView} onSelect={setSelectedJockeyId} />}{" "}
           {view === "jockey" && <Jockey setView={setView} onSelectHorse={openHorseRecord} jockeyId={selectedJockeyId} horses={[...(state.activeHorse ? [state.activeHorse] : []), ...state.archive]} />}
           </>}
+          {view === "stable" && (
+            <Stable
+              setView={setView}
+              mode={saveMode}
+              activeHorse={compatibleMode && saveMode === 'local' ? state.activeHorse : null}
+              loading={!hydrated}
+              saveError={compatibleMode ? saveError : null}
+              archive={compatibleMode && (saveMode === 'server' ? !!workspace : hydrated && !!snapshot.lifecycle) ? state.archive : []}
+              onActiveSelect={() => { setSelectedRaceRunId(undefined); setView('horse'); }}
+              onArchiveSelect={(id) => { setSelectedArchiveId(id); setSelectedRaceRunId(undefined); }}
+            />
+          )}{" "}
+          {saveMode === 'server' && view === 'stable' && workspace && workspace.pagination.page < workspace.pagination.totalPages && (
+            <button disabled={busy || pending} onClick={() => void careerStore.loadMoreRetirements()} className="m-4 text-sm underline">이전 은퇴 기록 더 불러오기</button>
+          )}
           {view === 'races' && <Races setView={setView} onGameplay={openCatalogGameplay} />}
           {view === 'race' && <Race setView={setView} onGameplay={openCatalogGameplay} />}
         </main>
