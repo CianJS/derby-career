@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ExpeditionLink } from './expedition-navigation'
 import { GameRaceSource, GameRaceDisclosure } from './game-race-source'
 import { countryMismatch, TravelRaceNotice } from './expedition-availability'
 import { Button } from '@/components/ui/button'
@@ -60,9 +61,9 @@ export function RaceAction({ onOpen }: { onOpen: () => void }) {
           : (mismatch ?? restriction ?? `현재 전적으로 출전 가능한 경주 ${open}개`)}
       </p>
       {mismatch && (
-        <a className="text-xs text-primary underline" href="#career-expedition">
+        <ExpeditionLink>
           {stableTravel(snapshot)?.activeExpedition ? '귀국·원정 상태 보기' : '원정 상태 보기'}
-        </a>
+        </ExpeditionLink>
       )}
       <Button
         disabled={busy || pending || (mode === 'local' && !career.raceRun && !!restriction)}
