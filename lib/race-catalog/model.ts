@@ -151,7 +151,20 @@ export function prizeText(race: Race) {
     : `${race.prizeCurrency} ${race.prizeMoney.toLocaleString('ko-KR')} · ${race.prizeBasis || '상금 기준 미확인'}`
 }
 export function gradeText(race: Race) {
-  return `${race.originalGrade || race.grade} · ${race.gradeSystem}${race.internationalGrade ? ` · 국제 ${race.internationalGrade}` : ''}`
+  const systems = { KRA_domestic: '한국 국내', JRA: '일본 JRA', NAR: '일본 NAR', USA: '미국' }
+  const grade = race.grade.trim()
+  const original = race.originalGrade?.trim()
+  const international = race.internationalGrade?.trim()
+  const parts = [grade || '등급 미확인', systems[race.gradeSystem]]
+  // The API's grade is the catalog classification. Original/international fields are independent:
+  // e.g. USA grade G1 may have originalGrade "1"; a Korean domestic G1 need not be international G1.
+  if (original && original !== grade) {
+    parts.push(`원문 ${original}`)
+  }
+  if (international) {
+    parts.push(`국제 ${international}`)
+  }
+  return parts.join(' · ')
 }
 export function distanceText(race: Race) {
   const original = race.originalDistance
