@@ -6,6 +6,7 @@ import { JSDOM } from 'jsdom'
 import { act, createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NoticeCenter, NoticeList, NoticeDetails } from '../components/notices/notice-center'
+import { stableActiveState } from '../components/career/stable'
 import { catalogGameplayTarget } from '../components/career/catalog-gameplay-bridge'
 import { gameplayUrl, readGameplayView } from '../lib/race-catalog/model'
 import { updateNotices, noticeCenterDescription } from '../lib/notices/updates'
@@ -742,6 +743,130 @@ for (const mode of ['local', 'server'] as const) {
       await act(async () => bridge.click())
       await h.waitFor(() => !!h.container.querySelector('input[name="entry-race"]'))
       assert.deepEqual(readBrowserSave(), before)
+    } finally {
+      await h.close()
+    }
+  })
+}
+
+for (const mode of ['local', 'server'] as const) {
+  test(`actual App ${mode}: stable active card routes without commands and stays separate from retirement records`, async () => {
+    const fixture = managementFixture()
+    const workspace = activeServerWorkspace()
+    delete workspace.career!.state.raceRun
+    const h = await harness(
+      mode,
+      '/',
+      mode === 'server' ? workspace : undefined,
+      mode === 'local' ? () => writeBrowserSave(fixture) : undefined,
+    )
+    const clickText = async (text: string) => {
+      const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+        (b) => b.textContent?.trim() === text,
+      )
+      assert.ok(button, text)
+      await act(async () => button.click())
+    }
+    const openStable = async () => {
+      const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+        b.textContent?.includes('STABLE'),
+      )!
+      await act(async () => button.click())
+      await h.waitFor(() => !!h.container.querySelector('#stable-current-horse'))
+    }
+    try {
+      await h.waitFor(() => !!careerStore.getSnapshot().career)
+      const before = readBrowserSave()
+      const beforeServer = JSON.stringify(workspace)
+      await openStable()
+      const current = h.container.querySelector('section[aria-labelledby="stable-current-horse"]')!
+      assert.match(current.textContent!, /육성 계속/)
+      const savedCareer = mode === 'server' ? workspace.career!.state : readBrowserSave().career!
+      assert.ok(current.textContent!.includes(savedCareer.horse.name))
+      assert.ok(current.textContent!.includes(`${savedCareer.age}세`))
+      assert.ok(current.textContent!.includes(`${savedCareer.careerTurnIndex}턴`))
+      if (mode === 'server') {
+        assert.match(h.container.textContent!, /아직 기록된 은퇴 경주마가 없습니다/)
+        const snapshot = careerStore.getSnapshot()
+        const stale = { ...snapshot, career: fixture.career }
+        assert.equal(stableActiveState(stale, 'server').horse?.id, workspace.career!.ownedHorseId)
+        assert.equal(
+          stableActiveState({ ...snapshot, workspace: null }, 'server').status,
+          'loading',
+        )
+      }
+      const detail = current.querySelector<HTMLButtonElement>('button')!
+      await act(async () => detail.click())
+      await h.waitFor(
+        () =>
+          h.container.textContent!.includes(savedCareer.horse.name) &&
+          !h.container.querySelector('#stable-current-horse'),
+      )
+      await act(async () => h.container.querySelector<HTMLButtonElement>('header button')!.click())
+      await openStable()
+      await clickText('육성 계속')
+      await h.waitFor(() => !!h.container.querySelector('[aria-labelledby="month-outlook"]'))
+      await clickText('← 홈')
+      await openStable()
+      assert.deepEqual(readBrowserSave(), before)
+      assert.equal(JSON.stringify(workspace), beforeServer)
+      await h.reload()
+      await h.waitFor(() => !!careerStore.getSnapshot().career)
+      await openStable()
+      assert.ok(
+        h.container
+          .querySelector('section[aria-labelledby="stable-current-horse"]')!
+          .textContent!.includes(savedCareer.horse.name),
+      )
+      if (mode === 'local') {
+        await act(async () =>
+          h.container
+            .querySelector<HTMLButtonElement>(
+              'section[aria-labelledby="stable-current-horse"] button',
+            )!
+            .click(),
+        )
+        await clickText('은퇴')
+        await clickText('은퇴 확정')
+        await h.waitFor(() => !careerStore.getSnapshot().career)
+        await act(async () =>
+          h.container.querySelector<HTMLButtonElement>('header button')!.click(),
+        )
+        await openStable()
+        assert.match(
+          h.container.querySelector('section[aria-labelledby="stable-current-horse"]')!
+            .textContent!,
+          /현재 육성 중인 경주마가 없습니다/,
+        )
+        const retired = readBrowserSave().lifecycle!.archive![0]
+        assert.ok(h.container.querySelector(`[data-archive-id="${retired.id}"]`))
+        const archive = JSON.stringify(readBrowserSave().lifecycle!.archive)
+        await act(async () => {
+          await careerStore.select(savedCareer.horse.id)
+        })
+        await h.waitFor(
+          () =>
+            !!h.container.querySelector('section[aria-labelledby="stable-current-horse"] button'),
+        )
+        assert.match(
+          h.container.querySelector('section[aria-labelledby="stable-current-horse"]')!
+            .textContent!,
+          /0전 0승/,
+        )
+        assert.equal(JSON.stringify(readBrowserSave().lifecycle!.archive), archive)
+      } else {
+        const current = careerStore.getSnapshot()
+        for (const patch of [{ pending: true }, { busy: true }, { error: '서버 연결 오류' }]) {
+          assert.equal(stableActiveState({ ...current, ...patch }, 'server').horse, null)
+        }
+        assert.equal(
+          stableActiveState(
+            { ...current, career: null, workspace: { ...current.workspace!, career: null } },
+            'server',
+          ).status,
+          'empty',
+        )
+      }
     } finally {
       await h.close()
     }

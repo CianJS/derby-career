@@ -6,18 +6,157 @@ import { ChevronRight } from 'lucide-react'
 import type { View, CareerHorse } from './legacy-types'
 import { Section } from './presentation'
 import { Management } from './management'
+import { applyCareer } from '@/lib/career/lifecycle'
+import { serverLifecycle } from '@/lib/server-save/lifecycle'
+import { careerProgress } from '@/lib/career/career-time'
+import { SeasonSummary } from './career-progress'
+
+/** Read the current save authority, never an old lifecycle summary on its own. */
+export function stableActiveState(
+  snapshot: ReturnType<typeof useCareer>,
+  mode: 'local' | 'server' | null,
+  localHorse: CareerHorse | null = null,
+  loading = false,
+  saveError: string | null = null,
+) {
+  const unknown = { career: null, horse: null }
+  if (!mode || snapshot.mode !== mode) {
+    return { ...unknown, status: 'loading', message: '저장 모드를 확인하고 있습니다.' }
+  }
+  if (saveError || snapshot.error) {
+    return {
+      ...unknown,
+      status: 'error',
+      message: `현역마 정보를 확인하지 못했습니다. ${saveError ?? snapshot.error}`,
+    }
+  }
+  if (loading || !snapshot.ready || (mode === 'server' && !snapshot.workspace)) {
+    return { ...unknown, status: 'loading', message: '현재 육성마 정보를 불러오는 중…' }
+  }
+  if (snapshot.busy || snapshot.pending) {
+    return {
+      ...unknown,
+      status: 'pending',
+      message: snapshot.pending
+        ? '저장 요청의 결과를 확인하고 있습니다. 기존 저장 상태·재시도 안내를 확인해 주세요.'
+        : '저장 상태를 갱신하고 있습니다.',
+    }
+  }
+  const career = mode === 'server' ? (snapshot.workspace?.career?.state ?? null) : snapshot.career
+  const horse = career
+    ? mode === 'server'
+      ? serverLifecycle(snapshot.workspace!).activeHorse
+      : applyCareer({ activeHorse: localHorse, month: career.calendarDate.month }, career)
+          .activeHorse
+    : null
+  return {
+    career,
+    horse,
+    status: career && horse ? 'active' : 'empty',
+    message: '현재 육성 중인 경주마가 없습니다. 홈에서 새 육성을 시작할 수 있습니다.',
+  }
+}
+
+export function StableActiveHorse({
+  active,
+  setView,
+  onActiveSelect,
+}: {
+  active: ReturnType<typeof stableActiveState>
+  setView: (v: View) => void
+  onActiveSelect: () => void
+}) {
+  const { horse, career } = active
+  return (
+    <section
+      aria-labelledby="stable-current-horse"
+      aria-busy={active.status === 'loading' || active.status === 'pending'}
+      className="mb-4 rounded-lg border border-border bg-card p-4"
+    >
+      <h2 id="stable-current-horse" className="text-base font-bold">
+        현재 육성마
+      </h2>
+      {horse && career ? (
+        <>
+          <button
+            type="button"
+            onClick={onActiveSelect}
+            aria-label={`현역마 ${horse.name || '이름 미확인'} 상세 보기`}
+            className="mt-3 break-words text-left font-serif text-xl text-primary underline-offset-4 hover:underline"
+          >
+            {horse.name || '이름 미확인'}
+          </button>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ['나이', Number.isFinite(career.age) ? `${career.age}세` : '미확인'],
+              ['통산 전적', horse.record || '미확인'],
+              ['누적 상금', horse.prize || '미확인'],
+              ['상태', `${career.health || '미확인'} · ${career.condition || '미확인'}`],
+            ].map(([label, value]) => (
+              <div key={label} className="min-w-0">
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="mt-1 break-words tabular-nums">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs tabular-nums">
+            {career.careerTurnIndex}턴 ·{' '}
+            <SeasonSummary progress={careerProgress(career.careerTurnIndex)} showAge={false} />
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {career.raceRun
+              ? '경주 출전 확정 · 기존 육성 화면에서 확인하세요.'
+              : career.action
+                ? '이번 달 행동 확정 · 기존 육성 화면에서 결과를 확인하세요.'
+                : '육성 중'}
+          </p>
+          <button
+            type="button"
+            onClick={() => setView('training')}
+            className="mt-4 min-h-11 rounded-md border border-border px-4 text-sm font-semibold text-primary"
+          >
+            육성 계속
+          </button>
+        </>
+      ) : (
+        <p
+          role={active.status === 'error' ? 'alert' : 'status'}
+          className="mt-3 text-sm text-muted-foreground"
+        >
+          {active.message}
+        </p>
+      )}
+    </section>
+  )
+}
 
 export function Stable({
   setView,
   archive = [],
   onArchiveSelect = () => {},
+  onActiveSelect = () => setView('horse'),
+  mode,
+  activeHorse = null,
+  loading = false,
+  saveError = null,
 }: {
   setView: (v: View) => void
   archive?: CareerHorse[]
   onArchiveSelect?: (id: string) => void
+  onActiveSelect?: () => void
+  mode?: 'local' | 'server'
+  activeHorse?: CareerHorse | null
+  loading?: boolean
+  saveError?: string | null
 }) {
   const snapshot = useCareer()
-  const funds = stableFunds(snapshot)
+  const funds = mode && mode !== snapshot.mode ? null : stableFunds(snapshot)
+  const archiveKnown =
+    snapshot.ready &&
+    !loading &&
+    (!mode || mode === snapshot.mode) &&
+    (snapshot.mode === 'server' ? !!snapshot.workspace : !!snapshot.lifecycle)
+  const active = stableActiveState(snapshot, mode ?? snapshot.mode, activeHorse, loading, saveError)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('recent')
   // Both save modes provide newest retirements first; keep that order for ties as well.
@@ -43,8 +182,9 @@ export function Stable({
     <Management
       title="마구간"
       eyebrow="STABLE"
-      description="육성을 마친 경주마와 그들의 커리어 기록을 조회합니다."
+      description="현재 육성마와 은퇴 경주마의 커리어 기록을 구분해 확인합니다."
     >
+      <StableActiveHorse active={active} setView={setView} onActiveSelect={onActiveSelect} />
       <section aria-label="마방 자금 현황" className="border-y border-border py-4 text-sm">
         <span className="text-muted-foreground">마방 자금</span>
         <p className="mt-2 font-medium tabular-nums">
@@ -58,9 +198,14 @@ export function Stable({
           </p>
         )}
       </section>
-      {archive.length === 0 && (
+      {!archiveKnown && (
+        <p role="status" className="py-4 text-sm text-muted-foreground">
+          은퇴 기록을 확인하고 있습니다.
+        </p>
+      )}
+      {archiveKnown && archive.length === 0 && (
         <div className="ui-empty-state border-y border-border/70 py-8">
-          <p>아직 기록된 경주마가 없습니다.</p>
+          <p>아직 기록된 은퇴 경주마가 없습니다.</p>
           <p className="mt-1 text-sm">육성을 완료한 경주마의 커리어가 이곳에 보존됩니다.</p>
         </div>
       )}
