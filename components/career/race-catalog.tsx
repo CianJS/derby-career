@@ -266,9 +266,7 @@ export function RaceCatalogList({
                         {race.name}
                       </button>
                       {race.duplicateGroup && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          중복 검토 후보 · {race.duplicateGroup}
-                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">중복 검토 후보</p>
                       )}
                     </th>
                     <td className="break-words px-3 py-4">
@@ -442,7 +440,7 @@ export function RaceCatalogDetail({
 }) {
   return (
     <>
-      <Section eyebrow="RACE SUMMARY" title={`${race.grade} · ${dateText(race)}`}>
+      <Section eyebrow="RACE SUMMARY" title={`${gradeText(race)} · ${dateText(race)}`}>
         <Facts
           rows={[
             ['개최국 / 기준연도', `${countries[race.country]} / ${race.year}`],
@@ -493,19 +491,21 @@ export function RaceCatalogDetail({
         )}
       </Section>
       <Section eyebrow="REFERENCE" title="출처와 검토 정보">
-        <Facts
-          rows={[
-            ['경주 ID', race.id],
-            ['검증 상태', race.verificationStatus],
-            ['출처', <Source key="race-source" url={race.sourceUrl} />],
-            [
-              '중복 후보 그룹',
-              race.duplicateGroup ? `중복 검토 후보 · ${race.duplicateGroup}` : '없음',
-            ],
-            ['메모', race.notes || '없음'],
-            ['검토 항목', race.reviewIssues.join('\n') || '없음'],
-          ]}
-        />
+        <Facts rows={[['출처', <Source key="race-source" url={race.sourceUrl} />]]} />
+        <details className="mt-4 min-w-0 rounded-lg border border-border p-3 [&_dd]:break-all">
+          <summary className="cursor-pointer text-sm font-semibold">
+            내부 검토 정보 · 식별자·검증 상태·메모
+          </summary>
+          <Facts
+            rows={[
+              ['경주 ID', race.id],
+              ['검증 상태', race.verificationStatus],
+              ['중복 후보 그룹', race.duplicateGroup || '없음'],
+              ['메모', race.notes || '없음'],
+              ['검토 항목', race.reviewIssues.join('\n') || '없음'],
+            ]}
+          />
+        </details>
         <p className="mt-4 text-xs text-muted-foreground">
           취소·미개최 및 일정 미확정 자료에는 개최일을 부여하지 않습니다. 원문 통화·상금 기준을
           유지하며 게임 상금이나 출전 조건으로 적용하지 않습니다.

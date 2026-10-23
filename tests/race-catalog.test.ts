@@ -79,10 +79,86 @@ test('851 source rows preserve null dates, 3 duplicate pairs, national grade and
     const row = seed.races.find((r) => r.prizeCurrency === currency && r.prizeMoney !== null)!
     assert.match(prizeText(row), new RegExp(currency))
     assert.ok(prizeText(row).includes(row.prizeBasis || '상금 기준 미확인'))
-    assert.ok(gradeText(row).includes(row.gradeSystem))
+    assert.ok(gradeText(row).includes(row.grade))
     assert.equal(selectedCourse({ ...row, courseId: null }, []), null)
   }
   assert.equal(prizeText({ ...seed.races[0], prizeMoney: null }), '미확인')
+})
+test('catalog grades consistently distinguish actual classification, original notation and optional international fields', () => {
+  const before = JSON.stringify(seed.races)
+  for (const [country, system, grade, expected] of [
+    ['KOR', 'KRA_domestic', 'G2', 'G2 · 한국 국내'],
+    ['JPN', 'JRA', 'G1', 'G1 · 일본 JRA'],
+    ['JPN', 'JRA', 'G2', 'G2 · 일본 JRA'],
+    ['JPN', 'NAR', '기타', '기타 · 일본 NAR'],
+    ['USA', 'USA', 'G1', 'G1 · 미국 · 원문 1'],
+    ['USA', 'USA', 'G3', 'G3 · 미국 · 원문 3'],
+    ['USA', 'USA', 'Listed', 'Listed · 미국 · 원문 LR'],
+  ] as const) {
+    const race = seed.races.find(
+      (row) => row.country === country && row.gradeSystem === system && row.grade === grade,
+    )!
+    assert.equal(gradeText(race), expected)
+    const list = renderToStaticMarkup(
+      createElement(RaceCatalogList, {
+        page: { data: [race], pagination: { page: 1, pageSize: 100, total: 1, totalPages: 1 } },
+        venues: [],
+        onSelect: () => {},
+        onPage: () => {},
+      }),
+    )
+    const detail = renderToStaticMarkup(
+      createElement(RaceCatalogDetail, { race, venue: null, course: null }),
+    )
+    assert.ok(list.includes(expected))
+    assert.ok(detail.includes(expected))
+  }
+  const international = seed.races.find((row) => row.internationalGrade === 'IGⅢ')!
+  assert.equal(gradeText(international), 'G1 · 한국 국내 · 국제 IGⅢ')
+  const noOriginal = seed.races.find((row) => row.originalGrade === null)!
+  assert.doesNotMatch(gradeText(noOriginal), /원문|국제/)
+  assert.equal(
+    gradeText({ ...noOriginal, grade: '', originalGrade: null, internationalGrade: null }),
+    '등급 미확인 · 미국',
+  )
+  assert.equal(
+    gradeText({ ...noOriginal, grade: '', originalGrade: '원문 조건전', internationalGrade: ' ' }),
+    '등급 미확인 · 미국 · 원문 원문 조건전',
+  )
+  assert.equal(JSON.stringify(seed.races), before)
+})
+test('review identifiers remain in collapsed detail only, with duplicate rows and public source preserved', () => {
+  const races = seed.races.filter((row) => row.duplicateGroup)
+  const before = JSON.stringify(races)
+  const list = renderToStaticMarkup(
+    createElement(RaceCatalogList, {
+      page: {
+        data: races,
+        pagination: { page: 1, pageSize: 100, total: races.length, totalPages: 1 },
+      },
+      venues: [],
+      onSelect: () => {},
+      onPage: () => {},
+    }),
+  )
+  assert.equal((list.match(/scope="row"/g) ?? []).length, races.length)
+  assert.equal((list.match(/중복 검토 후보/g) ?? []).length, races.length)
+  for (const race of races) {
+    assert.ok(!list.includes(race.duplicateGroup!))
+    const detail = renderToStaticMarkup(
+      createElement(RaceCatalogDetail, { race, venue: null, course: null }),
+    )
+    const review = detail.match(/<details\b[^>]*>[\s\S]*?<\/details>/)![0]
+    assert.match(review, /<summary[^>]*>내부 검토 정보/)
+    assert.doesNotMatch(review.split('>')[0], /\bopen\b/)
+    assert.ok(review.includes(race.duplicateGroup!))
+    assert.ok(review.includes(race.id))
+    assert.ok(review.includes(race.verificationStatus))
+    assert.doesNotMatch(detail.replace(review, ''), new RegExp(race.duplicateGroup!))
+    assert.match(detail.replace(review, ''), /원본 출처 보기/)
+    assert.match(review, /break-all/)
+  }
+  assert.equal(JSON.stringify(races), before)
 })
 test('shared client accepts bounded raw-source fixture pages and the selected ID, rejecting oversized/invalid/mismatched responses', async () => {
   const seen: string[] = []
