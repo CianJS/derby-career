@@ -58,7 +58,7 @@ export function expeditionControls(
     !!career.raceRun ||
     !!saveError ||
     (mode === 'server' && (!!error || !snapshot.raceOptions))
-  return { travel, career, error, reason, blocked, known }
+  return { travel, career, error, reason, blocked, known, canManage: known && !!career }
 }
 
 export function ExpeditionPanel({
@@ -75,7 +75,7 @@ export function ExpeditionPanel({
   onManage?: () => void
 }) {
   const snapshot = useCareer()
-  const { travel, career, error, reason, blocked, known } = expeditionControls(
+  const { travel, career, error, reason, blocked, known, canManage } = expeditionControls(
     snapshot,
     mode,
     loading,
@@ -102,7 +102,7 @@ export function ExpeditionPanel({
       aria-label="해외 원정"
       tabIndex={-1}
       aria-busy={busy}
-      className="m-4 rounded-lg border border-border bg-card p-4 text-sm"
+      className="m-4 scroll-mt-20 rounded-lg border border-border bg-card p-4 text-sm"
     >
       <h2 className="font-semibold">해외 원정</h2>
       {travel && (
@@ -130,7 +130,7 @@ export function ExpeditionPanel({
         <Button
           className="mt-3"
           variant="outline"
-          disabled={!onManage || blocked}
+          disabled={!onManage || !canManage}
           onClick={onManage}
         >
           원정 관리 · 육성 화면에서 원정·귀국

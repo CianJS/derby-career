@@ -1163,6 +1163,10 @@ for (const mode of ['local', 'server'] as const) {
         await click('원정 관리 · 육성 화면에서 원정·귀국')
         assert.equal(h.dom.window.document.activeElement, panel())
         assert.equal(h.container.querySelectorAll('#career-expedition').length, 1)
+        assert.ok(
+          panel().classList.contains('scroll-mt-20'),
+          '80px scroll margin clears the 56px sticky header',
+        )
         assert.equal(panel().querySelector('[data-travel-location]')!.textContent, status)
         const action = [...panel().querySelectorAll<HTMLButtonElement>('button')].find(
           (b) => b.textContent?.trim() === (country === 'KOR' ? '원정 신청' : '귀국'),
@@ -1236,4 +1240,92 @@ for (const mode of ['local', 'server'] as const) {
       }
     })
   }
+}
+
+for (const mode of ['local', 'server'] as const) {
+  test(`actual App ${mode}: confirmed race allows readonly expedition navigation while commands stay locked`, async () => {
+    const fixture = managementFixture()
+    const workspace = activeServerWorkspace()
+    fixture.career = structuredClone(workspace.career!.state)
+    const travel = migrateTravel({ country: '대한민국' }).travel
+    workspace.stable!.travel = travel
+    const h = await harness(
+      mode,
+      '/',
+      mode === 'server' ? workspace : undefined,
+      mode === 'local'
+        ? () => writeBrowserSave({ ...fixture, lifecycle: { ...fixture.lifecycle, travel } })
+        : undefined,
+    )
+    const panel = () => h.container.querySelector<HTMLElement>('#career-expedition')!
+    const clickButton = async (button: HTMLButtonElement | undefined | null) => {
+      assert.ok(button)
+      assert.equal(button.disabled, false)
+      await act(async () => button.click())
+    }
+    try {
+      await h.waitFor(() => !!careerStore.getSnapshot().career?.raceRun)
+      const saved = readBrowserSave()
+      const serverSaved = JSON.stringify(workspace)
+      let scrolls = 0
+      h.dom.window.HTMLElement.prototype.scrollIntoView = function (options) {
+        assert.equal(this.id, 'career-expedition')
+        assert.deepEqual(options, { block: 'start' })
+        assert.ok(this.classList.contains('scroll-mt-20'))
+        scrolls++
+      }
+      for (const view of ['settings', 'stable']) {
+        if (view === 'settings') {
+          await clickButton(h.container.querySelector<HTMLButtonElement>('[aria-label="설정"]'))
+        } else {
+          await clickButton(h.container.querySelector<HTMLButtonElement>('header button'))
+          await clickButton(
+            [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+              b.textContent?.includes('STABLE'),
+            ),
+          )
+        }
+        await h.waitFor(() => !!panel())
+        assert.match(panel().textContent!, /확정한 경주를 완료한 뒤/)
+        const manage = [...panel().querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+          b.textContent?.includes('원정 관리'),
+        )
+        await clickButton(manage)
+        assert.equal(h.dom.window.document.activeElement, panel())
+        assert.equal(h.container.querySelectorAll('#career-expedition').length, 1)
+        const start = [...panel().querySelectorAll<HTMLButtonElement>('button')].find(
+          (b) => b.textContent?.trim() === '원정 신청',
+        )!
+        assert.ok(start)
+        assert.equal(start.disabled, true)
+        await act(async () => start.click())
+        assert.match(panel().textContent!, /확정한 경주를 완료한 뒤/)
+      }
+      assert.equal(scrolls, 2)
+      const snapshot = careerStore.getSnapshot()
+      for (const patch of [{ busy: true }, { pending: true }, { error: '연결 오류' }]) {
+        assert.equal(expeditionControls({ ...snapshot, ...patch }, mode).canManage, true)
+        assert.equal(expeditionControls({ ...snapshot, ...patch }, mode).blocked, true)
+      }
+      assert.equal(expeditionControls({ ...snapshot, career: null }, mode).canManage, false)
+      assert.equal(expeditionControls({ ...snapshot, ready: false }, mode).canManage, false)
+      assert.equal(
+        expeditionControls(snapshot, mode === 'local' ? 'server' : 'local').canManage,
+        false,
+      )
+      assert.equal(expeditionControls(snapshot, mode, true).canManage, false)
+      if (mode === 'server') {
+        assert.equal(expeditionControls({ ...snapshot, workspace: null }, mode).canManage, false)
+        assert.equal(expeditionControls({ ...snapshot, raceOptions: null }, mode).canManage, true)
+      }
+      assert.deepEqual(readBrowserSave(), saved)
+      assert.equal(JSON.stringify(workspace), serverSaved)
+      assert.equal(
+        h.requests.some((path) => path.includes('/return')),
+        false,
+      )
+    } finally {
+      await h.close()
+    }
+  })
 }
