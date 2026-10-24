@@ -514,12 +514,22 @@ test('PostgreSQL injury-blocked pending expiry and recovery are atomic under par
     throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
   }
   const f = await fixture({ db: postgresDatabase(url), probability: 1 })
+  const enabledBefore = (
+    await f.db.query<{ id: string; enabled: boolean }>(
+      'SELECT id,enabled FROM event_definitions ORDER BY id',
+    )
+  ).rows
+  const totalBefore = (await f.call('GET', '/v1/events')).json().pagination.total
   try {
     await f.db.query('UPDATE event_definitions SET enabled=false')
     const event = convertNotionRows((await catalogSource()).rows).events.find(
       (event) => event.id === 'COM-0034',
     )!
-    const { revision: _revision, ...body } = { ...event, choices: [event.choices[1]] }
+    const { revision: _revision, ...body } = {
+      ...event,
+      id: 'COM-INJURY-PG-TEST',
+      choices: [event.choices[1]],
+    }
     await importEvents(f.db, { schemaVersion: 1, events: [{ ...body, revision: digest(body) }] })
     const { id, response } = await f.create()
     const state = { ...response.career.state, health: 'SEVERE', healthRecovery: 1 }
@@ -569,6 +579,17 @@ test('PostgreSQL injury-blocked pending expiry and recovery are atomic under par
       next.json(),
     )
   } finally {
-    await f.close()
+    try {
+      await f.db.transaction(async (tx) => {
+        await tx.query("UPDATE event_definitions SET enabled=false WHERE id='COM-INJURY-PG-TEST'")
+        await tx.query(
+          'UPDATE event_definitions d SET enabled=b.enabled FROM jsonb_to_recordset($1::jsonb) AS b(id text,enabled boolean) WHERE d.id=b.id',
+          [JSON.stringify(enabledBefore)],
+        )
+      })
+      assert.equal((await f.call('GET', '/v1/events')).json().pagination.total, totalBefore)
+    } finally {
+      await f.close()
+    }
   }
 })
