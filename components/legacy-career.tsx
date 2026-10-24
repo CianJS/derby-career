@@ -1,5 +1,6 @@
 'use client'
 
+import { focusExpedition } from './career/expedition-navigation'
 import { ExpeditionPanel } from './career/expedition-panel'
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CareerCheckpoint } from "@/components/career/checkpoint";
@@ -455,6 +456,14 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [localState, setState] = useState<LifecycleState>(initialLifecycle);
   const [selectedJockeyId, setSelectedJockeyId] = useState(jockeys[0].id);
   const [view, updateView] = useState<View>("home");
+  const expeditionFocus = useRef(false)
+  useEffect(() => {
+    if (expeditionFocus.current) {
+      expeditionFocus.current = false
+      focusExpedition()
+    }
+  }, [view])
+
   const setView = useCallback((next: View) => {
     const url = new URL(window.location.href)
     if (next === 'races' || next === 'race') {
@@ -649,6 +658,18 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               <button disabled={busy} onClick={() => void careerStore.refresh()} className="mt-2 text-xs underline">{pending ? '같은 요청으로 다시 확인' : '서버 기록 새로고침'}</button>
             </div>
           )}
+          {(['training', 'entry', 'stable', 'settings'].includes(view) || (view === 'candidates' && !!career)) && (
+            <ExpeditionPanel
+              mode={saveMode}
+              loading={!hydrated}
+              saveError={saveError}
+              readOnly={view === 'stable' || view === 'settings'}
+              onManage={() => {
+                expeditionFocus.current = true
+                setView('training')
+              }}
+            />
+          )}
           {compatibleMode && (saveMode === 'local' || workspace) && <>
           {(saveError || (saveMode === 'local' && !snapshot.lifecycle && error)) && (
             <p role="alert" className="ui-error-state m-4">
@@ -717,7 +738,6 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
                   raceEntry={<RaceAction onOpen={() => setView("entry")} />}
                 />
           )}{" "}
-          {(['training', 'entry', 'stable', 'settings'].includes(view) || (view === 'candidates' && !!career)) && <ExpeditionPanel readOnly={view === 'stable' || view === 'settings'} />}
           {view === "entry" && <RaceEntry setView={setView} />}{" "}
           {(view === "raceplay" || view === "raceexperimental") && (
             <FocusShell setView={setView} backLabel="육성으로 돌아가기">

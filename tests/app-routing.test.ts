@@ -6,6 +6,8 @@ import { JSDOM } from 'jsdom'
 import { act, createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NoticeCenter, NoticeList, NoticeDetails } from '../components/notices/notice-center'
+import { expeditionControls } from '../components/career/expedition-panel'
+import { migrateTravel } from '../lib/career/local-travel'
 import { stableActiveState } from '../components/career/stable'
 import { catalogGameplayTarget } from '../components/career/catalog-gameplay-bridge'
 import { gameplayUrl, readGameplayView } from '../lib/race-catalog/model'
@@ -19,7 +21,7 @@ import { validateRaceEntryOptions } from '../packages/shared/src/generated/save-
 import { BROWSER_SAVE_KEY, readBrowserSave, writeBrowserSave } from '../lib/career/browser-save'
 import { careerStore } from '../lib/career/store'
 import { managementFixture } from './helpers/management-fixture'
-import { contractedJockeys, racesForTurn } from '../lib/career/race-entry'
+import { contractedJockeys, racesForTurn, localRacesForTurn } from '../lib/career/race-entry'
 
 type Models = components['schemas']
 
@@ -113,6 +115,9 @@ async function harness(
     requests.push(url.pathname + url.search)
     if (workspace && url.pathname.endsWith('/careers/workspace')) {
       return Response.json(workspace)
+    }
+    if (workspace?.stable?.travel && url.pathname.endsWith('/expedition')) {
+      return Response.json({ travel: workspace.stable.travel })
     }
     if (workspace && url.pathname.endsWith('/catalog/horses')) {
       return Response.json({ data: [] })
@@ -1080,3 +1085,247 @@ test('actual App: developer Server creation submits the explicit starter and pre
     await h.close()
   }
 })
+
+for (const mode of ['local', 'server'] as const) {
+  for (const country of ['KOR', 'JPN', 'USA'] as const) {
+    test(`actual App ${mode} ${country}: common expedition status, readonly navigation and country-warning focus preserve saves`, async () => {
+      const fixture = managementFixture()
+      fixture.career.month = 6
+      fixture.career.careerTurnIndex = 6
+      const travel = migrateTravel({ country: fixture.lifecycle.country }).travel
+      if (country !== 'KOR') {
+        travel.locationCountry = country
+        travel.revision = 2
+        travel.activeExpedition = {
+          id: randomUUID(),
+          careerId: randomUUID(),
+          targetCountry: country,
+          targetRaceDefinitionId: `DEV_${country}_M3_MILE_1600`,
+          status: 'active',
+          startedTurn: 3,
+          startedRevision: 1,
+          endedTurn: null,
+          endReason: null,
+          createdAt: '2035-01-01T00:00:00Z',
+          endedAt: null,
+        }
+      }
+      const workspace = activeServerWorkspace()
+      delete workspace.career!.state.raceRun
+      workspace.stable!.travel = travel
+      const h = await harness(
+        mode,
+        '/',
+        mode === 'server' ? workspace : undefined,
+        mode === 'local'
+          ? () => writeBrowserSave({ ...fixture, lifecycle: { ...fixture.lifecycle, travel } })
+          : undefined,
+        mode === 'server'
+          ? {
+              career: workspace.career!,
+              defaultEngineVersion: 'race-sim-v3',
+              restrictionReason: null,
+              races: localRacesForTurn(workspace.career!.state.careerTurnIndex)
+                .filter((r) => r.countryCode === 'KOR')
+                .map((definition) => ({
+                  sourceKind: 'development_fixture',
+                  definition,
+                  eligible: false,
+                  restrictionReason: '국가별 출전 조건을 확인해 주세요.',
+                })),
+              jockeys: contractedJockeys.map((j) => ({ ...j, chemistry: 0 })),
+              tactics: ['도주', '선행', '선입', '추입'],
+            }
+          : undefined,
+      )
+      const click = async (label: string) => {
+        const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+          (b) => b.textContent?.trim() === label,
+        )
+        assert.ok(button, label)
+        await act(async () => button.click())
+      }
+      const panel = () => h.container.querySelector<HTMLElement>('#career-expedition')!
+      try {
+        await h.waitFor(() => !!careerStore.getSnapshot().career)
+        const saved = readBrowserSave()
+        const serverSaved = JSON.stringify(workspace)
+        await act(async () =>
+          h.container.querySelector<HTMLButtonElement>('[aria-label="설정"]')!.click(),
+        )
+        await h.waitFor(() => !!panel())
+        const status = panel().querySelector('[data-travel-location]')!.textContent
+        assert.equal(panel().querySelector('select'), null)
+        assert.match(panel().textContent!, country === 'KOR' ? /소속국 체류 중/ : /원정 중/)
+        if (country !== 'KOR') {
+          assert.ok(panel().textContent!.includes(travel.activeExpedition!.targetRaceDefinitionId!))
+        }
+        await click('원정 관리 · 육성 화면에서 원정·귀국')
+        assert.equal(h.dom.window.document.activeElement, panel())
+        assert.equal(h.container.querySelectorAll('#career-expedition').length, 1)
+        assert.ok(
+          panel().classList.contains('scroll-mt-20'),
+          '80px scroll margin clears the 56px sticky header',
+        )
+        assert.equal(panel().querySelector('[data-travel-location]')!.textContent, status)
+        const action = [...panel().querySelectorAll<HTMLButtonElement>('button')].find(
+          (b) => b.textContent?.trim() === (country === 'KOR' ? '원정 신청' : '귀국'),
+        )!
+        assert.equal(action.disabled, false)
+        assert.equal(panel().querySelector('details')!.open, false)
+        assert.ok(
+          action.compareDocumentPosition(panel().querySelector('details')!) &
+            h.dom.window.Node.DOCUMENT_POSITION_FOLLOWING,
+        )
+        const current = careerStore.getSnapshot()
+        for (const patch of [{ busy: true }, { pending: true }, { ready: false }]) {
+          assert.equal(expeditionControls({ ...current, ...patch }, mode).blocked, true)
+        }
+        assert.equal(
+          expeditionControls(current, mode === 'local' ? 'server' : 'local').travel,
+          null,
+        )
+        assert.equal(expeditionControls(current, mode, false, '저장 오류').blocked, true)
+        assert.equal(expeditionControls({ ...current, career: null }, mode).blocked, true)
+        if (mode === 'server') {
+          assert.equal(expeditionControls({ ...current, raceOptions: null }, mode).blocked, true)
+          assert.equal(expeditionControls({ ...current, workspace: null }, mode).travel, null)
+          assert.equal(expeditionControls({ ...current, error: '연결 오류' }, mode).blocked, true)
+        } else {
+          // Local failed writes remain retryable through the existing atomic command path.
+          assert.equal(
+            expeditionControls({ ...current, error: '저장 공간 부족' }, mode).blocked,
+            false,
+          )
+        }
+        const locked = {
+          ...current,
+          career: { ...current.career!, raceRun: activeServerWorkspace().career!.state.raceRun },
+        }
+        assert.equal(expeditionControls(locked, mode).blocked, true)
+        await click('← 홈')
+        await act(async () =>
+          [...h.container.querySelectorAll<HTMLButtonElement>('button')]
+            .find((b) => b.textContent?.includes('STABLE'))!
+            .click(),
+        )
+        await h.waitFor(() => !!h.container.querySelector('#stable-current-horse'))
+        assert.equal(panel().querySelector('[data-travel-location]')!.textContent, status)
+        assert.equal(panel().querySelector('select'), null)
+        await click('원정 관리 · 육성 화면에서 원정·귀국')
+        assert.equal(h.dom.window.document.activeElement, panel())
+        await act(async () =>
+          [
+            ...h.container.querySelectorAll<HTMLButtonElement>(
+              '[aria-label="월간 행동 선택"] button',
+            ),
+          ]
+            .find((b) => b.textContent?.startsWith('경주'))!
+            .click(),
+        )
+        await click('경주 출전 준비')
+        assert.equal(panel().querySelector('[data-travel-location]')!.textContent, status)
+        if (country !== 'KOR') {
+          await h.waitFor(() => !!h.container.querySelector('a[href="#career-expedition"]'))
+          const link = h.container.querySelector<HTMLAnchorElement>('a[href="#career-expedition"]')!
+          await act(async () => link.click())
+          assert.equal(h.dom.window.document.activeElement, panel())
+          assert.equal(h.dom.window.location.hash, '')
+          assert.equal(panel().querySelector('[data-travel-location]')!.textContent, status)
+        }
+        assert.deepEqual(readBrowserSave(), saved)
+        assert.equal(JSON.stringify(workspace), serverSaved)
+      } finally {
+        await h.close()
+      }
+    })
+  }
+}
+
+for (const mode of ['local', 'server'] as const) {
+  test(`actual App ${mode}: confirmed race allows readonly expedition navigation while commands stay locked`, async () => {
+    const fixture = managementFixture()
+    const workspace = activeServerWorkspace()
+    fixture.career = structuredClone(workspace.career!.state)
+    const travel = migrateTravel({ country: '대한민국' }).travel
+    workspace.stable!.travel = travel
+    const h = await harness(
+      mode,
+      '/',
+      mode === 'server' ? workspace : undefined,
+      mode === 'local'
+        ? () => writeBrowserSave({ ...fixture, lifecycle: { ...fixture.lifecycle, travel } })
+        : undefined,
+    )
+    const panel = () => h.container.querySelector<HTMLElement>('#career-expedition')!
+    const clickButton = async (button: HTMLButtonElement | undefined | null) => {
+      assert.ok(button)
+      assert.equal(button.disabled, false)
+      await act(async () => button.click())
+    }
+    try {
+      await h.waitFor(() => !!careerStore.getSnapshot().career?.raceRun)
+      const saved = readBrowserSave()
+      const serverSaved = JSON.stringify(workspace)
+      let scrolls = 0
+      h.dom.window.HTMLElement.prototype.scrollIntoView = function (options) {
+        assert.equal(this.id, 'career-expedition')
+        assert.deepEqual(options, { block: 'start' })
+        assert.ok(this.classList.contains('scroll-mt-20'))
+        scrolls++
+      }
+      for (const view of ['settings', 'stable']) {
+        if (view === 'settings') {
+          await clickButton(h.container.querySelector<HTMLButtonElement>('[aria-label="설정"]'))
+        } else {
+          await clickButton(h.container.querySelector<HTMLButtonElement>('header button'))
+          await clickButton(
+            [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+              b.textContent?.includes('STABLE'),
+            ),
+          )
+        }
+        await h.waitFor(() => !!panel())
+        assert.match(panel().textContent!, /확정한 경주를 완료한 뒤/)
+        const manage = [...panel().querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+          b.textContent?.includes('원정 관리'),
+        )
+        await clickButton(manage)
+        assert.equal(h.dom.window.document.activeElement, panel())
+        assert.equal(h.container.querySelectorAll('#career-expedition').length, 1)
+        const start = [...panel().querySelectorAll<HTMLButtonElement>('button')].find(
+          (b) => b.textContent?.trim() === '원정 신청',
+        )!
+        assert.ok(start)
+        assert.equal(start.disabled, true)
+        await act(async () => start.click())
+        assert.match(panel().textContent!, /확정한 경주를 완료한 뒤/)
+      }
+      assert.equal(scrolls, 2)
+      const snapshot = careerStore.getSnapshot()
+      for (const patch of [{ busy: true }, { pending: true }, { error: '연결 오류' }]) {
+        assert.equal(expeditionControls({ ...snapshot, ...patch }, mode).canManage, true)
+        assert.equal(expeditionControls({ ...snapshot, ...patch }, mode).blocked, true)
+      }
+      assert.equal(expeditionControls({ ...snapshot, career: null }, mode).canManage, false)
+      assert.equal(expeditionControls({ ...snapshot, ready: false }, mode).canManage, false)
+      assert.equal(
+        expeditionControls(snapshot, mode === 'local' ? 'server' : 'local').canManage,
+        false,
+      )
+      assert.equal(expeditionControls(snapshot, mode, true).canManage, false)
+      if (mode === 'server') {
+        assert.equal(expeditionControls({ ...snapshot, workspace: null }, mode).canManage, false)
+        assert.equal(expeditionControls({ ...snapshot, raceOptions: null }, mode).canManage, true)
+      }
+      assert.deepEqual(readBrowserSave(), saved)
+      assert.equal(JSON.stringify(workspace), serverSaved)
+      assert.equal(
+        h.requests.some((path) => path.includes('/return')),
+        false,
+      )
+    } finally {
+      await h.close()
+    }
+  })
+}

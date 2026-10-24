@@ -14,6 +14,7 @@ import {
 import { countryName, type StableTravel } from '@/lib/career/local-travel'
 import { stableTravel, useCareer } from '@/lib/career/store'
 import { GameRaceSource, GameRaceDisclosure } from './game-race-source'
+import { ExpeditionLink } from './expedition-navigation'
 import { SeasonSummary } from './career-progress'
 
 /** Presentation only. No hypothetical arrival or future eligibility is ever written to a Save. */
@@ -89,12 +90,9 @@ export function TravelRaceNotice({
   return message ? (
     <div role="status" className="mt-2 text-xs text-muted-foreground">
       <p>{message}</p>
-      <a
-        className="mt-1 inline-block font-semibold text-primary underline"
-        href="#career-expedition"
-      >
+      <ExpeditionLink>
         {travel?.activeExpedition ? '귀국·원정 상태 보기' : '원정 상태 보기'}
-      </a>
+      </ExpeditionLink>
     </div>
   ) : null
 }
