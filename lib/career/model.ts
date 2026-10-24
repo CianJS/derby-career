@@ -1,3 +1,4 @@
+import { localEventChoiceAvailability } from './events/availability'
 import {
   careerJockeyRelations,
   raceTrustChange,
@@ -496,12 +497,17 @@ export function chooseEvent(
   if (event.status !== 'offered') {
     return state
   }
-  if (state.action || state.raceRun) {
+  if (event.month !== state.month || state.action || state.raceRun) {
     throw new Error('이번 달 행동을 시작한 뒤에는 이벤트를 선택할 수 없습니다.')
   }
   const choice = catalog.find(eventId)?.choices?.find((option) => option.id === choiceId)
   if (!choice) {
     throw new Error('선택할 수 없는 이벤트 항목입니다.')
+  }
+  if (!localEventChoiceAvailability(catalog.find(eventId)!, choiceId, state).available) {
+    throw new Error(
+      '현재 상태에서는 실행할 수 없는 이벤트 선택입니다. 휴식하거나 치료를 선택해 주세요.',
+    )
   }
   if (choice.effects.some((effect) => effect.trust && effect.scope !== 'immediate')) {
     throw new Error('선택지의 신뢰도 효과는 즉시 적용으로 선언해야 합니다.')

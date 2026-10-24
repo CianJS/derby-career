@@ -4,12 +4,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { raceTrustChange } from '../../../packages/shared/src/domain'
-import { importEvents } from '../src/modules/events/import'
+import { importEvents, convertNotionRows } from '../src/modules/events/import'
 import { digest } from '../src/services/identity'
 import type { EventDefinition } from '../../../packages/shared/src/events'
 import { postgresDatabase } from '../src/db'
 import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
-import { fixture } from './helpers'
+import { fixture, catalogSource } from './helpers'
 import { createApp } from '../src/app'
 import { oidcConfig, testIssuer } from './oidc-helpers'
 
@@ -506,4 +506,69 @@ registerExpeditionTests('native PostgreSQL expedition', () => {
     throw new Error('Dedicated *_test database required')
   }
   return postgresDatabase(url)
+})
+
+test('PostgreSQL injury-blocked pending expiry and recovery are atomic under parallel commands and retries', async () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
+  }
+  const f = await fixture({ db: postgresDatabase(url), probability: 1 })
+  try {
+    await f.db.query('UPDATE event_definitions SET enabled=false')
+    const event = convertNotionRows((await catalogSource()).rows).events.find(
+      (event) => event.id === 'COM-0034',
+    )!
+    const { revision: _revision, ...body } = { ...event, choices: [event.choices[1]] }
+    await importEvents(f.db, { schemaVersion: 1, events: [{ ...body, revision: digest(body) }] })
+    const { id, response } = await f.create()
+    const state = { ...response.career.state, health: 'SEVERE', healthRecovery: 1 }
+    await f.db.query('UPDATE careers SET state=$2 WHERE id=$1', [id, JSON.stringify(state)])
+    const original = (
+      await f.db.query('SELECT * FROM career_event_history WHERE career_id=$1', [id])
+    ).rows[0]
+    const draw = (await f.db.query('SELECT * FROM event_draws WHERE career_id=$1', [id])).rows
+    const payload = { actionId: randomUUID(), choice: 'treatment', expectedTurn: 1 }
+    const replies = await Promise.all(
+      Array.from({ length: 4 }, () => f.call('POST', `/v1/careers/${id}/actions`, payload)),
+    )
+    for (const reply of replies) {
+      assert.equal(reply.statusCode, 200, reply.body)
+      assert.deepEqual(reply.json(), replies[0].json())
+      assert.equal(reply.json().career.event.state, 'expired')
+      assert.equal(reply.json().career.event.choiceId, null)
+    }
+    const others = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        f.call('POST', `/v1/careers/${id}/actions`, { ...payload, actionId: randomUUID() }),
+      ),
+    )
+    assert.ok(others.every((reply) => reply.statusCode === 409))
+    assert.equal(
+      Number(
+        (await f.db.query('SELECT count(*) AS n FROM monthly_actions WHERE career_id=$1', [id]))
+          .rows[0].n,
+      ),
+      1,
+    )
+    const expired = (
+      await f.db.query('SELECT * FROM career_event_history WHERE career_id=$1', [id])
+    ).rows[0]
+    assert.deepEqual(expired.definition_snapshot, original.definition_snapshot)
+    assert.equal(expired.event_revision, original.event_revision)
+    assert.deepEqual(expired.result, original.result)
+    assert.deepEqual(
+      (await f.db.query('SELECT * FROM event_draws WHERE career_id=$1', [id])).rows,
+      draw,
+    )
+    const advance = { commandId: randomUUID(), actionId: payload.actionId, expectedTurn: 1 }
+    const next = await f.call('POST', `/v1/careers/${id}/months/advance`, advance)
+    assert.equal(next.statusCode, 200, next.body)
+    assert.deepEqual(
+      (await f.call('POST', `/v1/careers/${id}/months/advance`, advance)).json(),
+      next.json(),
+    )
+  } finally {
+    await f.close()
+  }
 })

@@ -299,7 +299,7 @@ test('structured inspector identifies duplicate choices, unknown types, conflict
   )
 })
 
-test('350 original definitions, their byte hashes, director probability and frozen seeded effects remain unchanged', async () => {
+test('350 original definitions and policy stay frozen; UX-12 changes only injury and impossible-context draws', async () => {
   const golden = JSON.parse(await readFile('tests/fixtures/events-v1.json', 'utf8'))
   for (const [name, hash] of [
     ['events.import.json', golden.sourceSha256],
@@ -323,7 +323,21 @@ test('350 original definitions, their byte hashes, director probability and froz
   )
   assert.equal(pool.length, golden.enabled)
   assert.deepEqual(DEFAULT_DIRECTOR_CONFIG, golden.directorConfig)
-  assert.equal(eventRegressionDigest(pool), golden.regressionDigest)
+  // The pre-UX-12 digest includes injury training choices and draws outside their real timing.
+  // Keep its historical fixture intact. The legal unaffected subset was measured on develop
+  // 8ee299e with the same observation helper, before changing production eligibility.
+  assert.equal(
+    golden.regressionDigest,
+    '8397d7e9d0bf33c8a5c116f91f704b8a64785ada6f7a8b6cc3d0ff00c6fad873',
+  )
+  assert.equal(
+    eventRegressionDigest(pool, 'unaffected'),
+    'c3095586a005534e95c419b7fb386db85d03605d781fe362c810dd45d36c6dde',
+  )
+  assert.equal(
+    eventRegressionDigest(pool),
+    '23ccb5e28345ae587b813e7b3fbbdcedee6c4352e11cef8ea84393d374d53482',
+  )
 })
 
 test('draft packet rejects activation, executable rules, edited provenance and misuse through ordinary import', async () => {

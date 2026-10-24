@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 // Keep format and format:check on exactly the same targets.
 const targets = [
+  '../../lib/career/events/availability.ts',
   '../../lib/career/career-time.ts',
   '../../lib/career/outlook.ts',
   '../../lib/career/jockey-catalog.ts',

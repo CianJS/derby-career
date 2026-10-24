@@ -1,18 +1,19 @@
+import {
+  serverEventChoiceAvailability,
+  serverEventAvailable,
+  injuryBlockedPendingEvent,
+} from '../../../../packages/shared/src/event-availability'
 import { resolveEventChoice } from '../modules/events/risk'
 import { randomUUID } from 'node:crypto'
 import type { Query } from '../db'
 import { ApiError, conflict } from '../errors'
 import { digest } from '../services/identity'
 import { EventRepository } from './events'
-import {
-  conditionsMatch,
-  planDraw,
-  drawEvent,
-  trustChoiceAvailable,
-} from '../modules/events/director'
+import { conditionsMatch, planDraw, drawEvent } from '../modules/events/director'
 import { applyImmediateEffects } from '../modules/events/resolver'
 import {
   isHealthy,
+  canTrain,
   statKeys,
   type Career,
   type Choice,
@@ -43,9 +44,9 @@ export class CareerEventRepository {
     }
     const choice = history.definition_snapshot.choices.find((x) => x.id === choiceId)
     if (
+      history.turn !== row.turn ||
       !choice ||
-      !trustChoiceAvailable(choice, row.state) ||
-      !conditionsMatch(choice.conditions, {
+      !serverEventChoiceAvailability(history.definition_snapshot, choice, {
         career: row.state,
         choice:
           row.state.action?.trainingType ??
@@ -54,7 +55,7 @@ export class CareerEventRepository {
             : row.state.action?.actionType === 'treatment'
               ? 'treatment'
               : undefined),
-      })
+      }).available
     ) {
       throw new ApiError(422, 'INVALID_CHOICE', '실행할 수 없는 이벤트 선택입니다.')
     }
@@ -99,8 +100,8 @@ export class CareerEventRepository {
     if (event.automatic) {
       const c = event.choices[0]
       if (
-        !trustChoiceAvailable(c, row.state) ||
-        !conditionsMatch(c.conditions, { career: row.state, choice, beforeAction })
+        !serverEventChoiceAvailability(event, c, { career: row.state, choice, beforeAction })
+          .available
       ) {
         throw conflict('자동 이벤트 조건이 변경되었습니다.')
       }
@@ -136,7 +137,7 @@ export class CareerEventRepository {
       if (e.timing === 'treatment_result' && isHealthy(row.state.health)) {
         return false
       }
-      if (e.timing === 'training_result' && !isHealthy(row.state.health)) {
+      if (e.timing === 'training_result' && !canTrain(row.state.health)) {
         return false
       }
       return (
@@ -144,12 +145,7 @@ export class CareerEventRepository {
           e.conditions.filter((c) => c.type !== 'action_is'),
           { career: row.state },
         ) &&
-        (e.timing !== 'month_start' ||
-          e.choices.some(
-            (c) =>
-              conditionsMatch(c.conditions, { career: row.state }) &&
-              trustChoiceAvailable(c, row.state),
-          ))
+        (e.timing !== 'month_start' || serverEventAvailable(e, { career: row.state }))
       )
     })
     const seed = digest({ seed: row.seed, turn: row.turn, version: this.director.version })
@@ -213,6 +209,25 @@ export class CareerEventRepository {
       'UPDATE event_draws SET finished=true,evaluated_timings=$3 WHERE career_id=$1 AND turn=$2',
       [row.id, row.turn, JSON.stringify([...draw.evaluated_timings, timing])],
     )
+  }
+
+  async prepareAction(tx: Query, row: CareerRow, choice: Choice) {
+    const history = await readCareerHistory(tx, row)
+    if (history?.state === 'pending') {
+      if (
+        (choice !== 'rest' && choice !== 'treatment') ||
+        !injuryBlockedPendingEvent(history.definition_snapshot, row.state)
+      ) {
+        throw conflict('이벤트 선택을 먼저 확정해 주세요.')
+      }
+      // The action and expiry commit together. A rejected action rolls this back, preserving the offer.
+      // Keep the original snapshot/draw/seed and choice_id=null; no effects or replacement event.
+      await tx.query(
+        "UPDATE career_event_history SET state='expired',applied_at=now() WHERE id=$1",
+        [history.id],
+      )
+    }
+    return history
   }
 
   async consumeModifiers(tx: Query, row: CareerRow, choice?: Choice, actionChanges: Change[] = []) {

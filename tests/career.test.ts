@@ -1,3 +1,12 @@
+import { canTrain, localEventChoiceAvailability } from '../packages/shared/src/domain'
+import { defaultEventCatalog } from '../lib/career/events/repository'
+import {
+  isStartEligible,
+  drawMonthStartEvent,
+  drawResultEvent,
+  planActionEvent,
+  withMonthEvent,
+} from '../lib/career/events/director'
 import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -267,4 +276,79 @@ test('browser repository round-trips action states and preserves saves on failed
   storage.rejectWrites(false)
   clearCareer()
   assert.equal(readCareer(), null)
+})
+
+test('injury filters month-start choices by actual effects while preserving recovery and saved offers', () => {
+  const healths = ['정상', 'HEALTHY', '경상', '중등도 부상', '중상', 'MINOR', 'MODERATE', 'SEVERE']
+  for (const health of healths) {
+    const career = { ...startCareer(horses[0].id), health }
+    const healthy = canTrain(health)
+    for (const id of ['COM-0031', 'COM-0032', 'COM-0033', 'COM-0034', 'COM-0035']) {
+      const definition = defaultEventCatalog.find(id)!
+      assert.equal(
+        isStartEligible(definition, health),
+        healthy || ['COM-0034', 'COM-0035'].includes(id),
+        `${health}:${id}`,
+      )
+      const saved: Career = {
+        ...career,
+        event: { eventId: id, month: 1, seed: 42, status: 'offered' },
+        eventLog: [],
+        eventMisses: 3,
+      }
+      const restored = JSON.parse(JSON.stringify(saved)) as Career
+      assert.deepEqual(
+        withMonthEvent(restored),
+        saved,
+        'reading an old offer never redraws or deletes it',
+      )
+      for (const choice of definition.choices!) {
+        const available = localEventChoiceAvailability(definition, choice.id, career)
+        const trainingOnly = choice.effects.every(
+          (effect) => effect.scope !== 'immediate' && effect.scope !== 'rest',
+        )
+        assert.equal(available.available, healthy || !trainingOnly)
+        if (!available.available) {
+          assert.throws(() => chooseEvent(saved, id, choice.id), /실행할 수 없는/)
+          assert.equal(saved.event!.status, 'offered')
+        } else {
+          const selected = chooseEvent(saved, id, choice.id)
+          assert.equal(chooseEvent(selected, id, choice.id), selected)
+        }
+      }
+      if (!healthy) {
+        for (const choice of ['rest', 'treatment'] as const) {
+          const done = resolveAction(commitAction(restored, choice))
+          assert.equal(done.action!.event, undefined, 'no training bonus may run during recovery')
+          assert.equal(done.event!.status, 'expired')
+          const advanced = advanceMonth(done, done.action!.actionId)
+          assert.deepEqual(advanced.eventLog!.at(-1), { eventId: id, month: 1, status: 'expired' })
+        }
+      }
+    }
+    const context = { horseId: career.horse.id, month: 1, health, eventMisses: 3, eventLog: [] }
+    const onlyTraining = createEventCatalog(
+      defaultEventCatalog
+        .list()
+        .filter((event) => ['COM-0031', 'COM-0032', 'COM-0033'].includes(event.id)),
+    )
+    const drawn = drawMonthStartEvent(context, onlyTraining)
+    assert.deepEqual(drawMonthStartEvent(context, onlyTraining), drawn)
+    assert.equal(!!drawn, healthy, 'pity does not invent a candidate from an empty eligible pool')
+    const fakeTraining = {
+      actionId: 'saved:training',
+      actionType: 'training' as const,
+      trainingType: 'speed' as const,
+      seed: 42,
+    }
+    if (!healthy) {
+      assert.equal(drawResultEvent(context, fakeTraining), null)
+      const selected: Career = {
+        ...career,
+        event: { eventId: 'COM-0033', month: 1, seed: 42, choice: 'B', status: 'chosen' },
+      }
+      assert.deepEqual(planActionEvent(selected, fakeTraining).effects, [])
+      assert.equal(planActionEvent(selected, fakeTraining).event!.status, 'expired')
+    }
+  }
 })
