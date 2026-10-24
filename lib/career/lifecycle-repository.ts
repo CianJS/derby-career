@@ -3,6 +3,9 @@ import { assertLifecycleSave } from './lifecycle-save'
 import { applyCareer } from './lifecycle'
 import { migrateTravel } from './local-travel'
 import { migrateEconomy } from './local-economy'
+import type { StarterJockeyId } from './jockey-catalog'
+
+export type StarterDraftChange = { expectedStarterJockeyId: StarterJockeyId | undefined }
 
 const key = 'derby-career-lifecycle-v2'
 export function readLifecycleSave(): unknown {
@@ -53,10 +56,21 @@ export function readLifecycleSave(): unknown {
   assertLifecycleSave(value)
   return value
 }
-export function writeLifecycleSave(value: unknown): void {
+export function writeLifecycleSave(value: unknown, draftChange?: StarterDraftChange): void {
   assertLifecycleSave(value)
   const saved = readBrowserSave()
-  if (
+  if (draftChange) {
+    if (saved.career || saved.lifecycle?.contractedJockeyIds !== undefined) {
+      throw new Error('기존 마방의 기수 계약은 초기 선택으로 변경할 수 없습니다.')
+    }
+    if (
+      !value.starterJockeyId ||
+      (saved.lifecycle?.starterJockeyId !== draftChange.expectedStarterJockeyId &&
+        saved.lifecycle?.starterJockeyId !== value.starterJockeyId)
+    ) {
+      throw new Error('다른 탭에서 초기 기수 선택이 변경되었습니다. 다시 불러와 주세요.')
+    }
+  } else if (
     saved.lifecycle?.starterJockeyId !== undefined &&
     value.starterJockeyId !== undefined &&
     saved.lifecycle.starterJockeyId !== value.starterJockeyId
@@ -67,7 +81,7 @@ export function writeLifecycleSave(value: unknown): void {
   // A stale tab may update presentation metadata, but cannot erase an immutable archive.
   let next = {
     ...value,
-    ...(saved.lifecycle?.starterJockeyId
+    ...(saved.lifecycle?.starterJockeyId && !draftChange
       ? { starterJockeyId: saved.lifecycle.starterJockeyId }
       : {}),
     ...(saved.lifecycle?.contractedJockeyIds
