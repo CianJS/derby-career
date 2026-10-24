@@ -29,7 +29,7 @@ import { withMonthEvent } from './events/director'
 import type { EventChoiceId } from './events/types'
 import { writeCareer } from './repository'
 import { restoreLocalCareer } from './local-recovery'
-import { writeLifecycleSave } from './lifecycle-repository'
+import { writeLifecycleSave, type StarterDraftChange } from './lifecycle-repository'
 import { startLocalCareer, retireLocalCareer } from './local-career'
 import type { StarterJockeyId } from './jockey-catalog'
 import { applyCareer } from './lifecycle'
@@ -341,12 +341,12 @@ export const careerStore = {
   getSnapshot: () => snapshot,
   configure,
   refresh,
-  saveLifecycle: (state: unknown) => {
+  saveLifecycle: (state: unknown, draftChange?: StarterDraftChange) => {
     const generation = modeGeneration
     return snapshot.mode === 'local'
       ? locked(() => {
           if (snapshot.mode === 'local' && modeGeneration === generation) {
-            writeLifecycleSave(state)
+            writeLifecycleSave(state, draftChange)
             publish({ lifecycle: readBrowserSave().lifecycle ?? null })
           }
         })

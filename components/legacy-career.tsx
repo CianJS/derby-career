@@ -576,7 +576,8 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   useEffect(() => {
     if (saveMode !== 'local' || !hydrated || !compatibleMode) return
     let current = true
-    void careerStore.saveLifecycle(state).then(() => {
+    // Starter drafts belong to InitialJockeyGate; do not replay the draft read at startup.
+    void careerStore.saveLifecycle({ ...state, starterJockeyId: undefined }).then(() => {
       if (current) setSaveError(null)
     }).catch(error => {
       if (current) setSaveError(error instanceof Error ? error.message : '마방 기록을 저장하지 못했습니다.')
