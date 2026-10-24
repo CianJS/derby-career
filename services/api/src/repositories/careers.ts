@@ -411,10 +411,7 @@ export class CareerRepository {
         if (row.turn !== body.expectedTurn || row.state.action || row.state.raceRun) {
           throw conflict('이번 월 행동이 이미 확정되었거나 월이 변경되었습니다.')
         }
-        const history = await readCareerHistory(tx, row)
-        if (history?.state === 'pending') {
-          throw conflict('이벤트 선택을 먼저 확정해 주세요.')
-        }
+        const history = await this.eventsRepository.prepareAction(tx, row, body.choice)
         const before = structuredClone(row.state)
         let modifierChanges: Change[] = []
         try {

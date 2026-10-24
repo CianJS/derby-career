@@ -80,6 +80,8 @@ OIDC_MAX_TOKEN_AGE_SECONDS=3600
 
 ## 계약과 연동
 
+부상 중 월초 이벤트의 공유 선택 판단 함수와 기존 pending 저장 보호는 [이벤트 선택 가능 기준](docs/injury-event-eligibility.md)을 따른다. Backend 적용 전에 `009_unselected_event_expiry.sql`까지 migration이 필요하다.
+
 기본 60턴·연령 증가·다년 시즌 경주는 [육성 시간과 시즌 경주 계약](docs/career-seasons.md)을 따른다. 기존 API 구조와 저장 버전은 유지하며 출전 후보의 `month`는 실제 절대 턴으로 반환한다.
 
 초기 기수는 신규 마방에서 선택한 1명만 무료 계약한다. CreateCareer의 `starterJockeyId`, 공통 도감/후보, 기존 저장 승계 및 후속 Frontend 연결은 [초기 기수 계약](docs/starter-jockeys.md)을 따른다. 기존 3명 계약은 축소하지 않는다.
@@ -122,7 +124,7 @@ API `actionId`는 UUID이며 `career.state.action.actionId`의 기존 도메인 
 
 ## 서버 레이스
 
-신규 출전은 공유 `simulateRace`의 **race-sim-v4**를 기본 사용한다. 기존 v1/v2/v3 지정 요청과 저장 로그는 원래 계산으로 유지한다. v4는 기존 v3 코어에 잠긴 신뢰도의 execution 보정만 더한다. 적용 전 `npm run db:migrate`로 **007_jockey_trust.sql**까지 실행한다. readiness는 국가/원정 스키마 008까지 요구하며 기존 migration과 저장 로그/결과는 변경하지 않는다.
+신규 출전은 공유 `simulateRace`의 **race-sim-v4**를 기본 사용한다. 기존 v1/v2/v3 지정 요청과 저장 로그는 원래 계산으로 유지한다. v4는 기존 v3 코어에 잠긴 신뢰도의 execution 보정만 더한다. 적용 전 `npm run db:migrate`로 **007_jockey_trust.sql**까지 실행한다. readiness는 이벤트 만료 제약을 포함한 009까지 요구하며 기존 migration과 저장 로그/결과는 변경하지 않는다.
 
 [신뢰도 규칙·출전 전 전력 평가·DB/Local 이행·Frontend 계약](docs/jockey-trust.md)을 확인한다. 기존 내부 chemistry 필드는 신뢰도를 뜻하며 새 조회는 `GET /v1/careers/{careerId}/jockey-relations` / `getJockeyRelations`다. 현역/은퇴 관계의 trust·starts와 Career ID/revision을 소유자 범위로 제공한다. 실제 이벤트 1,000개에는 신뢰도 효과를 임의로 추가하지 않았다.
 
@@ -237,7 +239,7 @@ Frontend 계약은 기존 `GET /v1/events`, 상세 조회, `GET /v1/careers/{id}
 
 ## 실존 경마장·경주 일정 참조 카탈로그
 
-`006_racing_reference_catalog.sql`은 `racecourses`, `racecourse_courses`, `race_schedules`를 추가한다. 기존 `race_definitions` 17개, Career/RaceRun/결과/ledger/저장 로그와 분리되어 있으며 `db:seed`와 서버 시작은 실존 카탈로그를 가져오지 않는다. `/health/ready`는 현재 최신 008까지 적용되어야 성공한다. 운영 DB에는 이번 작업에서 적용하지 않았다.
+`006_racing_reference_catalog.sql`은 `racecourses`, `racecourse_courses`, `race_schedules`를 추가한다. 기존 `race_definitions` 17개, Career/RaceRun/결과/ledger/저장 로그와 분리되어 있으며 `db:seed`와 서버 시작은 실존 카탈로그를 가져오지 않는다. `/health/ready`는 현재 최신 009까지 적용되어야 성공한다. 운영 DB에는 이번 작업에서 적용하지 않았다.
 
 2026-10-15 Notion의 필터 없는 기본 뷰를 끝까지 조회한 속성 snapshot을 `seeds/racing.notion.source.json`에 보존했다. 경마장 **90**, 코스 **101**, 경주 원본 **851행**이다. 비공개 Notion 페이지 식별자는 제거하고 관계는 원본의 안정 ID로 바꿨다. 공식 외부 출처·메모·원본 제원은 보존한다. 변환 결과는 `seeds/racing.catalog.json`, 검토 목록은 `reports/racing-catalog.json`이다. 이 수치는 서로 다른 851개 대회 또는 실행 가능한 경주 수가 아니다.
 

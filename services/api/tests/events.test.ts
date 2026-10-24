@@ -1,3 +1,17 @@
+import {
+  serverEventAvailable,
+  serverEventChoiceAvailability,
+  injuryBlockedPendingEvent,
+} from '../../../packages/shared/src/event-availability'
+import {
+  riskOutcomes,
+  type EventDefinition,
+  type EventEffect,
+  type EventChoice,
+} from '../../../packages/shared/src/events'
+import { canTrain, eventActionAvailable } from '../../../packages/shared/src/domain'
+import { CareerEventRepository } from '../src/repositories/career-events'
+import { readCareerRow } from '../src/repositories/career-rows'
 import { legacyCareer as startCareer } from '../../../tests/helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -250,5 +264,277 @@ test('three completed months without an event guarantee the next eligible month 
     )
   } finally {
     await f.close()
+  }
+})
+
+test('shared Server eligibility matches Local actions for injury aliases, effect scopes and every risk outcome', async () => {
+  const catalog = convertNotionRows((await catalogSource()).rows).events
+  const sample = catalog.find((event) => event.id === 'COM-0034')!
+  const training: EventEffect = {
+    type: 'action_modifier',
+    action: 'training',
+    field: 'fatigue',
+    operation: 'add',
+    value: -3,
+  }
+  const immediate: EventEffect = { type: 'value_delta', key: 'fatigue', amount: -3 }
+  for (const health of [
+    '정상',
+    'HEALTHY',
+    '경상',
+    '중등도 부상',
+    '중상',
+    'MINOR',
+    'MODERATE',
+    'SEVERE',
+  ]) {
+    const career = { ...startCareer('DEV_HORSE_SERENE_STEP'), health }
+    const healthy = canTrain(health)
+    for (const action of ['speed', 'stamina', 'rest', 'treatment'] as const) {
+      const allowed = action === 'rest' || (action === 'treatment' ? !healthy : healthy)
+      assert.equal(
+        eventActionAvailable(
+          career,
+          action === 'speed' || action === 'stamina' ? 'training' : action,
+        ),
+        allowed,
+      )
+      if (allowed) {
+        assert.doesNotThrow(() => commitAction(career, action))
+      } else {
+        assert.throws(() => commitAction(career, action))
+      }
+    }
+    const trainingBranches: EventEffect[][] = [[training], [{ ...training, training: 'speed' }]]
+    for (const effects of trainingBranches) {
+      const event: EventDefinition = {
+        ...sample,
+        choices: [{ ...sample.choices[0], effects, conditions: [] }],
+      }
+      assert.equal(serverEventAvailable(event, { career }), healthy)
+      assert.equal(injuryBlockedPendingEvent(event, career), !healthy)
+      assert.equal(
+        !!drawEvent([event], 'month_start', { career }, 'fixed', 'event-director-v1'),
+        healthy,
+      )
+    }
+    const mixed: EventDefinition = {
+      ...sample,
+      choices: [{ ...sample.choices[0], effects: [immediate, training] }],
+    }
+    assert.equal(serverEventAvailable(mixed, { career }), true)
+    assert.equal(serverEventAvailable(sample, { career }), true)
+    assert.equal(
+      serverEventChoiceAvailability(sample, sample.choices[1], { career }).available,
+      healthy,
+    )
+    for (const action of ['rest', 'treatment'] as const) {
+      const event: EventDefinition = {
+        ...sample,
+        choices: [{ ...sample.choices[0], effects: [{ ...training, action }] }],
+      }
+      assert.equal(serverEventAvailable(event, { career }), action === 'rest' || !healthy)
+    }
+    for (const outcome of riskOutcomes) {
+      const choice: EventChoice = {
+        ...sample.choices[0],
+        effects: [],
+        risk: {
+          version: 'event-risk-v1' as const,
+          outcomes: { great_success: [immediate], success: [immediate], failure: [], disaster: [] },
+        },
+      }
+      choice.risk!.outcomes[outcome] = [training]
+      const event: EventDefinition = { ...sample, choices: [choice] }
+      assert.equal(serverEventAvailable(event, { career }), healthy, `${health}:${outcome}`)
+    }
+    const bonus: EventEffect = { type: 'resolved_growth_bonus', stat: 'speed', ratio: 0.5 }
+    const resultEvent = {
+      ...sample,
+      timing: 'training_result' as const,
+      choices: [{ ...sample.choices[0], effects: [bonus] }],
+    }
+    assert.equal(serverEventAvailable(resultEvent, { career }), false)
+    const resolved = resolveServerAction({ ...career, health: '정상' }, 'speed')
+    assert.equal(serverEventAvailable(resultEvent, { career: resolved, choice: 'speed' }), true)
+    assert.equal(
+      serverEventAvailable(resultEvent, {
+        career: resolveServerAction(career, 'rest'),
+        choice: 'rest',
+      }),
+      false,
+    )
+  }
+})
+
+test('persisted monthly pools exclude injury-only training rewards before planning and keep eligible mixed choices', async () => {
+  const f = await fixture({ probability: 1 })
+  try {
+    await f.db.query('UPDATE event_definitions SET enabled=false')
+    const { id } = await f.create()
+    const catalog = convertNotionRows((await catalogSource()).rows).events
+    const sample = catalog.find((event) => event.id === 'COM-0034')!
+    const onlyTraining = { ...sample, id: 'COM-0031', choices: [sample.choices[1]] }
+    const { revision: _revision, ...body } = onlyTraining
+    await importEvents(f.db, {
+      schemaVersion: 1,
+      events: [{ ...body, revision: digest(body) }, sample],
+    })
+    const repository = new CareerEventRepository({
+      ...DEFAULT_DIRECTOR_CONFIG,
+      monthlyProbability: 1,
+    })
+    let turn = 1
+    for (const health of [
+      '정상',
+      'HEALTHY',
+      '경상',
+      '중등도 부상',
+      '중상',
+      'MINOR',
+      'MODERATE',
+      'SEVERE',
+    ]) {
+      turn++
+      await f.db.transaction(async (tx) => {
+        const row = await readCareerRow(tx, f.user.principalId, id, true)
+        row.turn = turn
+        row.state = { ...row.state, health, month: turn, careerTurnIndex: turn }
+        await repository.createMonth(tx, row)
+      })
+      const draw = (
+        await f.db.query('SELECT * FROM event_draws WHERE career_id=$1 AND turn=$2', [id, turn])
+      ).rows[0]
+      assert.deepEqual(
+        draw.pool.map((event: EventDefinition) => event.id),
+        canTrain(health) ? ['COM-0031', 'COM-0034'] : ['COM-0034'],
+      )
+      assert.equal(draw.deferred_to_result, false)
+      const histories = (
+        await f.db.query('SELECT * FROM career_event_history WHERE career_id=$1 AND turn=$2', [
+          id,
+          turn,
+        ])
+      ).rows
+      assert.equal(histories.length, 1)
+      assert.ok(draw.pool.some((event: EventDefinition) => event.id === histories[0].event_id))
+    }
+  } finally {
+    await f.close()
+  }
+})
+
+test('injured choice rejection preserves pending snapshot; usable recovery choice applies only once', async () => {
+  const f = await fixture({ probability: 1 })
+  try {
+    await f.db.query("UPDATE event_definitions SET enabled=false WHERE id<>'COM-0034'")
+    const { id, response } = await f.create()
+    const state = { ...response.career.state, health: 'MINOR', healthRecovery: 1 }
+    await f.db.query('UPDATE careers SET state=$2 WHERE id=$1', [id, JSON.stringify(state)])
+    const before = (await f.call('GET', `/v1/careers/${id}`)).json()
+    const draws = (await f.db.query('SELECT * FROM event_draws WHERE career_id=$1', [id])).rows
+    const path = `/v1/careers/${id}/events/${before.career.event.id}/choice`
+    const invalid = { commandId: randomUUID(), choiceId: 'B', expectedTurn: 1 }
+    for (let retry = 0; retry < 2; retry++) {
+      const rejected = await f.call('POST', path, invalid)
+      assert.equal(rejected.statusCode, 422, rejected.body)
+      assert.equal(rejected.json().error.code, 'INVALID_CHOICE')
+      assert.deepEqual((await f.call('GET', `/v1/careers/${id}`)).json(), before)
+    }
+    const selection = { commandId: randomUUID(), choiceId: 'A', expectedTurn: 1 }
+    const selected = await f.call('POST', path, selection)
+    assert.equal(selected.statusCode, 200, selected.body)
+    assert.equal(selected.json().career.event.state, 'applied')
+    assert.deepEqual((await f.call('POST', path, selection)).json(), selected.json())
+    assert.deepEqual(
+      (await f.db.query('SELECT * FROM event_draws WHERE career_id=$1', [id])).rows,
+      draws,
+    )
+  } finally {
+    await f.close()
+  }
+})
+
+test('old injury-blocked pending snapshot expires atomically with recovery without reroll, duplicate effects or turn loss', async () => {
+  for (const action of ['rest', 'treatment'] as const) {
+    const f = await fixture({ probability: 1 })
+    try {
+      await f.db.query('UPDATE event_definitions SET enabled=false')
+      const event = convertNotionRows((await catalogSource()).rows).events.find(
+        (event) => event.id === 'COM-0034',
+      )!
+      const { revision: _revision, ...body } = { ...event, choices: [event.choices[1]] }
+      await importEvents(f.db, { schemaVersion: 1, events: [{ ...body, revision: digest(body) }] })
+      const { id, response } = await f.create()
+      const before = { ...response.career.state, health: 'MODERATE', healthRecovery: 1 }
+      await f.db.query('UPDATE careers SET state=$2 WHERE id=$1', [id, JSON.stringify(before)])
+      const original = (
+        await f.db.query('SELECT * FROM career_event_history WHERE career_id=$1', [id])
+      ).rows[0]
+      const draws = (await f.db.query('SELECT * FROM event_draws WHERE career_id=$1', [id])).rows
+      const saved = (await f.call('GET', `/v1/careers/${id}`)).json()
+      assert.equal(saved.career.event.state, 'pending')
+      await assert.rejects(
+        f.db.transaction(async (tx) => {
+          const row = await readCareerRow(tx, f.user.principalId, id, true)
+          await new CareerEventRepository(DEFAULT_DIRECTOR_CONFIG).prepareAction(tx, row, action)
+          throw new Error('lost transaction')
+        }),
+        /lost transaction/,
+      )
+      assert.deepEqual(
+        (await f.db.query('SELECT * FROM career_event_history WHERE career_id=$1', [id])).rows[0],
+        original,
+      )
+      const payload = { actionId: randomUUID(), choice: action, expectedTurn: 1 }
+      const done = await f.call('POST', `/v1/careers/${id}/actions`, payload)
+      assert.equal(done.statusCode, 200, done.body)
+      assert.equal(done.json().career.event.state, 'expired')
+      assert.equal(done.json().career.event.choiceId, null)
+      assert.deepEqual(done.json().career.state.values, resolveServerAction(before, action).values)
+      assert.deepEqual(
+        (await f.call('POST', `/v1/careers/${id}/actions`, payload)).json(),
+        done.json(),
+        'lost response retry returns the same receipt',
+      )
+      assert.equal(
+        (await f.call('POST', `/v1/careers/${id}/actions`, { ...payload, actionId: randomUUID() }))
+          .statusCode,
+        409,
+      )
+      const expired = (
+        await f.db.query('SELECT * FROM career_event_history WHERE career_id=$1', [id])
+      ).rows[0]
+      for (const key of [
+        'id',
+        'definition_snapshot',
+        'event_revision',
+        'modifiers',
+        'result',
+        'choice_id',
+      ]) {
+        assert.deepEqual(expired[key], original[key])
+      }
+      assert.deepEqual(
+        (await f.db.query('SELECT * FROM event_draws WHERE career_id=$1', [id])).rows,
+        draws,
+      )
+      const advance = { commandId: randomUUID(), actionId: payload.actionId, expectedTurn: 1 }
+      const next = await f.call('POST', `/v1/careers/${id}/months/advance`, advance)
+      assert.equal(next.statusCode, 200, next.body)
+      assert.deepEqual(
+        (await f.call('POST', `/v1/careers/${id}/months/advance`, advance)).json(),
+        next.json(),
+      )
+      assert.equal(next.json().career.state.careerTurnIndex, 2)
+      assert.equal(
+        (await f.call('GET', `/v1/careers/${id}/events`))
+          .json()
+          .data.filter((history: { turn: number }) => history.turn === 1).length,
+        1,
+      )
+    } finally {
+      await f.close()
+    }
   }
 })

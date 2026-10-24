@@ -1,3 +1,6 @@
+import { mkdtemp, readdir, copyFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -196,5 +199,67 @@ test('private reads and writes require unexpired owned sessions; default/product
     assert.equal((await app.inject({ url: '/health/ready' })).statusCode, 503)
   } finally {
     await app.close()
+  }
+})
+
+test('009 preserves all pre-existing rows and checksums; unselected expiry needs a timestamp and stays immutable', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'derby-event-expiry-'))
+  let f: Awaited<ReturnType<typeof fixture>> | undefined
+  try {
+    for (const name of (await readdir('migrations')).filter(
+      (name) => name.endsWith('.sql') && !name.startsWith('009_'),
+    )) {
+      await copyFile(join('migrations', name), join(directory, name))
+    }
+    f = await fixture({ migrationsDirectory: directory, probability: 1 })
+    await f.db.query("UPDATE event_definitions SET enabled=false WHERE id<>'COM-0034'")
+    const { id } = await f.create()
+    const histories = (await f.db.query('SELECT * FROM career_event_history ORDER BY id')).rows
+    const draws = (await f.db.query('SELECT * FROM event_draws ORDER BY career_id,turn')).rows
+    const commands = (await f.db.query('SELECT * FROM commands ORDER BY principal_id,request_id'))
+      .rows
+    const checksums = (
+      await f.db.query('SELECT name,checksum FROM schema_migrations ORDER BY name')
+    ).rows
+    assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 503)
+    assert.deepEqual(await migrate(f.db), ['009_unselected_event_expiry.sql'])
+    assert.deepEqual(await migrate(f.db), [])
+    assert.deepEqual(
+      (await f.db.query('SELECT name,checksum FROM schema_migrations ORDER BY name')).rows.slice(
+        0,
+        8,
+      ),
+      checksums,
+    )
+    assert.deepEqual(
+      (await f.db.query('SELECT * FROM career_event_history ORDER BY id')).rows,
+      histories,
+    )
+    assert.deepEqual(
+      (await f.db.query('SELECT * FROM event_draws ORDER BY career_id,turn')).rows,
+      draws,
+    )
+    assert.deepEqual(
+      (await f.db.query('SELECT * FROM commands ORDER BY principal_id,request_id')).rows,
+      commands,
+    )
+    assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 200)
+    for (const state of ['selected', 'applied', 'expired']) {
+      await assert.rejects(
+        f.db.query('UPDATE career_event_history SET state=$2 WHERE career_id=$1', [id, state]),
+        /check constraint/,
+      )
+    }
+    await f.db.query(
+      "UPDATE career_event_history SET state='expired',applied_at=now() WHERE career_id=$1",
+      [id],
+    )
+    await assert.rejects(
+      f.db.query("UPDATE career_event_history SET state='pending' WHERE career_id=$1", [id]),
+      /Immutable event selection/,
+    )
+  } finally {
+    await f?.close()
+    await rm(directory, { recursive: true, force: true })
   }
 })

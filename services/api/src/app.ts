@@ -133,9 +133,9 @@ export async function createApp(
   app.get('/health/ready', { schema: routeSchema(spec, '/health/ready', 'get') }, async () => {
     try {
       const result = await db.query(
-        "SELECT name FROM schema_migrations WHERE name IN ('001_foundation.sql','002_history_guards.sql','003_exact_race_log_json.sql','004_race_sim_v3.sql','005_event_activation_guards.sql','006_racing_reference_catalog.sql','007_jockey_trust.sql','008_overseas_expeditions.sql')",
+        "SELECT name FROM schema_migrations WHERE name IN ('001_foundation.sql','002_history_guards.sql','003_exact_race_log_json.sql','004_race_sim_v3.sql','005_event_activation_guards.sql','006_racing_reference_catalog.sql','007_jockey_trust.sql','008_overseas_expeditions.sql','009_unselected_event_expiry.sql')",
       )
-      if (result.rows.length !== 8) {
+      if (result.rows.length !== 9) {
         throw new Error('Migration missing')
       }
       return { status: 'ready' }

@@ -1,5 +1,6 @@
 import { BALANCE } from '../balance'
 import { canTrain } from '../health'
+import { localEventChoiceAvailability } from './availability'
 import type { ActionRecord, Career } from '../model'
 import { defaultEventCatalog, type EventCatalog } from './repository'
 import { isEventActive, pendingEffects, appliesToAction } from './effects'
@@ -40,7 +41,9 @@ function choose(candidates: readonly EventDefinition[], log: readonly EventLogEn
 
 export function isStartEligible(event: EventDefinition, health: string): boolean {
   if (event.timing !== 'month-start') return false
-  return !event.condition.trainingStat || canTrain(health)
+  return event.choices
+    ? event.choices.some((choice) => localEventChoiceAvailability(event, choice.id, { health }).available)
+    : localEventChoiceAvailability(event, undefined, { health }).available
 }
 
 export function drawMonthStartEvent(context: DrawContext, catalog: EventCatalog = defaultEventCatalog): CareerEvent | null {
@@ -52,7 +55,9 @@ export function drawMonthStartEvent(context: DrawContext, catalog: EventCatalog 
 }
 
 export function drawResultEvent(context: DrawContext, action: ResolvedAction, catalog: EventCatalog = defaultEventCatalog): CareerEvent | null {
-  if (action.actionType === 'treatment') return null
+  if (action.actionType === 'treatment' || (action.actionType === 'training' && !canTrain(context.health))) {
+    return null
+  }
   const base = `${action.actionId}:event-result:v1`
   if (unit(`${base}:roll`) >= resultChance()) return null
   const timing = action.actionType === 'rest' ? 'rest-result' : 'training-result'
@@ -80,8 +85,10 @@ export function planActionEvent(career: Career, action: ResolvedAction, catalog:
   }
   const definition = catalog.find(current.eventId)
   if (current.status === 'applied' || current.status === 'expired') return { event: current, effects: [] }
-  if (!definition || !isEventActive(definition, current)) return { event: { ...current, status: 'expired' }, effects: [] }
-  const effects = pendingEffects(definition, current)
+  if (current.month !== career.month || !definition || !isEventActive(definition, current)) return { event: { ...current, status: 'expired' }, effects: [] }
+  const effects = pendingEffects(definition, current).filter(
+    (effect) => canTrain(career.health) || effect.scope === 'rest',
+  )
   if (!effects.some(effect => appliesToAction(effect, action))) return { event: { ...current, status: 'expired' }, effects: [] }
   return { event: { ...current, status: 'applied' }, effects, definition }
 }

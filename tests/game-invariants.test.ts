@@ -15,6 +15,7 @@ import {
   chooseEvent,
   completeRace,
 } from '../lib/career/model'
+import { localEventChoiceAvailability } from '../lib/career/events/availability'
 import { withMonthEvent } from '../lib/career/events/director'
 import { defaultEventCatalog } from '../lib/career/events/repository'
 import { isHealthy } from '../lib/career/status'
@@ -78,7 +79,14 @@ test('84 months per horse preserve bounded stats, calendar order, replay idempot
         career.event?.status === 'offered' &&
         defaultEventCatalog.find(career.event.eventId)?.choices
       ) {
-        career = chooseEvent(career, career.event.eventId, turn % 2 ? 'A' : 'B')
+        const definition = defaultEventCatalog.find(career.event.eventId)!
+        const options = definition.choices!.filter(
+          (choice) => localEventChoiceAvailability(definition, choice.id, career).available,
+        )
+        const choice = options[turn % options.length]
+        if (choice) {
+          career = chooseEvent(career, career.event.eventId, choice.id)
+        }
       }
       const choice = !isHealthy(career.health)
         ? 'treatment'

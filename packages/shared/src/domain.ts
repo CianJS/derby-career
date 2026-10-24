@@ -22,3 +22,5 @@ export {
   type CareerJockeySelection,
 } from '../../../lib/career/jockey-catalog'
 export * from '../../../lib/career/race-sim-v4'
+
+export * from '../../../lib/career/events/availability'

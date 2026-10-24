@@ -15,7 +15,10 @@ import { applyImmediateEffects } from '../src/modules/events/resolver'
 import { digest } from '../src/services/identity'
 
 /** Frozen observations of the existing director and resolver, independent of import implementation. */
-export function eventRegressionDigest(pool: EventDefinition[]) {
+export function eventRegressionDigest(
+  pool: EventDefinition[],
+  scope: 'all' | 'unaffected' = 'all',
+) {
   const observations: unknown[] = []
   const timings: EventTiming[] = [
     'month_start',
@@ -48,6 +51,23 @@ export function eventRegressionDigest(pool: EventDefinition[]) {
           [0, 2, 3].map((misses) => planDraw(seed, misses, pool, DEFAULT_DIRECTOR_CONFIG)),
         )
         for (const timing of timings) {
+          // The old full golden also probes impossible result-before-action/start-after-action
+          // draws and injured training choices. UX-12 deliberately changes those observations.
+          if (scope === 'unaffected') {
+            const context = contexts[index]
+            const actualTiming =
+              context.choice === 'rest'
+                ? 'rest_result'
+                : context.choice === 'treatment'
+                  ? 'treatment_result'
+                  : 'training_result'
+            if (
+              index === 2 ||
+              (context.choice ? timing !== actualTiming : timing !== 'month_start')
+            ) {
+              continue
+            }
+          }
           const event = drawEvent(
             pool,
             timing,
