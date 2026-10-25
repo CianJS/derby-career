@@ -23,6 +23,7 @@ function fixture(version: 'race-sim-v1' | 'race-sim-v2' | 'race-sim-v3' | 'race-
 for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4'] as const) {
   test(`local adapter preserves persisted ${version} without server requests`, async () => {
     const { career, log } = fixture(version)
+    const saved = JSON.stringify({ career, log })
     const api = createApiClient({
       baseUrl: '',
       fetch: async () => {
@@ -32,11 +33,13 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4
     const data = await createRaceDataAdapter('local', api, () => log).load(career)
     assert.equal(data.log, log)
     assert.equal(data.run, career.raceRun)
+    assert.equal(JSON.stringify({ career, log }), saved)
   })
 }
 for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4'] as const) {
   test(`server adapter reads ${version} with GET only and never touches local storage`, async () => {
     const { career, log } = fixture(version)
+    const saved = JSON.stringify({ career, log })
     const calls: string[] = []
     const api = createApiClient({
       baseUrl: '/api/server-save',
@@ -68,6 +71,7 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4
     assert.equal(JSON.stringify(data.log), JSON.stringify(log))
     assert.equal(calls.length, 2)
     await assert.rejects(adapter.load(career), /서버 육성/)
+    assert.equal(JSON.stringify({ career, log }), saved)
   })
 }
 

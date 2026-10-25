@@ -118,6 +118,15 @@ test('commentary is deterministic, uses stored data only and rotates wording for
       assert.ok(text.length > 0)
       assert.ok(!/undefined|NaN|null/.test(text), text)
       assert.equal(text, liveCommentary(log, t, run.playerHorseId, map))
+      const current = analyzeRace(log, t, run.playerHorseId)
+      // Removing future event/phase records must not change the current broadcast.
+      const known = {
+        ...log,
+        events: log.events.filter(event => event.tMs <= current.tMs),
+        highlights: log.highlights.filter(event => event.tMs <= current.tMs),
+        phaseMarkers: log.phaseMarkers.filter(marker => marker.tMs <= current.tMs),
+      }
+      assert.equal(text, liveCommentary(known, t, run.playerHorseId, map))
     }
   }
   const { run, log } = sample[0]

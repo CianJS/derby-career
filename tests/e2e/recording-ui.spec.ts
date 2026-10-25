@@ -3,7 +3,7 @@ import { BROWSER_SAVE_KEY } from '../../lib/career/browser-save'
 import { buildFixture } from '../../lib/career/fixtures'
 import { applyCareer } from '../../lib/career/lifecycle'
 import { frameAt, simulateRace, summarizeRaceLog } from '../../lib/career/race-simulation'
-import { buildFeedTimeline, feedAt } from '../../lib/career/race-feed'
+import { buildFeedTimeline, feedAt, liveCommentary } from '../../lib/career/race-feed'
 import { managementFixture } from '../helpers/management-fixture'
 
 async function seed(
@@ -258,6 +258,8 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4
         return {
           time: Number(stage.getAttribute('data-frame-ms')),
           rank: Number(focus.dataset.rank),
+          identity: focus.querySelector('.race-focus-identity')!.textContent,
+          commentary: focus.querySelector('.race-focus-commentary')!.textContent,
           remaining: Number(focus.dataset.remaining),
           leaderRemaining: Number(
             stage.querySelector('[data-leader-remaining]')?.getAttribute('data-leader-remaining'),
@@ -271,6 +273,7 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4
           markers: [...stage.querySelectorAll<HTMLElement>('.race-strip-runner')].map((el) => ({
             id: el.dataset.horseId!,
             rank: Number(el.dataset.rank),
+            gate: Number(el.dataset.gate),
             distance: Number(el.dataset.distance),
             x: Number(el.style.getPropertyValue('--strip-x')),
             centre:
@@ -289,6 +292,11 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4
       const frame = frameAt(log, snapshot.time)
       const me = frame.runners.find((runner) => runner.horseId === run.playerHorseId)!
       expect(snapshot.rank).toBe(me.rank)
+      expect(snapshot.identity).toContain(run.player.horseSnapshot.name)
+      expect(snapshot.identity).toContain('마번 1 · 출발 번호')
+      expect(snapshot.commentary).toBe(
+        '실시간 중계' + liveCommentary(log, frame.tMs, run.playerHorseId, names),
+      )
       expect(snapshot.historyRank).toBe(me.rank)
       expect(snapshot.remaining).toBe(Math.max(0, Math.round(log.raceDistance - me.distance)))
       expect(snapshot.leaderRemaining).toBe(frame.remaining)
@@ -296,6 +304,7 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4
       for (const marker of snapshot.markers) {
         const runner = frame.runners.find((runner) => runner.horseId === marker.id)!
         expect(marker.rank).toBe(runner.rank)
+        expect(marker.gate).toBe(run.runners.findIndex((r) => r.horseSnapshot.id === marker.id) + 1)
         expect(marker.x).toBeCloseTo(runner.distance / log.raceDistance, 8)
         expect(snapshot.board.find((row) => row.id === marker.id)?.rank).toBe(runner.rank)
       }

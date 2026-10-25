@@ -541,3 +541,56 @@ input::placeholder { color: var(--muted-foreground); }
   .lab-brand { font-size: .75rem; letter-spacing: .025em; }
   .race-focus-main { flex-wrap: wrap; }
 }
+
+/* Spectator labels stay independent of saved distance anchors. */
+.lab-playback { min-width: 0; }
+.lab-playback .race-broadcast-header > div { min-width: 0; overflow-wrap: anywhere; }
+.race-focus-identity { display: grid; gap: .25rem; margin: 0; overflow-wrap: anywhere; }
+.race-focus-identity strong { font-size: 1.15rem; line-height: 1.5; }
+.race-focus-identity span, .race-rank-caption { color: var(--muted-foreground); font-size: .8125rem; }
+.race-rank-caption { display: block; margin-bottom: .35rem; }
+.race-focus-head { letter-spacing: 0; line-height: 1.5; }
+.race-focus-gaps { font-size: .875rem; line-height: 1.6; }
+.race-focus-gaps dt { flex: none; }
+.race-focus-gaps dd { min-width: 0; overflow-wrap: anywhere; }
+.race-focus-leader { margin: 0; font-size: .875rem; color: var(--muted-foreground); }
+.race-focus-commentary { margin: .25rem 0; font-size: 1rem; line-height: 1.8; }
+.race-focus-commentary b { display: block; font-size: .8125rem; color: var(--primary); }
+.race-strip-runner, .race-strip-runner.is-player { width: 1.4rem; height: 1.4rem; }
+.race-strip-runner b, .race-strip-runner.is-player b { width: 1.4rem; height: 1.4rem; font-size: .8125rem; }
+.race-strip-runner.is-player b { border-radius: .2rem; border-width: 2px; }
+.race-strip-runner.is-ahead b { border-width: 2px; }
+.race-strip-runner.is-behind b { border-width: 2px; border-style: dashed; }
+.race-strip-runner span, .race-strip-runner small { padding: .05rem .15rem; font-size: .75rem; line-height: 1.4; }
+.race-gap-lane { margin: .25rem .75rem 1.25rem; height: 5rem; }
+.race-gap-dot { width: 1.3rem; height: 1.3rem; font-size: .75rem; }
+.race-gap-dot.is-player { width: 1.4rem; height: 1.4rem; border-radius: .2rem; border-width: 2px; }
+.race-gap-dot.is-ahead { border-width: 2px; }
+.race-gap-dot.is-behind { border-style: dashed; border-width: 2px; }
+.race-gap-scale { font-size: .75rem; }
+.race-gap-caption, .race-board-guide, .race-history-guide { margin: .5rem .8rem; color: var(--muted-foreground); font-size: .8125rem; line-height: 1.6; }
+.race-gap-caption { margin: 0; }
+.lab-playback .race-board li, .lab-playback .race-board.is-dense li { grid-template-columns: 2.4rem minmax(0,1fr) 2.5rem; padding: .5rem .8rem; font-size: .875rem; line-height: 1.6; }
+.race-board li span { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+.race-board li small { display: block; color: var(--muted-foreground); font-size: .8125rem; }
+.race-board li em { display: inline-block; margin-left: .4rem; font-size: .75rem; letter-spacing: 0; }
+.lab-playback .panel-title { flex-wrap: wrap; font-size: .875rem; line-height: 1.6; letter-spacing: 0; }
+.race-playback-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1rem; padding: .75rem; border: 1px solid var(--border); border-radius: .75rem; background: var(--card); }
+.race-playback-controls [aria-label="재생 배속"] { flex-wrap: wrap; }
+.lab-playback .race-feed-list li span:first-child { width: 4rem; }
+.lab-playback button:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+@media (max-width: 800px) {
+  .race-phase-track { gap: .25rem; }
+  .race-phase-track li { font-family: var(--font-sans); font-size: .8125rem; letter-spacing: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-playback *, .lab-playback *::before, .lab-playback *::after { animation: none !important; transition: none !important; }
+}
+.lab-playback .race-strip-runner.is-ahead b, .lab-playback .race-strip-runner.is-behind b { border-color: var(--foreground); }
+@media (max-width: 520px) {
+  .race-history-rank { display: none; }
+  .race-history-rank.is-key { display: block; font-size: 23px; }
+  .race-history-time { font-size: 23px; }
+}
+.race-playback-controls { position: sticky; bottom: .5rem; z-index: 10; box-shadow: var(--shadow-soft); }
+.race-playback-controls button { min-width: 2.75rem; font-size: .875rem; }

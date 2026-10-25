@@ -2,15 +2,25 @@ import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { createElement } from 'react'
+import { createElement, act } from 'react'
+import { createRoot } from 'react-dom/client'
+import { JSDOM } from 'jsdom'
+import { buildFixture } from '../lib/career/fixtures'
+import { liveCommentary } from '../lib/career/race-feed'
 import { renderToStaticMarkup } from 'react-dom/server'
 import postcss from 'postcss'
-import { RaceStrip, GapLane, PositionBoard, RaceFocus } from '../components/career/race-playback'
+import {
+  RaceStrip,
+  GapLane,
+  PositionBoard,
+  RaceFocus,
+  Stage,
+} from '../components/career/race-playback'
 import { PositionHistory } from '../components/career/race-position-history'
 
 import { contractedJockeys, createRaceRun, raceDefinitions } from '../lib/career/race-entry'
 import { simulateRace, type RaceFrame } from '../lib/career/race-simulation'
-import { analyzeRace, situationFrom } from '../lib/career/race-spectate'
+import { analyzeRace, situationFrom, momentOf } from '../lib/career/race-spectate'
 
 const career = { ...startCareer('DEV_HORSE_RED_COMET'), month: 3, careerTurnIndex: 3 }
 let sequence = 0
@@ -54,6 +64,7 @@ for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4
           playerHorseId: run.playerHorseId,
           names,
           raceDistance: log.raceDistance,
+          gates,
         }),
       )
       const focus = renderToStaticMarkup(
@@ -175,5 +186,254 @@ test('marker centre is independent of name label width and has no delayed positi
     const inFlowLabelWidth =
       declarations('.race-strip-runner span').position === 'absolute' ? 0 : labelWidth
     assert.equal(left - (anchorWidth + inFlowLabelWidth) / 2 + markerWidth / 2, left)
+  }
+})
+
+// Reuse the shipped 12/18-runner fixtures and all persisted engines; no invented racing data.
+for (const field of [12, 18] as const) {
+  test(`${field} runners: Korean labels, gates and readable identities follow actual start/finish frames`, () => {
+    const fixture = buildFixture(`playback-${field}`)
+    const savedRun = fixture.career!.raceRun!
+    const savedNames = new Map(
+      savedRun.runners.map((r) => [r.horseSnapshot.id, r.horseSnapshot.name]),
+    )
+    const savedGates = new Map(savedRun.runners.map((r, i) => [r.horseSnapshot.id, i + 1]))
+    for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4'] as const) {
+      const log = simulateRace(savedRun, version)
+      const before = JSON.stringify({ log, savedRun })
+      const times = new Set([0, ...log.phaseMarkers.map((m) => m.tMs), log.durationMs])
+      for (const time of times) {
+        const a = analyzeRace(log, time, savedRun.playerHorseId)
+        const html = renderToStaticMarkup(
+          createElement(
+            'div',
+            null,
+            createElement(RaceStrip, {
+              frame: a.frame,
+              runners: savedRun.runners,
+              playerHorseId: savedRun.playerHorseId,
+              names: savedNames,
+              raceDistance: log.raceDistance,
+              situation: a.now,
+            }),
+            createElement(RaceFocus, {
+              frame: a.frame,
+              situation: a.now,
+              moment: momentOf(a),
+              commentary: liveCommentary(log, a.frame.tMs, savedRun.playerHorseId, savedNames),
+              speedLabel: '자동 · x4',
+              names: savedNames,
+              playerHorseId: savedRun.playerHorseId,
+              gates: savedGates,
+            }),
+            createElement(PositionBoard, {
+              frame: a.frame,
+              playerHorseId: savedRun.playerHorseId,
+              names: savedNames,
+              raceDistance: log.raceDistance,
+              gates: savedGates,
+            }),
+            createElement(PositionHistory, {
+              log,
+              frame: a.frame,
+              playerHorseId: savedRun.playerHorseId,
+              names: savedNames,
+            }),
+          ),
+        )
+        const dom = new JSDOM(html)
+        try {
+          const doc = dom.window.document
+          assert.doesNotMatch(
+            doc.body.textContent!,
+            /FOCUS|POSITION BOARD|POSITION HISTORY|YOU|AUTO|START|FINISH/,
+          )
+          assert.equal(
+            doc.querySelector('.race-focus-identity strong')!.textContent,
+            savedNames.get(savedRun.playerHorseId),
+          )
+          assert.match(
+            doc.querySelector('.race-focus-identity span')!.textContent!,
+            /마번 1 · 출발 번호/,
+          )
+          assert.ok(doc.querySelector('.race-focus-rank')!.textContent!.includes(`${a.now.rank}위`))
+          assert.equal(
+            doc.querySelector('.race-focus-commentary')!.textContent,
+            '실시간 중계' + liveCommentary(log, a.frame.tMs, savedRun.playerHorseId, savedNames),
+          )
+          const rows = [...doc.querySelectorAll<HTMLElement>('.race-board li')]
+          assert.deepEqual(
+            rows.map((row) => Number(row.dataset.rank)),
+            a.frame.runners.map((r) => r.rank),
+          )
+          for (const row of rows) {
+            assert.equal(Number(row.dataset.gate), savedGates.get(row.dataset.horseId!))
+            assert.equal(row.querySelector('b')!.textContent, `${row.dataset.rank}위`)
+            assert.equal(row.querySelector('small')!.textContent, `마번 ${row.dataset.gate}`)
+          }
+          assert.equal(doc.querySelectorAll('.race-board em').length, 1)
+          assert.equal(doc.querySelector('.race-board em')!.textContent, '내 말')
+          const player = a.frame.runners.find((r) => r.horseId === savedRun.playerHorseId)!
+          assert.equal(
+            Number(doc.querySelector('.race-focus')!.getAttribute('data-remaining')),
+            Math.max(0, Math.round(log.raceDistance - player.distance)),
+          )
+          if (player.finished) {
+            assert.ok(
+              [...doc.querySelectorAll('.race-focus-gaps dd')].every(
+                (el) => el.textContent === '결승 통과',
+              ),
+            )
+          }
+          assert.equal(
+            doc.querySelectorAll('.race-focus [aria-live]').length,
+            0,
+            'rapid HUD changes are static readable content, not per-frame announcements',
+          )
+        } finally {
+          dom.window.close()
+        }
+      }
+      assert.equal(JSON.stringify({ log, savedRun }), before)
+    }
+  })
+}
+
+test('real playback controls preserve one RAF clock, shared frame and bounded announcements', async () => {
+  const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/' })
+  const previous = new Map<string, PropertyDescriptor | undefined>()
+  const install = (key: string, value: unknown) => {
+    previous.set(key, Object.getOwnPropertyDescriptor(globalThis, key))
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value })
+  }
+  let tick: FrameRequestCallback | undefined
+  let rafCalls = 0
+  let announce: (() => void) | undefined
+  let cleared = false
+  install('window', dom.window)
+  install('document', dom.window.document)
+  install('navigator', dom.window.navigator)
+  for (const key of [
+    'HTMLElement',
+    'HTMLButtonElement',
+    'Element',
+    'Node',
+    'Event',
+    'MouseEvent',
+  ] as const) {
+    install(key, dom.window[key])
+  }
+  install('IS_REACT_ACT_ENVIRONMENT', true)
+  install('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    tick = callback
+    rafCalls += 1
+    return rafCalls
+  })
+  install('cancelAnimationFrame', () => {
+    tick = undefined
+  })
+  dom.window.setInterval = ((callback: () => void, delay: number) => {
+    assert.equal(delay, 3000)
+    announce = callback
+    return 1
+  }) as typeof dom.window.setInterval
+  dom.window.clearInterval = () => {
+    cleared = true
+  }
+  const root = createRoot(dom.window.document.getElementById('root')!)
+  const fixture = buildFixture('playback-18')
+  const run = fixture.career!.raceRun!
+  const log = fixture.log!
+  const original = JSON.stringify({ log, run })
+  let finishes = 0
+  let wall = performance.now() + 1
+  const button = (name: string) =>
+    [...dom.window.document.querySelectorAll('button')].find((b) => b.textContent?.trim() === name)!
+  const advance = async (steps: number) => {
+    for (let i = 0; i < steps; i += 1) {
+      wall += 200
+      await act(async () => tick!(wall))
+    }
+  }
+  try {
+    await act(async () =>
+      root.render(
+        createElement(Stage, {
+          run,
+          log,
+          onFinish: () => {
+            finishes += 1
+          },
+        }),
+      ),
+    )
+    const doc = dom.window.document
+    assert.deepEqual(
+      [...doc.querySelectorAll('.race-phase-label')].map((el) => el.textContent),
+      ['출발', '중반', '마지막 코너', '최종 직선', '결승'],
+    )
+    assert.match(doc.querySelector('.race-broadcast-header')!.textContent!, /잔디/)
+    assert.equal(button('자동').getAttribute('aria-pressed'), 'true')
+    assert.equal(doc.querySelector('[role="status"]')!.textContent, '')
+    await advance(3)
+    assert.equal(
+      doc.querySelector('[role="status"]')!.textContent,
+      '',
+      'HUD updates do not announce',
+    )
+    await act(async () => announce!())
+    assert.ok(doc.querySelector('[role="status"]')!.textContent)
+    for (const speed of [1, 2, 4, 8]) {
+      await act(async () => button(`x${speed}`).click())
+      assert.equal(button(`x${speed}`).getAttribute('aria-pressed'), 'true')
+      await advance(4)
+      const frameMs = Number(doc.querySelector('.lab-playback')!.getAttribute('data-frame-ms'))
+      const a = analyzeRace(log, frameMs, run.playerHorseId)
+      for (const el of doc.querySelectorAll('[data-frame-ms]')) {
+        assert.equal(Number(el.getAttribute('data-frame-ms')), frameMs)
+      }
+      assert.equal(Number(doc.querySelector('.race-focus')!.getAttribute('data-rank')), a.now.rank)
+      assert.equal(
+        doc.querySelector('.race-focus-commentary')!.textContent,
+        '실시간 중계' +
+          liveCommentary(
+            log,
+            frameMs,
+            run.playerHorseId,
+            new Map(run.runners.map((r) => [r.horseSnapshot.id, r.horseSnapshot.name])),
+          ),
+      )
+      await act(async () => button('일시정지').click())
+      await advance(5)
+      assert.equal(
+        Number(doc.querySelector('.lab-playback')!.getAttribute('data-frame-ms')),
+        frameMs,
+      )
+      await act(async () => button('계속').click())
+    }
+    await act(async () => button('자동').click())
+    assert.equal(button('자동').getAttribute('aria-pressed'), 'true')
+    // Skip delegates once; the view itself never settles a race or modifies its saved data.
+    await act(async () => button('건너뛰기').click())
+    assert.equal(finishes, 1)
+    await act(async () => button('x8').click())
+    await advance(Math.ceil(log.durationMs / 1600) + 5)
+    assert.ok(button('결과 확인'))
+    await act(async () => button('결과 확인').click())
+    assert.equal(finishes, 2)
+    assert.equal(JSON.stringify({ log, run }), original)
+    await act(async () => root.unmount())
+    assert.equal(tick, undefined)
+    assert.equal(cleared, true)
+  } finally {
+    await act(async () => root.unmount())
+    dom.window.close()
+    for (const [key, descriptor] of previous) {
+      if (descriptor) {
+        Object.defineProperty(globalThis, key, descriptor)
+      } else {
+        Reflect.deleteProperty(globalThis, key)
+      }
+    }
   }
 })
