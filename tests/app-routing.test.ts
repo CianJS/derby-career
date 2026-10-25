@@ -10,6 +10,7 @@ import { expeditionControls } from '../components/career/expedition-panel'
 import { localEventChoiceAvailability, canTrain } from '../packages/shared/src/domain'
 import { serverMonthEventAvailability } from '../components/career/event-choice-guidance'
 import { defaultEventCatalog } from '../lib/career/events/repository'
+import { healthGuidance, recoveryGuidance } from '../lib/career/health-presentation'
 import { normalizeHealth } from '../lib/career/health'
 import { migrateTravel } from '../lib/career/local-travel'
 import { stableActiveState } from '../components/career/stable'
@@ -1831,3 +1832,128 @@ test('actual App Server: rejected available event choice keeps the saved pending
     await h.close()
   }
 })
+
+for (const mode of ['local', 'server'] as const) {
+  for (const [health, healthRecovery] of [
+    ['정상', 0],
+    ['경상', 1],
+    ['중등도 부상', 30],
+    ['중상', 140],
+    ['HEALTHY', undefined],
+    ['MINOR', undefined],
+    ['MODERATE', 10],
+    ['SEVERE', 30],
+  ] as const) {
+    test(`actual App ${mode} ${health}/${healthRecovery}: current health, recovery previews and entry guidance preserve saved state`, async () => {
+      const fixture = managementFixture()
+      const workspace = activeServerWorkspace()
+      delete workspace.career!.state.raceRun
+      fixture.career.month = 3
+      fixture.career.careerTurnIndex = 3
+      fixture.career.health = health
+      fixture.career.healthRecovery = healthRecovery
+      workspace.career!.state.health = health
+      workspace.career!.state.healthRecovery = healthRecovery
+      const options: Models['RaceEntryOptions'] = {
+        career: workspace.career!,
+        defaultEngineVersion: 'race-sim-v3',
+        restrictionReason: '서버 출전 자격 확인 필요',
+        races: localRacesForTurn(3).map((definition) => ({
+          sourceKind: 'development_fixture',
+          definition,
+          eligible: false,
+          restrictionReason: '서버 출전 자격 확인 필요',
+        })),
+        jockeys: contractedJockeys,
+        tactics: ['도주', '선행', '선입', '추입'],
+      }
+      const h = await harness(
+        mode,
+        '/',
+        mode === 'server' ? workspace : undefined,
+        mode === 'local' ? () => writeBrowserSave(fixture) : undefined,
+        options,
+      )
+      const click = async (text: string) => {
+        const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+          (b) => b.textContent?.trim() === text,
+        )!
+        assert.ok(button, text)
+        assert.equal(button.disabled, false)
+        await act(async () => button.click())
+      }
+      const tab = (text: string) =>
+        [
+          ...h.container.querySelectorAll<HTMLButtonElement>(
+            '[aria-label="월간 행동 선택"] button',
+          ),
+        ].find((b) => b.textContent?.startsWith(text))!
+      try {
+        await click('육성 계속')
+        const current = careerStore.getSnapshot().career!
+        const guidance = healthGuidance(current)
+        const saved = readBrowserSave()
+        const serverSaved = JSON.stringify(workspace)
+        const summary = h.container.querySelector('[data-health-guidance]')!.textContent!
+        assert.ok(summary.includes(`건강 · ${guidance.health}`))
+        assert.ok(summary.includes(`현재 회복 필요량 ${guidance.recovery}`))
+        assert.ok(summary.includes(guidance.trainingText))
+        assert.ok(summary.includes(guidance.raceText))
+        assert.equal(tab('훈련').disabled, !guidance.trainingAllowed)
+        assert.equal(tab('치료').disabled, guidance.trainingAllowed)
+        const outlook = h.container.querySelector('[aria-labelledby="month-outlook"]')!.textContent!
+        assert.ok(outlook.includes(guidance.raceText))
+        assert.match(outlook, /실제 등록은 경주 일정/)
+        if (!guidance.trainingAllowed) {
+          assert.doesNotMatch(outlook, /준비 양호/)
+        }
+        for (const action of ['rest', 'treatment'] as const) {
+          if (action === 'treatment' && guidance.trainingAllowed) {
+            continue
+          }
+          await act(async () => tab(action === 'rest' ? '휴식' : '치료').click())
+          const expected = recoveryGuidance(current, action)
+          const preview = h.container.querySelector(
+            `[data-recovery-preview="${action}"]`,
+          )!.textContent!
+          assert.ok(
+            preview.includes(
+              `현재 회복 필요량 ${expected.before.recovery} → 실행 후 예상 ${expected.after.recovery}`,
+            ),
+          )
+          assert.ok(
+            preview.includes(
+              `현재 건강 ${expected.before.health} → 실행 후 예상 ${expected.after.health}`,
+            ),
+          )
+          assert.match(preview, /같은 달에 훈련·경주를 추가로 할 수 없습니다/)
+          assert.doesNotMatch(h.container.textContent!, /훈련과 경주가 다시 열립니다/)
+          await click('행동 선택으로')
+        }
+        await act(async () => tab('경주').click())
+        if (guidance.racingAllowed || mode === 'server') {
+          await click('경주 출전 준비')
+          const entry = h.container.querySelector('[data-health-guidance]')!.textContent!
+          assert.ok(entry.includes(guidance.raceText))
+          if (guidance.caution) {
+            assert.ok(entry.includes(guidance.caution))
+          }
+          if (mode === 'server') {
+            assert.match(h.container.textContent!, /서버 출전 자격 확인 필요/)
+            const confirm = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+              (b) => b.textContent?.trim() === '출전 확정',
+            )!
+            assert.equal(confirm.disabled, true)
+          }
+        } else {
+          assert.match(h.container.textContent!, /중상 상태에서는 출전할 수 없습니다/)
+        }
+        assert.deepEqual(readBrowserSave(), saved)
+        assert.equal(JSON.stringify(workspace), serverSaved)
+        assert.equal(careerStore.getSnapshot().career!.action, null)
+      } finally {
+        await h.close()
+      }
+    })
+  }
+}

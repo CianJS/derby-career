@@ -1,5 +1,6 @@
 'use client'
 
+import { HealthGuidance } from './health-guidance'
 import { useState } from 'react'
 import { ExpeditionLink } from './expedition-navigation'
 import { GameRaceSource, GameRaceDisclosure } from './game-race-source'
@@ -244,6 +245,7 @@ export function RaceEntryForm({
           {restriction}
         </p>
       )}
+      <HealthGuidance career={career} />
       {!locked && <TravelRaceNotice races={turnRaces} travel={travel} />}
       {!locked && (
         <>

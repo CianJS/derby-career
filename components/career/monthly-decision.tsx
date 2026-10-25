@@ -9,12 +9,14 @@ import { AppliedEventNote, MonthEventCard, visibleMonthEvent } from '@/component
 import { BALANCE } from '@/lib/career/balance'
 import { actionName, labels, statKeys, trainings, type Career, type Stat } from '@/lib/career/model'
 import { careerStore, useCareer } from '@/lib/career/store'
-import { INJURY_NOTICE, STRAIN_WARNING, injuryRiskPercent, isHealthy, isStrained } from '@/lib/career/status'
-import { canRace, careerHealth, recoverBy } from '@/lib/career/health'
+import { STRAIN_WARNING, injuryRiskPercent, isHealthy, isStrained } from '@/lib/career/status'
+import { canRace, careerHealth } from '@/lib/career/health'
 import { GameRaceSource } from './game-race-source'
 import { TrainingPreview } from './training-preview'
 import { ServerMonthEvent } from './server-month-event'
 import { serverMonthEventAvailability } from './event-choice-guidance'
+import { healthGuidance } from '@/lib/career/health-presentation'
+import { RecoveryPreview } from './health-guidance'
 import { countryName } from '@/lib/career/local-travel'
 
 const icons = { speed: Zap, stamina: Wind, power: Dumbbell, guts: Flame, intelligence: Brain }
@@ -34,8 +36,7 @@ export function MonthlyDecision({ career, busy, raceEntry }: { career: Career; b
   const currentHealth = careerHealth(career)
   const injured = !isHealthy(currentHealth.health)
   const raceBlocked = !canRace(currentHealth.health)
-  const afterRest = recoverBy(currentHealth, BALANCE.health.recovery.rest)
-  const afterTreatment = recoverBy(currentHealth, BALANCE.health.recovery.treatment)
+  const health = healthGuidance(career)
   const strained = !injured && isStrained(career.values.fatigue, career.values.bodyLoad)
   const riskPercent = injuryRiskPercent(career.values)
   const locked = !!(career.action || career.raceRun)
@@ -43,10 +44,10 @@ export function MonthlyDecision({ career, busy, raceEntry }: { career: Career; b
   const raceTurn = isRaceTurn(career.careerTurnIndex)
   const raceHint = career.raceRun ? '출전 확정됨' : raceTurn ? (raceBlocked ? '중상으로 출전 불가' : '이번 달 출전 기회') : '이번 달 출전 기회 없음'
   const tabs: { id: Panel; name: string; Icon: typeof Zap; hint: string; disabled?: boolean }[] = [
-    { id: 'training', name: '훈련', Icon: Dumbbell, hint: injured ? '부상 중에는 훈련할 수 없습니다' : '능력치 1종을 성장시킵니다', disabled: injured },
+    { id: 'training', name: '훈련', Icon: Dumbbell, hint: health.trainingText, disabled: injured },
     { id: 'rest', name: '휴식', Icon: Moon, hint: '피로와 신체 부하를 회복합니다' },
-    { id: 'treatment', name: '치료', Icon: HeartPulse, hint: injured ? `건강 · ${career.health} 회복` : '치료할 부상이 없습니다', disabled: !injured },
-    { id: 'race', name: '경주', Icon: Flag, hint: serverMode ? '서버 출전 조건 확인' : raceHint, disabled: false },
+    { id: 'treatment', name: '치료', Icon: HeartPulse, hint: injured ? `건강 · ${currentHealth.health} 회복 필요량 감소` : '치료할 부상이 없습니다', disabled: !injured },
+    { id: 'race', name: '경주', Icon: Flag, hint: `${health.raceText} · ${serverMode ? '서버 출전 조건 확인' : raceHint}`, disabled: false },
   ]
   const title = career.raceRun ? '확정된 출전' : locked ? '월간 행동 결과' : panel ? tabs.find(tab => tab.id === panel)!.name : '이번 달, 무엇에 집중할까요?'
   const localEvent = !serverMode ? visibleMonthEvent(career) : null
@@ -63,14 +64,14 @@ export function MonthlyDecision({ career, busy, raceEntry }: { career: Career; b
         {strained && <div role="status" className="lab-warn px-3 py-2 text-xs"><b className="font-semibold">피로가 높습니다.</b> <span className="text-muted-foreground">{STRAIN_WARNING.replace('피로가 높습니다. ', '')}{riskPercent > 0 && ` 현재 부상 위험 ${riskPercent}%`}</span></div>}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{statKeys.map(type => { const item = trainings[type]; const Icon = icons[type]; return <article key={type} className="lab-train-card"><div className="flex items-center gap-2"><Icon size={16} className="text-primary" aria-hidden /><h3 className="text-sm font-bold">{item.name}</h3></div><div className="flex flex-wrap gap-1"><span className="lab-chip is-main">주 {labels[type]}</span>{item.secondary && <span className="lab-chip">보조 {labels[item.secondary]}</span>}</div><p className="text-xs">{item.preview}</p><TrainingPreview career={career} type={type} serverMode={serverMode} /><Button size="sm" className="mt-auto" disabled={blocked || injured} onClick={() => commit(type)}>{busy ? '저장 중…' : `${item.name} 실행`}</Button></article> })}</div>
       </div>}
-      {panel === 'rest' && <div className="flex flex-wrap items-center justify-between gap-4"><dl className="grid flex-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2"><div className="flex items-center justify-between border-b border-border py-2"><dt className="text-muted-foreground">피로</dt><dd className="tabular-nums">{career.values.fatigue} → <b>{Math.max(0, career.values.fatigue + BALANCE.rest.fatigue)}</b></dd></div><div className="flex items-center justify-between border-b border-border py-2"><dt className="text-muted-foreground">신체 부하</dt><dd className="tabular-nums">{career.values.bodyLoad} → <b>{Math.max(0, career.values.bodyLoad + BALANCE.rest.bodyLoad)}</b></dd></div>{injured && <div className="flex items-center justify-between border-b border-border py-2"><dt className="text-muted-foreground">건강</dt><dd>{currentHealth.health} → <b>{afterRest.health}</b>{afterRest.health !== '정상' && <span className="ml-1 text-xs text-muted-foreground tabular-nums">(회복 필요량 {currentHealth.recovery} → {afterRest.recovery})</span>}</dd></div>}</dl><div className="flex items-center gap-4"><p className="max-w-60 text-xs text-muted-foreground">이번 달 행동으로 확정되며 능력치는 변하지 않습니다.</p><Button disabled={actionBlocked('rest')} onClick={() => commit('rest')}>{busy ? '저장 중…' : '휴식 실행'}<Check data-icon="inline-end" aria-hidden /></Button></div></div>}
-      {panel === 'treatment' && <div className="flex flex-wrap items-center justify-between gap-4"><dl className="grid flex-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2"><div className="flex items-center justify-between border-b border-border py-2"><dt className="text-muted-foreground">건강</dt><dd>{currentHealth.health} → <b className="text-sage">{afterTreatment.health}</b>{afterTreatment.health !== '정상' && <span className="ml-1 text-xs text-muted-foreground tabular-nums">(회복 필요량 {currentHealth.recovery} → {afterTreatment.recovery})</span>}</dd></div><div className="flex items-center justify-between border-b border-border py-2"><dt className="text-muted-foreground">신체 부하</dt><dd className="tabular-nums">{career.values.bodyLoad} → <b>{Math.max(0, career.values.bodyLoad + BALANCE.treatment.bodyLoad)}</b></dd></div></dl><div className="flex items-center gap-4"><p className="max-w-64 text-xs text-muted-foreground">이번 달 행동으로 확정되며, 회복되면 다음 달부터 훈련과 경주가 다시 열립니다.</p><Button disabled={actionBlocked('treatment')} onClick={() => commit('treatment')}>{busy ? '저장 중…' : '치료 실행'}<Check data-icon="inline-end" aria-hidden /></Button></div></div>}
+      {panel === 'rest' && <div className="flex flex-wrap items-center justify-between gap-4"><RecoveryPreview career={career} action="rest" /><dl className="grid flex-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2"><div className="flex items-center justify-between border-b border-border py-2"><dt className="text-muted-foreground">피로</dt><dd className="tabular-nums">{career.values.fatigue} → <b>{Math.max(0, career.values.fatigue + BALANCE.rest.fatigue)}</b></dd></div><div className="flex items-center justify-between border-b border-border py-2"><dt className="text-muted-foreground">신체 부하</dt><dd className="tabular-nums">{career.values.bodyLoad} → <b>{Math.max(0, career.values.bodyLoad + BALANCE.rest.bodyLoad)}</b></dd></div></dl><div className="flex items-center gap-4"><p className="max-w-60 text-xs text-muted-foreground">이번 달 행동으로 확정되며 능력치는 변하지 않습니다.</p><Button disabled={actionBlocked('rest')} onClick={() => commit('rest')}>{busy ? '저장 중…' : '휴식 실행'}<Check data-icon="inline-end" aria-hidden /></Button></div></div>}
+      {panel === 'treatment' && <div className="flex flex-wrap items-center justify-between gap-4"><RecoveryPreview career={career} action="treatment" /><dl className="grid flex-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2"><div className="flex items-center justify-between border-b border-border py-2"><dt className="text-muted-foreground">신체 부하</dt><dd className="tabular-nums">{career.values.bodyLoad} → <b>{Math.max(0, career.values.bodyLoad + BALANCE.treatment.bodyLoad)}</b></dd></div></dl><div className="flex items-center gap-4"><p className="max-w-64 text-xs text-muted-foreground">이번 달 치료 행동 1회를 확정합니다. 회복 예상은 위 안내에서 확인하세요.</p><Button disabled={actionBlocked('treatment')} onClick={() => commit('treatment')}>{busy ? '저장 중…' : '치료 실행'}<Check data-icon="inline-end" aria-hidden /></Button></div></div>}
       {panel === 'race' && <div className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">{serverMode || raceTurn ? '경주·계약 기수·전술은 출전 준비 화면에서 비교하고 선택하세요.' : '이번 달은 출전할 수 있는 경주가 없습니다.'}</p>
         {!serverMode && raceBlocked ? <p className="lab-warn px-3 py-2 text-xs text-muted-foreground">경주 출전 제한 · 중상 상태에서는 출전할 수 없습니다. 치료나 휴식으로 회복하면 다시 출전할 수 있습니다.</p> : serverMode || raceTurn ? raceEntry : null}
         {!serverMode && isRaceTurn(career.careerTurnIndex + 1) && <aside aria-label="다음 달 주요 출전 기회" className="border-t border-border pt-3"><h3 className="text-xs font-bold">다음 달 주요 출전 기회</h3><div className="mt-2 grid gap-3 md:grid-cols-3">{localRacesForTurn(career.careerTurnIndex + 1).map(r => <div key={r.id} className="text-[11px] leading-5 text-muted-foreground"><p className="text-sm font-semibold text-foreground">{r.name} <GameRaceSource raceId={r.id} /></p><p>{countryName(r.countryCode ?? '국가 미확인')} · {r.surface} {r.distance}m · {r.raceClass} · {r.runners}두</p><p>등록비 ₩{r.entryFee.toLocaleString('ko-KR')} · 1착 상금 ₩{r.prize.toLocaleString('ko-KR')}</p></div>)}</div></aside>}
       </div>}
-      {!panel && injured && <p role="status" className="lab-warn mt-3 px-3 py-2 text-xs"><b className="font-semibold">건강 · {career.health}</b> <span className="text-muted-foreground">{INJURY_NOTICE}</span></p>}
+      {!panel && injured && <p role="status" className="lab-warn mt-3 px-3 py-2 text-xs"><b className="font-semibold">건강 · {currentHealth.health} · 현재 회복 필요량 {currentHealth.recovery}</b> <span className="text-muted-foreground">{health.trainingText} · {health.raceText}. {health.caution}</span></p>}
       {!panel && strained && <p role="status" className="lab-warn mt-3 px-3 py-2 text-xs"><b className="font-semibold">피로가 높습니다.</b> <span className="text-muted-foreground">{STRAIN_WARNING.replace('피로가 높습니다. ', '')}</span></p>}
     </> : <div role="region" aria-label="저장된 월간 행동 결과" aria-live="polite"><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary"><Check size={16} aria-hidden /><span>Month {career.month} · {actionName(career.action!)}</span></div>
       {result !== null && result !== undefined ? <><ActionResult action={career.action!} animate={committedMonth === career.month} />{serverMode ? <ServerMonthEvent busy={busy} /> : <AppliedEventNote action={career.action!} />}<div className="mt-3 flex flex-wrap items-center justify-between gap-4"><p className="text-xs text-muted-foreground">{eventPending ? '행동 결과가 저장되었습니다. 이벤트 선택을 마치면 다음 달로 진행할 수 있습니다.' : '결과가 저장되었습니다. 다음 달에 새로운 행동을 선택할 수 있습니다.'}</p><Button size="lg" disabled={blocked} onClick={() => void careerStore.next(career.action!.actionId)}>다음 달 시작<ArrowRight data-icon="inline-end" aria-hidden /></Button></div></> : <p className="py-4 text-sm text-muted-foreground">행동은 확정되었습니다. 저장된 결과를 불러오고 있습니다.</p>}

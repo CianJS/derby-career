@@ -1,5 +1,7 @@
 'use client'
 
+import { HealthGuidance } from './career/health-guidance'
+import { healthGuidance } from '@/lib/career/health-presentation'
 import { focusExpedition } from './career/expedition-navigation'
 import { ExpeditionPanel } from './career/expedition-panel'
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -11,7 +13,7 @@ import { RaceReflection } from "@/components/career/race-reflection";
 import { careerStore, useCareer, stableFunds } from "@/lib/career/store";
 import { applyCareer } from '@/lib/career/lifecycle';
 import { serverLifecycle } from '@/lib/server-save/lifecycle';
-import { INJURY_NOTICE, isHealthy, isStrained } from "@/lib/career/status";
+import { isHealthy, isStrained } from "@/lib/career/status";
 import { readLifecycleSave } from "@/lib/career/lifecycle-repository";
 import { ChevronRight, Coffee } from 'lucide-react'
 import type { View, CareerHorse, LifecycleState } from './career/legacy-types'
@@ -358,7 +360,7 @@ function Cockpit({
   const stats = horse?.stats ?? [];
   const apt = horse?.aptitude ?? [];
   const { career } = useCareer();
-  const health = career?.health ?? "정상";
+  const health = career ? healthGuidance(career).health : "확인 중";
   const injured = !isHealthy(health);
   return (
     <Section
@@ -392,15 +394,7 @@ function Cockpit({
               </span>
             </div>
           )}
-          {injured && (
-            <div
-              role="status"
-              className="lab-warn mt-2 px-3 py-2 text-xs"
-            >
-              <b className="font-semibold">부상 중 · {health}</b>{" "}
-              <span className="text-muted-foreground">{INJURY_NOTICE}</span>
-            </div>
-          )}
+          {career && <HealthGuidance career={career} />}
         </div>
         <dl className="grid grid-cols-5 gap-3 lg:border-x lg:border-border lg:px-6">
           {stats.map(([n, v]) => (

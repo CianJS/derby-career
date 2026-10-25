@@ -18,6 +18,7 @@ import { countryName } from '@/lib/career/local-travel'
 import { CareerProgressView, SeasonSummary } from './career-progress'
 import { CalendarClock, Flag, HeartPulse, TrendingUp } from 'lucide-react'
 import type { Career } from '@/lib/career/model'
+import { healthGuidance } from '@/lib/career/health-presentation'
 import { cn } from '@/lib/utils'
 
 const readinessTone: Record<Readiness['level'], string> = {
@@ -28,6 +29,7 @@ const readinessTone: Record<Readiness['level'], string> = {
 
 export function MonthOutlook({ career }: { career: Career }) {
   const state = useCareer()
+  const health = healthGuidance(career)
   const travel = stableTravel(state)
   const { progress, nextRace, readiness, growth } = careerOutlook(career, {
     availableFunds: stableFunds(state) ?? undefined,
@@ -125,6 +127,9 @@ export function MonthOutlook({ career }: { career: Career }) {
           <dd className={cn('mt-1 text-sm font-semibold', readinessTone[readiness.level])}>
             {readiness.label}
           </dd>
+          <p className="mt-0.5 text-muted-foreground">
+            {health.trainingText} · {health.raceText}
+          </p>
           <p className="mt-0.5 text-muted-foreground">{readiness.detail}</p>
         </div>
         <div className="min-w-0">
