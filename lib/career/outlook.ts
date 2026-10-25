@@ -1,5 +1,6 @@
 import { actionName, changeText, statKeys, type Career, type Stat } from './model'
 import { canRace } from './health'
+import { healthGuidance, RACE_ELIGIBILITY_NOTICE } from './health-presentation'
 import {
   raceEligibility,
   raceMonths,
@@ -40,26 +41,40 @@ export type CareerOutlook = {
 export type RaceOutlookContext = { availableFunds?: number; travel?: StableTravel }
 
 export function readiness(career: Career): Readiness {
-  if (!canRace(career.health)) {
-    return {
-      level: 'blocked',
-      label: '출전 불가',
-      detail: `건강 ${career.health} · 치료나 휴식으로 회복해야 출전할 수 있습니다.`,
-    }
-  }
+  const health = healthGuidance(career)
   const tired = career.values.fatigue >= STRAIN_AT
   const loaded = career.values.bodyLoad >= STRAIN_AT
-  if (tired || loaded) {
+  const strain =
+    tired || loaded
+      ? `${[tired && '피로', loaded && '신체 부하'].filter(Boolean).join('·')}가 높아 경주 성적에 영향을 줄 수 있습니다.`
+      : ''
+  if (!health.racingAllowed) {
+    return {
+      level: 'blocked',
+      label: '건강 조건상 출전 불가',
+      detail:
+        `건강 ${health.health} · 훈련·출전 제한 중이며 추가 회복이 필요합니다. ${strain} ${RACE_ELIGIBILITY_NOTICE}`.trim(),
+    }
+  }
+  if (!health.trainingAllowed || strain) {
     return {
       level: 'caution',
       label: '주의',
-      detail: `${[tired && '피로', loaded && '신체 부하'].filter(Boolean).join('·')}가 높아 경주 성적에 영향을 줄 수 있습니다.`,
+      detail: [
+        !health.trainingAllowed
+          ? `건강 ${health.health} · ${health.raceText}. ${health.caution}`
+          : '',
+        strain,
+        RACE_ELIGIBILITY_NOTICE,
+      ]
+        .filter(Boolean)
+        .join(' '),
     }
   }
   return {
     level: 'ready',
     label: '준비 양호',
-    detail: '건강과 피로 기준으로 출전할 수 있는 상태입니다.',
+    detail: `건강·피로·신체 부하 기준으로 특이사항이 없습니다. ${RACE_ELIGIBILITY_NOTICE}`,
   }
 }
 
