@@ -7,6 +7,10 @@ import { act, createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NoticeCenter, NoticeList, NoticeDetails } from '../components/notices/notice-center'
 import { expeditionControls } from '../components/career/expedition-panel'
+import { localEventChoiceAvailability, canTrain } from '../packages/shared/src/domain'
+import { serverMonthEventAvailability } from '../components/career/event-choice-guidance'
+import { defaultEventCatalog } from '../lib/career/events/repository'
+import { normalizeHealth } from '../lib/career/health'
 import { migrateTravel } from '../lib/career/local-travel'
 import { stableActiveState } from '../components/career/stable'
 import { catalogGameplayTarget } from '../components/career/catalog-gameplay-bridge'
@@ -14,7 +18,7 @@ import { gameplayUrl, readGameplayView } from '../lib/race-catalog/model'
 import { updateNotices, noticeCenterDescription } from '../lib/notices/updates'
 import type { Root } from 'react-dom/client'
 import type { components } from '../packages/shared/src/generated/api'
-import { horses, commitAction, startCareer } from '../lib/career/model'
+import { horses, commitAction, resolveAction, advanceMonth, startCareer } from '../lib/career/model'
 import { buildFixture } from '../lib/career/fixtures'
 import { parseSaveWorkspace, type SaveWorkspace } from '../lib/server-save/workspace'
 import { validateRaceEntryOptions } from '../packages/shared/src/generated/save-validation.mjs'
@@ -104,6 +108,16 @@ async function harness(
   install('IS_REACT_ACT_ENVIRONMENT', true)
   Object.defineProperty(dom.window.navigator, 'locks', {
     value: { request: async (_name: string, fn: () => unknown) => fn() },
+  })
+  dom.window.matchMedia = (query: string) => ({
+    matches: true,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
   })
   dom.window.scrollTo = () => {}
   dom.window.HTMLElement.prototype.scrollIntoView = () => {}
@@ -1490,3 +1504,330 @@ for (const mode of ['local', 'server'] as const) {
     }
   })
 }
+
+const savedEventCatalog: { events: Models['EventDefinition'][] } = JSON.parse(
+  readFileSync(new URL('../services/api/seeds/events.catalog.json', import.meta.url), 'utf8'),
+)
+function pendingEvent(workspace: SaveWorkspace, id: string): Models['CareerEvent'] {
+  const definition = savedEventCatalog.events.find((event) => event.id === id)!
+  return {
+    id: randomUUID(),
+    turn: workspace.career!.state.careerTurnIndex,
+    eventId: definition.id,
+    revision: definition.revision,
+    choiceId: null,
+    state: 'pending',
+    definition,
+    result: null,
+  }
+}
+
+for (const mode of ['local', 'server'] as const) {
+  for (const health of ['정상', '경상', '중등도 부상', '중상']) {
+    test(`actual App ${mode} ${health}: saved event choices use shared eligibility without altering the offer`, async () => {
+      for (const eventId of ['COM-0031', 'COM-0034', 'COM-0035']) {
+        const fixture = managementFixture()
+        const workspace = activeServerWorkspace()
+        delete workspace.career!.state.raceRun
+        const recovery = normalizeHealth(health, undefined).recovery
+        fixture.career.health = health
+        fixture.career.healthRecovery = recovery
+        const localCareer = {
+          ...fixture.career,
+          event: { eventId, month: fixture.career.month, seed: 42, status: 'offered' as const },
+        }
+        workspace.career!.state.health = health
+        workspace.career!.state.healthRecovery = recovery
+        workspace.career!.event = pendingEvent(workspace, eventId)
+        const h = await harness(
+          mode,
+          '/',
+          mode === 'server' ? workspace : undefined,
+          mode === 'local'
+            ? () => writeBrowserSave({ career: localCareer, lifecycle: fixture.lifecycle })
+            : undefined,
+        )
+        try {
+          const before = readBrowserSave()
+          const beforeServer = JSON.stringify(workspace)
+          const start = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+            (b) => b.textContent?.trim() === '육성 계속',
+          )!
+          await act(async () => start.click())
+          const region = h.container.querySelector<HTMLElement>(
+            mode === 'server'
+              ? '[aria-label="이번 달 서버 이벤트"]'
+              : '[aria-label="이번 달 이벤트"]',
+          )!
+          assert.ok(region, `${mode}:${health}:${eventId}`)
+          const buttons = [...region.querySelectorAll<HTMLButtonElement>('button')]
+          const expected =
+            mode === 'server'
+              ? serverMonthEventAvailability(
+                  careerStore.getSnapshot().workspace!.career,
+                )!.choices.map((row) => row.availability)
+              : defaultEventCatalog
+                  .find(eventId)!
+                  .choices!.map((choice) =>
+                    localEventChoiceAvailability(
+                      defaultEventCatalog.find(eventId)!,
+                      choice.id,
+                      localCareer,
+                    ),
+                  )
+          assert.equal(buttons.length, expected.length)
+          for (let index = 0; index < buttons.length; index++) {
+            assert.equal(buttons[index].disabled, !expected[index].available)
+            if (!expected[index].available) {
+              assert.match(region.textContent!, /부상 중에는 훈련할 수 없어/)
+              const reason = buttons[index].getAttribute('aria-describedby')!
+              assert.ok(h.dom.window.document.getElementById(reason))
+              await act(async () => buttons[index].click())
+            }
+          }
+          const actions = [
+            ...h.container.querySelectorAll<HTMLButtonElement>(
+              '[aria-label="월간 행동 선택"] button',
+            ),
+          ]
+          const rest = actions.find((button) => button.textContent?.startsWith('휴식'))!
+          const treatment = actions.find((button) => button.textContent?.startsWith('치료'))!
+          const recoverable = mode === 'local' || (!canTrain(health) && eventId === 'COM-0031')
+          assert.equal(rest.disabled, !recoverable)
+          assert.equal(treatment.disabled, canTrain(health) || !recoverable)
+          if (mode === 'server' && recoverable) {
+            assert.match(region.textContent!, /행동 저장이 성공하면 서버에서/)
+          }
+          assert.deepEqual(readBrowserSave(), before)
+          assert.equal(JSON.stringify(workspace), beforeServer)
+          assert.equal(
+            h.requests.some((path) => path.endsWith('/choice')),
+            false,
+          )
+        } finally {
+          await h.close()
+        }
+      }
+    })
+  }
+}
+
+test('actual App Local: failed event choice is preserved, immediate recovery applies once, and treatment restores training next month', async () => {
+  const fixture = managementFixture()
+  const career = {
+    ...fixture.career,
+    health: '경상',
+    healthRecovery: 1,
+    event: {
+      eventId: 'COM-0034',
+      month: fixture.career.month,
+      seed: 42,
+      status: 'offered' as const,
+    },
+  }
+  const h = await harness('local', '/', undefined, () =>
+    writeBrowserSave({ career, lifecycle: fixture.lifecycle }),
+  )
+  const click = async (label: string) => {
+    const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === label,
+    )!
+    assert.ok(button, label)
+    assert.equal(button.disabled, false)
+    await act(async () => button.click())
+  }
+  const prototype = h.dom.window.Storage.prototype
+  const write = prototype.setItem
+  try {
+    await click('육성 계속')
+    const before = readBrowserSave()
+    prototype.setItem = () => {
+      throw new h.dom.window.DOMException('Full', 'QuotaExceededError')
+    }
+    await click('A 선택')
+    assert.deepEqual(readBrowserSave(), before)
+    assert.match(h.container.textContent!, /저장 공간/)
+    prototype.setItem = write
+    await click('A 선택')
+    await h.waitFor(() => readBrowserSave().career!.event!.choice === 'A')
+    const chosen = readBrowserSave().career!
+    assert.equal(chosen.values.fatigue, Math.max(0, career.values.fatigue - 3))
+    await act(async () => {
+      assert.equal(await careerStore.chooseEvent('COM-0034', 'A', career.month), true)
+    })
+    assert.equal(readBrowserSave().career!.values.fatigue, chosen.values.fatigue)
+    const treatment = [
+      ...h.container.querySelectorAll<HTMLButtonElement>('[aria-label="월간 행동 선택"] button'),
+    ].find((b) => b.textContent?.startsWith('치료'))!
+    await act(async () => treatment.click())
+    await click('치료 실행')
+    await h.waitFor(() => !!readBrowserSave().career!.action?.result)
+    assert.equal(readBrowserSave().career!.health, '정상')
+    await click('다음 달 시작')
+    await h.waitFor(() => !!h.container.querySelector('[aria-label="월간 행동 선택"]'))
+    const train = [
+      ...h.container.querySelectorAll<HTMLButtonElement>('[aria-label="월간 행동 선택"] button'),
+    ].find((b) => b.textContent?.startsWith('훈련'))!
+    assert.equal(train.disabled, false)
+  } finally {
+    prototype.setItem = write
+    await h.close()
+  }
+})
+
+for (const choice of ['rest', 'treatment'] as const) {
+  test(`actual App Server: legacy injury pending offers ${choice}, handles response loss and displays server-confirmed expiry`, async () => {
+    const workspace = activeServerWorkspace()
+    delete workspace.career!.state.raceRun
+    workspace.career!.state.health = '경상'
+    workspace.career!.state.healthRecovery = 1
+    workspace.career!.event = pendingEvent(workspace, 'COM-0031')
+    const h = await harness('server', '/', workspace)
+    const delegate = activeFetch
+    const posts: Models['ConfirmAction'][] = []
+    let committed = false
+    activeFetch = async (input, init) => {
+      if (init?.method === 'POST' && String(input).endsWith('/actions')) {
+        const body: Models['ConfirmAction'] = JSON.parse(String(init.body))
+        posts.push(body)
+        assert.equal(body.choice, choice)
+        if (!committed) {
+          const state = resolveAction(commitAction(workspace.career!.state, choice))
+          state.action!.actionId = body.actionId
+          Object.assign(
+            workspace,
+            parseSaveWorkspace({
+              ...workspace,
+              confirmedActionId: body.actionId,
+              career: {
+                ...workspace.career,
+                revision: workspace.career!.revision + 1,
+                state,
+                event: { ...workspace.career!.event, state: 'expired', choiceId: null },
+              },
+            }),
+          )
+          committed = true
+          throw new TypeError('response lost')
+        }
+        return Response.json({ actionId: body.actionId, career: workspace.career })
+      }
+      if (init?.method === 'POST' && String(input).endsWith('/advance')) {
+        const state = advanceMonth(workspace.career!.state, workspace.confirmedActionId!)
+        Object.assign(
+          workspace,
+          parseSaveWorkspace({
+            ...workspace,
+            confirmedActionId: null,
+            career: {
+              ...workspace.career,
+              revision: workspace.career!.revision + 1,
+              state,
+              event: null,
+            },
+          }),
+        )
+        return Response.json({ career: workspace.career })
+      }
+      return delegate(input, init)
+    }
+    const click = async (label: string) => {
+      const buttons = [...h.container.querySelectorAll<HTMLButtonElement>('button')].filter(
+        (b) => b.textContent?.trim() === label,
+      )
+      const button = buttons.at(-1)!
+      assert.ok(button, label)
+      assert.equal(button.disabled, false)
+      await act(async () => button.click())
+    }
+    try {
+      await click('육성 계속')
+      const before = JSON.stringify(workspace)
+      const name = choice === 'rest' ? '휴식' : '치료'
+      const tab = [
+        ...h.container.querySelectorAll<HTMLButtonElement>('[aria-label="월간 행동 선택"] button'),
+      ].find((b) => b.textContent?.startsWith(name))!
+      await act(async () => tab.click())
+      assert.equal(
+        JSON.stringify(workspace),
+        before,
+        'navigation does not expire or choose the event',
+      )
+      await click(`${name} 실행`)
+      await h.waitFor(() => careerStore.getSnapshot().pending)
+      assert.equal(careerStore.getSnapshot().workspace!.career!.event!.state, 'pending')
+      assert.equal(
+        [
+          ...h.container.querySelectorAll<HTMLButtonElement>(
+            '[aria-label="이번 달 서버 이벤트"] button',
+          ),
+        ].every((button) => button.disabled),
+        true,
+      )
+      await click('같은 요청으로 다시 확인')
+      await h.waitFor(() => careerStore.getSnapshot().workspace!.career!.event!.state === 'expired')
+      assert.deepEqual(posts[1], posts[0])
+      assert.equal(
+        h.requests.some((path) => path.endsWith('/choice')),
+        false,
+      )
+      assert.match(h.container.textContent!, /선택하지 않은 이벤트가 서버에서 만료/)
+      assert.equal(careerStore.getSnapshot().workspace!.career!.event!.choiceId, null)
+      assert.equal(careerStore.getSnapshot().career!.health, '정상')
+      await click('다음 달 시작')
+      await h.waitFor(() => !!h.container.querySelector('[aria-label="월간 행동 선택"]'))
+      const train = [
+        ...h.container.querySelectorAll<HTMLButtonElement>('[aria-label="월간 행동 선택"] button'),
+      ].find((b) => b.textContent?.startsWith('훈련'))!
+      assert.equal(train.disabled, false)
+      assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
+    } finally {
+      await h.close()
+    }
+  })
+}
+
+test('actual App Server: rejected available event choice keeps the saved pending offer and ordinary actions locked', async () => {
+  const workspace = activeServerWorkspace()
+  delete workspace.career!.state.raceRun
+  workspace.career!.state.health = '경상'
+  workspace.career!.event = pendingEvent(workspace, 'COM-0034')
+  const h = await harness('server', '/', workspace)
+  const delegate = activeFetch
+  let posts = 0
+  activeFetch = async (input, init) => {
+    if (init?.method === 'POST' && String(input).endsWith('/choice')) {
+      posts++
+      return Response.json(
+        { error: { code: 'INVALID_CHOICE', message: '저장된 선택 조건을 다시 확인해 주세요.' } },
+        { status: 422 },
+      )
+    }
+    return delegate(input, init)
+  }
+  try {
+    const before = JSON.stringify(workspace)
+    await act(async () =>
+      [...h.container.querySelectorAll<HTMLButtonElement>('button')]
+        .find((b) => b.textContent?.trim() === '육성 계속')!
+        .click(),
+    )
+    const button = h.container.querySelector<HTMLButtonElement>(
+      '[aria-label="이번 달 서버 이벤트"] button',
+    )!
+    assert.equal(button.disabled, false)
+    await act(async () => button.click())
+    await h.waitFor(() => !!careerStore.getSnapshot().error)
+    assert.equal(posts, 1)
+    assert.equal(JSON.stringify(workspace), before)
+    assert.equal(careerStore.getSnapshot().workspace!.career!.event!.state, 'pending')
+    assert.match(h.container.textContent!, /저장된 선택 조건을 다시 확인/)
+    const rest = [
+      ...h.container.querySelectorAll<HTMLButtonElement>('[aria-label="월간 행동 선택"] button'),
+    ].find((b) => b.textContent?.startsWith('휴식'))!
+    assert.equal(rest.disabled, true, 'one usable choice does not qualify for injury expiry')
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
+  } finally {
+    await h.close()
+  }
+})
