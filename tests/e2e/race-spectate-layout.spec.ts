@@ -81,6 +81,13 @@ for (const viewport of viewports) {
             labels,
             stageRow: rect(stage.querySelector('.race-stage-row')!),
             strip: rect(stage.querySelector('.race-strip')!),
+            markers: [...stage.querySelectorAll('.race-strip-runner')].map((item) => ({
+              circle: rect(item.querySelector('b')!),
+              label: item.querySelector('span, small')
+                ? rect(item.querySelector('span, small')!)
+                : null,
+              fontSize: parseFloat(getComputedStyle(item.querySelector('b')!).fontSize),
+            })),
             focus: rect(stage.querySelector('.race-focus')!),
             boards: [...stage.querySelectorAll('.race-live-grid > *')].map(rect),
             guideText: guide.textContent,
@@ -100,11 +107,11 @@ for (const viewport of viewports) {
 
         expect(layout.documentWidth).toBeLessThanOrEqual(viewport.width)
         expect(layout.labels.map((label) => label.text)).toEqual([
-          'START',
-          'MID',
-          'FINAL CORNER',
-          'STRETCH',
-          'FINISH',
+          '출발',
+          '중반',
+          '마지막 코너',
+          '최종 직선',
+          '결승',
         ])
         expect(layout.activePhase).toBeTruthy()
         expect(layout.guideText).toMatch(/마번/)
@@ -135,6 +142,19 @@ for (const viewport of viewports) {
         const overlaps = (a: typeof layout.strip, b: typeof layout.strip) =>
           Math.min(a.right, b.right) > Math.max(a.left, b.left) + 1 &&
           Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top) + 1
+        for (const [index, marker] of layout.markers.entries()) {
+          expect(marker.fontSize).toBeGreaterThanOrEqual(12)
+          for (const box of [marker.circle, marker.label].filter(Boolean)) {
+            expect(box!.left).toBeGreaterThanOrEqual(layout.strip.left)
+            expect(box!.right).toBeLessThanOrEqual(layout.strip.right)
+            for (const other of layout.markers.slice(index + 1)) {
+              expect(overlaps(box!, other.circle)).toBe(false)
+              if (other.label) {
+                expect(overlaps(box!, other.label)).toBe(false)
+              }
+            }
+          }
+        }
         expect(overlaps(layout.strip, layout.focus)).toBe(false)
         for (const board of layout.boards) {
           expect(overlaps(layout.strip, board)).toBe(false)
