@@ -2,6 +2,8 @@
 
 이 문서는 `develop`의 Frontend, Backend, 공유 라이브러리, API 연동, 테스트와 CI를 함께 검토한 뒤 정리한 책임 지도다. 게임 동작을 변경하는 설계 제안이 아니다.
 
+AI 작업 시작은 [AGENTS.md](../AGENTS.md), Work 담당·브랜치·공유 변경 협업은 [CONTRIBUTING.md](../CONTRIBUTING.md), 변경 위험과 리뷰 증거는 [PR 리뷰 정책](pr-review-policy.md), 병합·배포 권한은 [배포 정책](release-policy.md)을 따른다.
+
 ## 책임 지도
 
 | 영역                                                                                        | 책임과 의존 방향                                                                                                                                                                                                          |

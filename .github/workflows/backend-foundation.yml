@@ -8,6 +8,7 @@ on:
       - 'app/**'
       - 'components/**'
       - 'lib/**'
+      - 'public/**'
       - 'scripts/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -15,16 +16,21 @@ on:
       - 'tsconfig.json'
       - 'tsconfig.frontend-integration.json'
       - 'next.config.mjs'
+      - 'postcss.config.mjs'
+      - 'playwright.config.ts'
+      - 'vercel.json'
       - '.gitignore'
       - 'tests/**'
-      - 'README.md'
       - '.env.example'
       - '.github/workflows/backend-foundation.yml'
       - '.editorconfig'
       - '.prettierrc.json'
       - '.prettierignore'
-      - 'CONTRIBUTING.md'
-      - 'AGENTS.md'
+      # Documentation and the isolated risk analyzer use PR governance, not product CI.
+      # Keep exclusions last; mixed PRs still match every existing runtime/test path.
+      - '!**/*.md'
+      - '!scripts/pr-risk-report.mjs'
+      - '!scripts/pr-risk-report.test.mjs'
   push:
     branches: ['develop', 'api/develop', 'frontend/develop', 'feature/frontend']
 jobs:
