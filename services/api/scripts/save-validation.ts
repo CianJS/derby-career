@@ -39,6 +39,7 @@ export async function generateSaveValidation() {
   const models = [
     'StableTravel',
     'ExpeditionResponse',
+    'ExpeditionHistory',
     'StartExpedition',
     'ReturnExpedition',
     'Racecourse',

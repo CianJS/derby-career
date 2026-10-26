@@ -123,6 +123,11 @@ export function careerRoutes(
   register<{ Params: CareerParams }>('GET', '/v1/careers/{careerId}/expedition', (r, o) =>
     careers.expedition(o, r.params.careerId),
   )
+  register<{ Params: CareerParams; Querystring: Page }>(
+    'GET',
+    '/v1/careers/{careerId}/expeditions/history',
+    (r, o) => careers.expeditionHistory(o, r.params.careerId, r.query.page, r.query.pageSize),
+  )
   register<{ Params: CareerParams; Body: Models['StartExpedition'] }>(
     'POST',
     '/v1/careers/{careerId}/expeditions',

@@ -1323,6 +1323,49 @@ paths:
           $ref: '#/components/responses/ApiError'
         '503':
           $ref: '#/components/responses/ApiError'
+  /v1/careers/{careerId}/expeditions/history:
+    get:
+      operationId: getExpeditionHistory
+      summary: 현재 또는 은퇴한 Career의 저장된 원정 이력 조회
+      description: >-
+        소유자의 Career 및 소속 마방에 귀속된 완료/진행 중 원정만 읽는다.
+        startedTurn DESC, createdAt DESC, id DESC로 정렬한다. turn은 절대 육성 턴이다.
+        은퇴 snapshot 및 현재 마방 여행 상태를 변경하거나 누락된 과거 기록을 생성하지 않는다.
+        동일 데이터에 대해 페이지 순서는 안정적이며 여러 요청 사이의 원정 추가/종료를 고정하는 cursor는 제공하지 않는다.
+      security:
+      - CareerBearer: []
+      parameters:
+      - name: careerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpeditionHistory'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
   /v1/careers/{careerId}/expeditions:
     post:
       operationId: startExpedition
@@ -3758,6 +3801,17 @@ components:
       properties:
         travel:
           $ref: '#/components/schemas/StableTravel'
+    ExpeditionHistory:
+      type: object
+      additionalProperties: false
+      required: [data, page, pageSize]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expedition'
+        page: {type: integer, minimum: 1}
+        pageSize: {type: integer, minimum: 1, maximum: 100}
     StartExpedition:
       type: object
       additionalProperties: false

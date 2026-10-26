@@ -483,6 +483,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/careers/{careerId}/expeditions/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 현재 또는 은퇴한 Career의 저장된 원정 이력 조회
+         * @description 소유자의 Career 및 소속 마방에 귀속된 완료/진행 중 원정만 읽는다. startedTurn DESC, createdAt DESC, id DESC로 정렬한다. turn은 절대 육성 턴이다. 은퇴 snapshot 및 현재 마방 여행 상태를 변경하거나 누락된 과거 기록을 생성하지 않는다. 동일 데이터에 대해 페이지 순서는 안정적이며 여러 요청 사이의 원정 추가/종료를 고정하는 cursor는 제공하지 않는다.
+         */
+        get: operations["getExpeditionHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/careers/{careerId}/expeditions": {
         parameters: {
             query?: never;
@@ -1420,6 +1440,11 @@ export interface components {
         };
         ExpeditionResponse: {
             travel: components["schemas"]["StableTravel"];
+        };
+        ExpeditionHistory: {
+            data: components["schemas"]["Expedition"][];
+            page: number;
+            pageSize: number;
         };
         StartExpedition: {
             /** Format: uuid */
@@ -2455,6 +2480,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExpeditionResponse"];
+                };
+            };
+            400: components["responses"]["ApiError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["ApiError"];
+            404: components["responses"]["ApiError"];
+            409: components["responses"]["ApiError"];
+            422: components["responses"]["ApiError"];
+            429: components["responses"]["ApiError"];
+            500: components["responses"]["ApiError"];
+            503: components["responses"]["ApiError"];
+        };
+    };
+    getExpeditionHistory: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                careerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpeditionHistory"];
                 };
             };
             400: components["responses"]["ApiError"];

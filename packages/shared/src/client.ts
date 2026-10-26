@@ -47,6 +47,13 @@ export function createApiClient(options: ApiClientOptions) {
       ),
     getExpedition: (id: string) =>
       request<Models['ExpeditionResponse']>(careerPath(id) + '/expedition', undefined, true),
+    getExpeditionHistory: (id: string, query: PageQuery = {}) =>
+      request<Models['ExpeditionHistory']>(
+        careerPath(id) + '/expeditions/history',
+        undefined,
+        true,
+        query,
+      ),
     startExpedition: (id: string, body: Models['StartExpedition']) =>
       request<Models['CareerResponse']>(careerPath(id) + '/expeditions', body, true),
     returnExpedition: (id: string, expeditionId: string, body: Models['ReturnExpedition']) =>
