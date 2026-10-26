@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import type { Database } from '../src/db'
+import type { components } from '../../../packages/shared/src/generated/api'
 import { fixture } from './helpers'
 import { createApp } from '../src/app'
 import { simulateRace, raceLogDigest, raceTrustChange } from '../../../packages/shared/src/domain'
@@ -9,6 +10,7 @@ import {
   validateCareerResponse,
   validateCareerWorkspace,
   validateExpeditionResponse,
+  validateExpeditionHistory,
   validateStartExpedition,
   validateReturnExpedition,
 } from '../../../packages/shared/src/generated/save-validation.mjs'
@@ -92,6 +94,73 @@ async function snapshot(f: Fixture, id: string) {
   ).rows
   return { career, expeditions, ledger, actions }
 }
+async function history(f: Fixture, id: string, query = '') {
+  const response = await f.call('GET', path(id) + '/expeditions/history' + query)
+  assert.equal(response.statusCode, 200, response.body)
+  assert.equal(response.headers['cache-control'], 'no-store')
+  const body = response.json<components['schemas']['ExpeditionHistory']>()
+  assert.ok(validateExpeditionHistory(body))
+  return body
+}
+
+/** Owner-wide before/after equality also detects accidental writes to the next horse or shared stable. */
+async function historyReadSnapshot(f: Fixture) {
+  return f.db.transaction(async (tx) => {
+    await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+    const result: Record<string, unknown> = {}
+    for (const table of [
+      'careers',
+      'monthly_actions',
+      'career_event_history',
+      'event_draws',
+      'race_runs',
+      'race_results',
+      'career_records',
+    ] as const) {
+      const filter =
+        table === 'careers'
+          ? 'owner_id=$1'
+          : 'career_id IN (SELECT id FROM careers WHERE owner_id=$1)'
+      result[table] = (
+        await tx.query(`SELECT * FROM ${table} WHERE ${filter} ORDER BY 1,2`, [f.user.principalId])
+      ).rows
+    }
+    result.stables = (
+      await tx.query('SELECT * FROM stables WHERE owner_id=$1 ORDER BY id', [f.user.principalId])
+    ).rows
+    result.trips = (
+      await tx.query(
+        'SELECT * FROM stable_expeditions WHERE stable_id IN (SELECT id FROM stables WHERE owner_id=$1) ORDER BY id',
+        [f.user.principalId],
+      )
+    ).rows
+    result.ledger = (
+      await tx.query(
+        'SELECT * FROM stable_ledger WHERE stable_id IN (SELECT id FROM stables WHERE owner_id=$1) ORDER BY id',
+        [f.user.principalId],
+      )
+    ).rows
+    result.logs = (
+      await tx.query(
+        'SELECT * FROM race_simulation_logs WHERE race_run_id IN (SELECT id FROM race_runs WHERE career_id IN (SELECT id FROM careers WHERE owner_id=$1)) ORDER BY race_run_id',
+        [f.user.principalId],
+      )
+    ).rows
+    result.commands = (
+      await tx.query('SELECT * FROM commands WHERE principal_id=$1 ORDER BY request_id', [
+        f.user.principalId,
+      ])
+    ).rows
+    result.trust = (
+      await tx.query(
+        'SELECT * FROM jockey_chemistry WHERE horse_id IN (SELECT horse_id FROM careers WHERE owner_id=$1) ORDER BY horse_id,jockey_id',
+        [f.user.principalId],
+      )
+    ).rows
+    return result
+  })
+}
+
 async function receiptFault(f: Fixture, commandId: string) {
   const name = 'expedition_fail_' + randomUUID().replaceAll('-', '')
   await f.db.query(
@@ -106,7 +175,8 @@ async function receiptFault(f: Fixture, commandId: string) {
   }
 }
 export function registerExpeditionTests(label: string, database?: () => Database) {
-  const setup = () => fixture(database ? { db: database() } : {})
+  const setup = (options: Parameters<typeof fixture>[0] = {}) =>
+    fixture({ ...options, ...(database ? { db: database() } : {}) })
   for (const country of ['JPN', 'USA']) {
     test(`${label}: KOR → ${country} race → KOR restores eligibility, economy, logs and trust`, async () => {
       const f = await setup()
@@ -619,6 +689,353 @@ export function registerExpeditionTests(label: string, database?: () => Database
         ).statusCode,
         409,
       )
+    } finally {
+      await f.close()
+    }
+  })
+
+  test(`${label}: retired expedition history pages preserve real multi-country journeys, all records and the next horse`, async () => {
+    const f = await setup()
+    try {
+      const { id } = await ready(f)
+      const tripIds: string[] = []
+      const depart = async (targetCountry: 'JPN' | 'USA') => {
+        const before = await travel(f, id)
+        const response = await f.call('POST', path(id) + '/expeditions', {
+          commandId: randomUUID(),
+          targetCountry,
+          expectedTravelRevision: before.revision,
+        })
+        assert.equal(response.statusCode, 200, response.body)
+        const trip = response.json().career.travel.activeExpedition
+        tripIds.push(trip.id)
+        return trip
+      }
+      const back = async (tripId: string) => {
+        const before = await travel(f, id)
+        const response = await f.call('POST', path(id) + `/expeditions/${tripId}/return`, {
+          commandId: randomUUID(),
+          expectedTravelRevision: before.revision,
+        })
+        assert.equal(response.statusCode, 200, response.body)
+      }
+      const first = await depart('JPN')
+      assert.deepEqual((await history(f, id)).data[0], first)
+      assert.equal(first.endedTurn, null)
+      await back(first.id)
+      const second = await depart('USA')
+      const runId = randomUUID()
+      assert.equal(
+        (await f.call('POST', path(id) + '/race-entries', { ...entry('USA'), raceRunId: runId }))
+          .statusCode,
+        200,
+      )
+      assert.equal(
+        (
+          await f.call('POST', path(id) + `/race-runs/${runId}/complete`, {
+            commandId: randomUUID(),
+          })
+        ).statusCode,
+        200,
+      )
+      await back(second.id)
+      await back((await depart('JPN')).id)
+      await back((await depart('USA')).id)
+      await advance(f, id, 4)
+      await advance(f, id, 5)
+      await choosePending(f, id)
+      const options = (await f.call('GET', path(id) + '/race-entries')).json()
+      const domestic = options.races.find(
+        (r: { eligible: boolean; definition: { countryCode: string } }) =>
+          r.eligible && r.definition.countryCode === 'KOR',
+      )
+      assert.ok(domestic)
+      const homeRun = randomUUID()
+      const entered = await f.call('POST', path(id) + '/race-entries', {
+        ...entry('KOR'),
+        raceRunId: homeRun,
+        raceDefinitionId: domestic.definition.id,
+        expectedTurn: 6,
+      })
+      assert.equal(entered.statusCode, 200, entered.body)
+      assert.equal(
+        (
+          await f.call('POST', path(id) + `/race-runs/${homeRun}/complete`, {
+            commandId: randomUUID(),
+          })
+        ).statusCode,
+        200,
+      )
+      const fifth = await depart('JPN')
+      const active = await current(f, id)
+      const retired = await f.call('POST', path(id) + '/retirement', {
+        commandId: randomUUID(),
+        expectedRevision: active.revision,
+      })
+      assert.equal(retired.statusCode, 200, retired.body)
+      const retirementSnapshot = retired.json().retirement
+      const all = await history(f, id)
+      assert.deepEqual(
+        all.data.map((trip) => trip.id),
+        [...tripIds].reverse(),
+      )
+      assert.deepEqual(
+        all.data.map((trip) => [
+          trip.targetCountry,
+          trip.startedTurn,
+          trip.endedTurn,
+          trip.endReason,
+        ]),
+        [
+          ['JPN', 7, 7, 'retirement'],
+          ['USA', 4, 4, 'return'],
+          ['JPN', 4, 4, 'return'],
+          ['USA', 3, 4, 'return'],
+          ['JPN', 3, 3, 'return'],
+        ],
+      )
+      assert.ok(all.data.every((trip) => trip.status === 'returned' && trip.endedAt !== null))
+      assert.equal(all.data[0].id, fifth.id)
+      const next = await f.create()
+      const nextDepart = await f.call('POST', path(next.id) + '/expeditions', {
+        commandId: randomUUID(),
+        targetCountry: 'USA',
+        expectedTravelRevision: next.response.career.travel.revision,
+      })
+      assert.equal(nextDepart.statusCode, 200, nextDepart.body)
+      const before = await historyReadSnapshot(f)
+      const currentTravel = await travel(f, id)
+      assert.equal(
+        currentTravel.activeExpedition!.careerId,
+        next.id,
+        'old /expedition still reports the current stable travel',
+      )
+      const pages = await Promise.all(
+        [1, 2, 3, 4].map((page) => history(f, id, `?page=${page}&pageSize=2`)),
+      )
+      assert.deepEqual(
+        pages.map((page) => page.page),
+        [1, 2, 3, 4],
+      )
+      assert.ok(pages.every((page) => page.pageSize === 2))
+      assert.deepEqual(
+        pages.flatMap((page) => page.data),
+        all.data,
+      )
+      assert.deepEqual(await history(f, id), all)
+      assert.deepEqual((await history(f, next.id)).data, [
+        nextDepart.json().career.travel.activeExpedition,
+      ])
+      const actionPages = await Promise.all(
+        [1, 2, 3, 4].map((page) => f.call('GET', path(id) + `/actions?page=${page}&pageSize=2`)),
+      )
+      assert.ok(actionPages.every((reply) => reply.statusCode === 200))
+      assert.deepEqual(
+        actionPages.flatMap((reply) =>
+          reply.json().data.map((record: { turn: number }) => record.turn),
+        ),
+        [6, 5, 4, 3, 2, 1],
+      )
+      const racePages = await Promise.all(
+        [1, 2, 3].map((page) => f.call('GET', path(id) + `/records?page=${page}&pageSize=1`)),
+      )
+      assert.ok(racePages.every((reply) => reply.statusCode === 200))
+      assert.deepEqual(
+        racePages.flatMap((reply) => reply.json().data),
+        (
+          await f.db.query(
+            'SELECT career_record FROM race_results WHERE career_id=$1 ORDER BY applied_at DESC,race_run_id DESC',
+            [id],
+          )
+        ).rows.map((row) => row.career_record),
+      )
+      assert.equal(racePages[0].json().data.length, 1)
+      assert.equal(racePages[1].json().data.length, 1)
+      const eventRows = (
+        await f.db.query(
+          'SELECT * FROM career_event_history WHERE career_id=$1 ORDER BY turn DESC',
+          [id],
+        )
+      ).rows
+      const eventPages = await Promise.all(
+        Array.from({ length: eventRows.length + 1 }, (_, page) =>
+          f.call('GET', path(id) + `/events?page=${page + 1}&pageSize=1`),
+        ),
+      )
+      assert.ok(eventPages.every((reply) => reply.statusCode === 200))
+      assert.deepEqual(
+        eventPages.flatMap((reply) => reply.json().data.map((event: { id: string }) => event.id)),
+        eventRows.map((row) => row.id),
+      )
+      assert.deepEqual(
+        (await f.call('GET', path(id) + '/retirement')).json().retirement,
+        retirementSnapshot,
+      )
+      assert.deepEqual(await travel(f, id), currentTravel)
+      assert.deepEqual(
+        await historyReadSnapshot(f),
+        before,
+        'GETs cannot mutate any old/new horse, ledger, log, draw, snapshot or receipt',
+      )
+    } finally {
+      await f.close()
+    }
+  })
+
+  test(`${label}: retired pending/expired events remain unselected; history authorization, empty pages and validation fail closed`, async () => {
+    const f = await setup({ probability: 1 })
+    const enabledBefore = (await f.db.query('SELECT id,enabled FROM event_definitions ORDER BY id'))
+      .rows
+    try {
+      await f.db.query("UPDATE event_definitions SET enabled=(id='COM-0034')")
+      const { id, response } = await f.create()
+      assert.equal(response.career.event.state, 'pending')
+      assert.equal(
+        (
+          await f.call('POST', path(id) + `/events/${response.career.event.id}/choice`, {
+            commandId: randomUUID(),
+            choiceId: 'B',
+            expectedTurn: 1,
+          })
+        ).statusCode,
+        200,
+      )
+      await advance(f, id, 1)
+      const second = await current(f, id)
+      assert.equal(second.event.state, 'pending')
+      const retirement = await f.call('POST', path(id) + '/retirement', {
+        commandId: randomUUID(),
+        expectedRevision: second.revision,
+      })
+      assert.equal(retirement.statusCode, 200, retirement.body)
+      const before = await historyReadSnapshot(f)
+      const page1 = await f.call('GET', path(id) + '/events?page=1&pageSize=1')
+      const page2 = await f.call('GET', path(id) + '/events?page=2&pageSize=1')
+      assert.equal(page1.statusCode, 200)
+      assert.equal(page2.statusCode, 200)
+      assert.equal(page1.json().data[0].state, 'pending')
+      assert.equal(page1.json().data[0].choiceId, null)
+      assert.equal(page1.json().data[0].result, null)
+      assert.equal(page2.json().data[0].state, 'expired')
+      assert.equal(page2.json().data[0].choiceId, 'B')
+      assert.deepEqual(await history(f, id), { data: [], page: 1, pageSize: 20 })
+      assert.deepEqual(await history(f, id, '?page=2&pageSize=1'), {
+        data: [],
+        page: 2,
+        pageSize: 1,
+      })
+      for (const suffix of ['expeditions/history', 'actions', 'events', 'records']) {
+        assert.equal(
+          (await f.call('GET', path(id) + '/' + suffix, undefined, f.other.token)).statusCode,
+          404,
+        )
+        assert.equal((await f.call('GET', path(randomUUID()) + '/' + suffix)).statusCode, 404)
+        assert.equal((await f.app.inject({ url: path(id) + '/' + suffix })).statusCode, 401)
+      }
+      for (const query of [
+        '?page=0',
+        '?page=-1',
+        '?page=1.5',
+        '?page=100001',
+        '?page=x',
+        '?pageSize=0',
+        '?pageSize=101',
+        '?pageSize=x',
+        '?page=1&page=2',
+        '?careerId=another',
+        '?stableId=another',
+      ]) {
+        assert.equal(
+          (await f.call('GET', path(id) + '/expeditions/history' + query)).statusCode,
+          400,
+          query,
+        )
+      }
+      assert.equal(
+        (await f.call('GET', path('invalid-uuid') + '/expeditions/history')).statusCode,
+        400,
+      )
+      assert.deepEqual((await f.call('GET', path(id) + '/retirement')).json(), {
+        retirement: retirement.json().retirement,
+      })
+      assert.deepEqual(await historyReadSnapshot(f), before)
+    } finally {
+      try {
+        await f.db.query(
+          'UPDATE event_definitions d SET enabled=b.enabled FROM jsonb_to_recordset($1::jsonb) AS b(id text,enabled boolean) WHERE d.id=b.id',
+          [JSON.stringify(enabledBefore)],
+        )
+      } finally {
+        await f.close()
+      }
+    }
+  })
+
+  test(`${label}: existing 61+ turn rows retain absolute turns, nullable values and deterministic timestamp/ID ties`, async () => {
+    const f = await setup()
+    try {
+      const { id, response } = await f.create()
+      const state = {
+        ...response.career.state,
+        month: 61,
+        careerTurnIndex: 61,
+        age: 7,
+        calendarDate: {
+          ...response.career.state.calendarDate,
+          year: response.career.state.calendarDate.year + 5,
+        },
+      }
+      await f.db.query('UPDATE careers SET turn=61,state=$2 WHERE id=$1', [
+        id,
+        JSON.stringify(state),
+      ])
+      const ids = [
+        '00000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000002',
+        '00000000-0000-4000-8000-000000000003',
+      ].map((suffix) => randomUUID().slice(0, 24) + suffix.slice(24))
+      // Explicit immutable legacy fixtures, not inferred rows created by the API.
+      for (let index = 0; index < ids.length; index++) {
+        await f.db.query(
+          "INSERT INTO stable_expeditions(id,stable_id,career_id,target_country,status,started_revision,started_turn,ended_turn,end_reason,created_at,ended_at) VALUES($1,$2,$3,$4,'returned',$5,61,61,'return','2020-04-01T00:00:00Z','2020-04-01T00:00:00Z')",
+          [ids[index], response.career.stableId, id, index === 1 ? 'USA' : 'JPN', index + 1],
+        )
+      }
+      await f.db.query('UPDATE stables SET travel_revision=6 WHERE id=$1', [
+        response.career.stableId,
+      ])
+      const before = await historyReadSnapshot(f)
+      const pages = await Promise.all(
+        [1, 2, 3, 4].map((page) => history(f, id, `?page=${page}&pageSize=1`)),
+      )
+      assert.deepEqual(
+        pages.flatMap((page) => page.data.map((trip) => trip.id)),
+        [...ids].sort().reverse(),
+      )
+      assert.ok(
+        pages
+          .flatMap((page) => page.data)
+          .every(
+            (trip) =>
+              trip.startedTurn === 61 &&
+              trip.endedTurn === 61 &&
+              trip.targetRaceDefinitionId === null,
+          ),
+      )
+      assert.deepEqual(await historyReadSnapshot(f), before)
+      const started = await f.call('POST', path(id) + '/expeditions', {
+        commandId: randomUUID(),
+        targetCountry: 'USA',
+        expectedTravelRevision: 6,
+      })
+      assert.equal(started.statusCode, 200, started.body)
+      const active = (await history(f, id)).data[0]
+      assert.equal(active.status, 'active')
+      assert.equal(active.startedTurn, 61)
+      assert.equal(active.endedTurn, null)
+      assert.equal(active.endReason, null)
+      assert.equal(active.endedAt, null)
+      assert.equal(active.createdAt, started.json().career.travel.activeExpedition.createdAt)
     } finally {
       await f.close()
     }

@@ -1,5 +1,6 @@
 import {
   readTravel,
+  expeditionDto,
   withRaceCountry,
   countryRestriction,
   endExpedition,
@@ -751,6 +752,22 @@ export class CareerRepository {
       await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
       const row = await readCareerRow(tx, owner, id)
       return { travel: await readTravel(tx, row.stable_id) }
+    })
+  }
+  async expeditionHistory(
+    owner: string,
+    id: string,
+    page: number,
+    pageSize: number,
+  ): Promise<Models['ExpeditionHistory']> {
+    return this.db.transaction(async (tx) => {
+      await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+      const row = await readCareerRow(tx, owner, id)
+      const result = await tx.query<ExpeditionRow>(
+        'SELECT * FROM stable_expeditions WHERE career_id=$1 AND stable_id=$2 ORDER BY started_turn DESC,created_at DESC,id DESC LIMIT $3 OFFSET $4',
+        [row.id, row.stable_id, pageSize, (page - 1) * pageSize],
+      )
+      return { data: result.rows.map(expeditionDto), page, pageSize }
     })
   }
   async depart(owner: string, id: string, body: Models['StartExpedition']) {

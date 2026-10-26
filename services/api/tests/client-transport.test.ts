@@ -109,3 +109,26 @@ test('network and response body failures keep their original error identity', as
   })
   await assert.rejects(bodyClient.listHorses(), (error) => error === bodyError)
 })
+
+test('expedition history is an authenticated read with encoded Career identity and page query', async () => {
+  const calls: { url: string; init?: RequestInit }[] = []
+  const client = createApiClient({
+    baseUrl: 'https://api.example.test/',
+    getSessionToken: () => 'history-session',
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), init })
+      return Response.json({ data: [], page: 2, pageSize: 1 })
+    },
+  })
+  const response = await client.getExpeditionHistory('career/id ?', { page: 2, pageSize: 1 })
+  assert.deepEqual(response, { data: [], page: 2, pageSize: 1 })
+  assert.equal(
+    calls[0].url,
+    'https://api.example.test/v1/careers/career%2Fid%20%3F/expeditions/history?page=2&pageSize=1',
+  )
+  assert.equal(calls[0].init?.method, 'GET')
+  assert.equal(calls[0].init?.body, undefined)
+  assert.equal(calls[0].init?.cache, 'no-store')
+  assert.equal(calls[0].init?.credentials, 'omit')
+  assert.equal(new Headers(calls[0].init?.headers).get('authorization'), 'Bearer history-session')
+})

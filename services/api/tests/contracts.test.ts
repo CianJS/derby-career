@@ -1,3 +1,4 @@
+import { validateExpeditionHistory } from '../../../packages/shared/src/generated/save-validation.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import Ajv from 'ajv'
@@ -68,6 +69,26 @@ test('actual responses conform to OpenAPI and the public adapter works without t
     })
     validate('/v1/careers/{careerId}/expeditions/{expeditionId}/return', 'post', returned)
     assert.equal(returned.career.travel?.activeExpedition, null)
+    const history = await client.getExpeditionHistory(id, { page: 1, pageSize: 1 })
+    validate('/v1/careers/{careerId}/expeditions/history', 'get', history)
+    assert.ok(validateExpeditionHistory(history))
+    assert.equal(history.data[0].id, departed.career.travel.activeExpedition.id)
+    assert.equal(history.data[0].endReason, 'return')
+    assert.equal(history.data[0].startedTurn, 1)
+    assert.equal(history.data[0].endedTurn, 1)
+    assert.equal(
+      validateExpeditionHistory({ ...history, data: [{ ...history.data[0], endedTurn: 0 }] }),
+      false,
+    )
+    assert.equal(
+      validateExpeditionHistory({
+        ...history,
+        data: [{ ...history.data[0], endReason: 'inferred' }],
+      }),
+      false,
+    )
+    assert.equal(validateExpeditionHistory({ ...history, extra: 'unsupported' }), false)
+    assert.equal(validateExpeditionHistory({ data: [], page: 0, pageSize: 1 }), false)
 
     const action = await client.confirmAction(id, {
       actionId: randomUUID(),
@@ -90,6 +111,7 @@ test('actual responses conform to OpenAPI and the public adapter works without t
     const archive = await client.getRetirement(id)
     validate('/v1/careers/{careerId}/retirement', 'get', archive)
     assert.deepEqual(archive.retirement, retired.retirement)
+    assert.deepEqual(await client.getExpeditionHistory(id, { page: 1, pageSize: 1 }), history)
   } finally {
     await f.close()
   }

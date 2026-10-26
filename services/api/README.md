@@ -146,6 +146,8 @@ Run의 `engineVersion: 'entry-contract-v1'`은 **입력 계약 버전**이다. �
 
 ## 서버 은퇴
 
+현재·은퇴 Career의 원정 이력은 `GET /v1/careers/{careerId}/expeditions/history`와 `getExpeditionHistory`로 조회한다. 네 가지 육성 이력의 계약·기존 저장 보존·Frontend 연결 한계는 [은퇴 Career 이력 조회](docs/retirement-history.md)를 따른다. 새 migration은 없다.
+
 `POST /v1/careers/{careerId}/retirement`에 `{ commandId, expectedRevision }`을 전달한다. `expectedRevision`은 직전에 조회한 `career.revision`이다. 미완료 경주·행동, 변경된 revision, 이미 은퇴한 Career는 409다. 완료된 훈련·휴식·치료 결과가 있는 월에도 은퇴할 수 있으며 다음 월로 진행하지 않는다. 동일 commandId와 본문의 재시도는 최초 응답을 반환한다. 다른 본문이나 명령에 같은 ID를 재사용할 수 없다.
 
 응답은 `{ career, retirement }`다. `career.status`를 `retired`로 변경하고 revision을 1 증가시키며, 은퇴 snapshot과 명령 receipt를 같은 트랜잭션으로 저장한다. 실패하면 모두 롤백한다. 능력·건강·전적·자금·세계 날짜·이벤트 기록은 그대로 보존한다. 미선택 이벤트와 사용하지 않은 이벤트 보정도 당시 상태로 보존하며 추가 선택이나 효과 적용은 없다. 클라이언트 snapshot과 은퇴 사유는 받지 않으며 서버가 사유를 `manual`로 기록한다. 자동 은퇴 조건은 추가하지 않았다.
