@@ -1,8 +1,10 @@
+import type { CareerStory } from './career-story'
 import { careerJockeyRelations, type JockeyRelations } from './jockey-trust'
 import { labels, statKeys, type Career } from './model'
 import { summarizeRecords } from './records'
 
 export type LifecycleHorse = {
+  story?: CareerStory
   jockeyTrust?: JockeyRelations
   id: string
   name: string

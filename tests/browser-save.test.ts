@@ -1,3 +1,7 @@
+import { canTrain } from '../lib/career/health'
+import { defaultEventCatalog } from '../lib/career/events/repository'
+import { localEventChoiceAvailability } from '../lib/career/events/availability'
+import { recommendRaceEntry } from '../lib/career/race-entry-recommendation'
 import { legacyCareer as startCareer } from './helpers/legacy-career'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -534,8 +538,20 @@ test('a failed resolved-action write keeps its commitment and retry grows exactl
   const committed = readCareer()!
   assert.equal(committed.action!.result, null)
   assert.deepEqual(committed.values, base().values)
+  assert.equal(
+    readBrowserSave().lifecycle!.activeHorse!.story!.entries.filter(
+      (entry) => entry.kind === 'training',
+    ).length,
+    0,
+  )
   storage.target.setItem = native
   await careerStore.refresh()
+  assert.equal(
+    readBrowserSave().lifecycle!.activeHorse!.story!.entries.filter(
+      (entry) => entry.kind === 'training',
+    ).length,
+    1,
+  )
   assert.deepEqual(readCareer()!.values, resolveAction(committed).values)
   await careerStore.refresh()
   assert.deepEqual(readCareer()!.values, resolveAction(committed).values)
@@ -600,4 +616,214 @@ test('trust survives durable Local reload and retirement without leaking into a 
   writeCareer(startLocalCareer(career.horse.id, null))
   assert.deepEqual(readCareer()?.jockeyTrust ?? {}, {})
   assert.deepEqual(readBrowserSave().lifecycle?.archive?.[0].jockeyTrust, career.jockeyTrust)
+})
+
+test('actual Local 65-turn story survives retries, trips, races, archive and the next horse without truncation', async () => {
+  const storage = browserStorage()
+  locks()
+  writeLifecycleSave({
+    stableName: '이력 마방',
+    country: '대한민국',
+    month: 4,
+    year: 2028,
+    starterJockeyId: 'HAN_DOYUN',
+  })
+  careerStore.configure('local')
+  await careerStore.refresh()
+  assert.equal(await careerStore.select('DEV_HORSE_SERENE_STEP', 'KOR', 'HAN_DOYUN'), true)
+  const id = readBrowserSave().localCareerId!
+  const initial = structuredClone(readBrowserSave().career!.values)
+  const stale = structuredClone(readBrowserSave().lifecycle!)
+  const actionIds = new Set<string>()
+  const eventIds = new Set<string>()
+  const observe = () => {
+    const saved = readBrowserSave().career!
+    if (saved.event) {
+      eventIds.add(`event:${saved.event.month}:${saved.event.eventId}`)
+    }
+    return saved
+  }
+  for (let turn = 1; turn <= 65; turn += 1) {
+    let career = observe()
+    assert.equal(career.careerTurnIndex, turn)
+    if (career.event?.status === 'offered') {
+      const definition = defaultEventCatalog.find(career.event.eventId)!
+      const choice = definition.choices?.find(
+        (option) => localEventChoiceAvailability(definition, option.id, career).available,
+      )
+      if (choice) {
+        assert.equal(await careerStore.chooseEvent(definition.id, choice.id, career.month), true)
+      }
+      career = observe()
+    }
+    if ([3, 30, 61].includes(turn)) {
+      for (const country of ['JPN', 'USA'] as const) {
+        const revision = readBrowserSave().lifecycle!.travel!.revision
+        assert.equal(await careerStore.startExpedition(country, revision), true)
+        const trip = readBrowserSave().lifecycle!.travel!
+        assert.equal(
+          await careerStore.returnExpedition(trip.activeExpedition!.id, trip.revision),
+          true,
+        )
+      }
+    }
+    let raced = false
+    if (turn === 3) {
+      const saved = readBrowserSave()
+      const draft = recommendRaceEntry(
+        career,
+        undefined,
+        undefined,
+        saved.lifecycle!.fundsKRW,
+        saved.lifecycle!.travel,
+      )
+      assert.ok(draft.raceId)
+      assert.equal(await careerStore.lockRace(draft, career.horse.id, turn), true)
+      const runId = readBrowserSave().career!.raceRun!.raceRunId
+      const log = readRaceLog(runId)!
+      assert.equal(await careerStore.completeRace(runId, log.result), true)
+      raced = true
+    }
+    if (!raced) {
+      const choice = canTrain(career.health) ? (turn % 4 === 0 ? 'rest' : 'speed') : 'treatment'
+      assert.equal(await careerStore.commit(choice, turn), true)
+      const action = readBrowserSave().career!.action!
+      actionIds.add(`action:${action.actionId}`)
+      const count = readBrowserSave().lifecycle!.activeHorse!.story!.entries.length
+      assert.equal(await careerStore.commit(choice, turn), true)
+      assert.equal(readBrowserSave().lifecycle!.activeHorse!.story!.entries.length, count)
+    }
+    career = observe()
+    if (turn === 12 || turn === 60 || turn === 65) {
+      const doc = readBrowserSave()
+      assert.equal(doc.lifecycle!.activeHorse!.story!.coverage, 'complete')
+      for (const actionId of actionIds) {
+        assert.ok(doc.lifecycle!.activeHorse!.story!.entries.some((entry) => entry.id === actionId))
+      }
+      assert.equal(JSON.stringify(readBrowserSave()), JSON.stringify(doc))
+    }
+    if (turn === 12) {
+      const before = storage.data.get(BROWSER_SAVE_KEY)
+      storage.rejectWrites(true)
+      assert.equal(await careerStore.next(career.action!.actionId), false)
+      assert.equal(storage.data.get(BROWSER_SAVE_KEY), before)
+      storage.rejectWrites(false)
+    }
+    if (turn < 65 && !raced) {
+      assert.equal(await careerStore.next(career.action!.actionId), true)
+    }
+  }
+  const active = readBrowserSave()
+  const entries = active.lifecycle!.activeHorse!.story!.entries
+  assert.equal(
+    entries.filter((entry) => ['training', 'rest', 'treatment'].includes(entry.kind)).length,
+    64,
+  )
+  assert.equal(entries.filter((entry) => entry.kind === 'race').length, 1)
+  assert.equal(entries.filter((entry) => entry.kind === 'departure').length, 6)
+  assert.equal(entries.filter((entry) => entry.kind === 'return').length, 6)
+  assert.ok(entries.some((entry) => entry.kind === 'treatment'))
+  for (const eventId of eventIds) {
+    assert.equal(entries.filter((entry) => entry.id === eventId).length, 1)
+  }
+  assert.equal(new Set(entries.map((entry) => entry.id)).size, entries.length)
+  assert.equal(active.lifecycle!.activeHorse!.story!.initialStats!.speed, initial.speed)
+  writeLifecycleSave(stale)
+  assert.deepEqual(
+    readBrowserSave().lifecycle!.activeHorse!.story,
+    active.lifecycle!.activeHorse!.story,
+  )
+  const receipt = await careerStore.release()
+  assert.ok(receipt && receipt.mode === 'local')
+  const archived = readBrowserSave().lifecycle!.archive![0]
+  assert.equal(archived.story!.careerId, id)
+  assert.equal(archived.story!.entries.filter((entry) => entry.kind === 'retirement').length, 1)
+  const frozen = JSON.stringify(archived)
+  const archiveStale = structuredClone(readBrowserSave().lifecycle!)
+  assert.equal(await careerStore.select('DEV_HORSE_SERENE_STEP'), true)
+  assert.notEqual(readBrowserSave().localCareerId, id)
+  assert.equal(
+    readBrowserSave().lifecycle!.activeHorse!.story!.entries.some(
+      (entry) => entry.kind === 'retirement',
+    ),
+    false,
+  )
+  assert.equal(await careerStore.commit('rest', 1), true)
+  writeLifecycleSave(archiveStale)
+  assert.equal(JSON.stringify(readBrowserSave().lifecycle!.archive![0]), frozen)
+  assert.deepEqual(readBrowserSave().career!.contractedJockeyIds, ['HAN_DOYUN'])
+})
+
+test('legacy partial story imports only persisted evidence, pending commitment recovers once and failed retirement adds nothing', async () => {
+  const storage = await storeFixture(buildFixture('injured').career!)
+  const old = readBrowserSave().lifecycle!.activeHorse!.story!
+  assert.equal(old.coverage, 'partial')
+  assert.equal(old.initialStats, undefined)
+  assert.equal(
+    old.entries.some((entry) => entry.kind === 'start' || entry.kind === 'departure'),
+    false,
+  )
+  assert.equal(await careerStore.commit('treatment', 3), true)
+  let career = readBrowserSave().career!
+  assert.equal(career.healthRecovery, 10)
+  assert.equal(await careerStore.next(career.action!.actionId), true)
+  assert.equal(await careerStore.commit('rest', 4), true)
+  career = readBrowserSave().career!
+  assert.equal(career.health, '정상')
+  const entries = readBrowserSave().lifecycle!.activeHorse!.story!.entries
+  assert.ok(
+    entries.some(
+      (entry) =>
+        entry.kind === 'treatment' && entry.details.some((text) => text.includes('40 → 10')),
+    ),
+  )
+  assert.ok(
+    entries.some(
+      (entry) =>
+        entry.kind === 'rest' && entry.details.some((text) => text.includes('경상 → 정상')),
+    ),
+  )
+  storage.rejectWrites(true)
+  assert.equal(await careerStore.release(), false)
+  storage.rejectWrites(false)
+  assert.equal(
+    readBrowserSave().lifecycle!.activeHorse!.story!.entries.some(
+      (entry) => entry.kind === 'retirement',
+    ),
+    false,
+  )
+  const previous = storage.data.get(BROWSER_SAVE_KEY)!
+  const broken = JSON.parse(previous)
+  broken.lifecycle.activeHorse.story.entries.push(
+    structuredClone(broken.lifecycle.activeHorse.story.entries[0]),
+  )
+  storage.data.set(BROWSER_SAVE_KEY, JSON.stringify(broken))
+  assert.throws(() => readBrowserSave(), /이야기 항목/)
+  storage.data.set(BROWSER_SAVE_KEY, previous)
+})
+
+test('story projection preserves legacy-cookie archives when migrating a career-only primary save', () => {
+  const storage = browserStorage()
+  const fixture = buildFixture('injured').career!
+  const life = {
+    ...fixtureLifecycle(true),
+    ...applyCareer({ activeHorse: null, month: 4 }, fixture),
+  }
+  storage.cookies.set('derby-career-lifecycle', encodeURIComponent(JSON.stringify(life)))
+  storage.data.set(
+    BROWSER_SAVE_KEY,
+    JSON.stringify({ version: 1, revision: 1, localCareerId: 'old-career-only', career: fixture }),
+  )
+  const archived = JSON.stringify(life.archive)
+  writeCareer(resolveAction(commitAction(fixture, 'treatment')))
+  assert.equal(JSON.stringify(readBrowserSave().lifecycle!.archive), archived)
+  assert.equal(readBrowserSave().lifecycle!.stableName, life.stableName)
+  assert.equal(readBrowserSave().lifecycle!.activeHorse!.story!.coverage, 'partial')
+  assert.equal(readBrowserSave().lifecycle!.activeHorse!.story!.initialStats, undefined)
+  assert.equal(
+    readBrowserSave().lifecycle!.activeHorse!.story!.entries.filter(
+      (entry) => entry.kind === 'treatment',
+    ).length,
+    1,
+  )
 })

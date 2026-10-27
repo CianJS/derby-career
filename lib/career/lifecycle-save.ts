@@ -1,3 +1,4 @@
+import { assertCareerStory } from './career-story'
 import { isStarterJockeyId, type StarterJockeyId } from './jockey-catalog'
 import { assertTravel, type StableTravel } from './local-travel'
 import { assertEconomy, type EconomyEntry } from './local-economy'
@@ -83,6 +84,9 @@ function horse(value: unknown) {
       ))
   ) {
     throw invalid()
+  }
+  if (value.story !== undefined) {
+    assertCareerStory(value.story)
   }
   if (value.jockeyTrust !== undefined) {
     assertJockeyRelations(value.jockeyTrust)

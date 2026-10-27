@@ -288,7 +288,7 @@ async function mutate(
           )
         : settled
       if ((next && next !== saved) || settled !== lifecycle) {
-        writeBrowserSave({ career: next, lifecycle: projected })
+        writeBrowserSave({ career: next, lifecycle: projected }, { storyStart: !saved && !!next })
       }
       return {
         career: next,

@@ -1,3 +1,4 @@
+import { validHistory, type HistoryPath } from './history-validation'
 import { validateSaveResponse } from './response'
 import { validateSaveCommand, type SaveCommand } from './commands'
 import {
@@ -122,6 +123,9 @@ export async function handleServerSave(
   ) {
     return reply(403, '같은 로컬 화면에서 요청해 주세요.')
   }
+  const history = new RegExp(
+    `^/v1/careers/(${uuid})/(actions|events|records|expeditions/history|retirement)$`,
+  ).exec(path)
   let payload: unknown
   let command: SaveCommand | null = null
   if (request.method === 'POST') {
@@ -148,18 +152,26 @@ export async function handleServerSave(
     if (
       path !== '/v1/careers/workspace' &&
       path !== '/v1/catalog/horses' &&
+      !history &&
       !new RegExp(
         `^/v1/careers/(${uuid})/(expedition|jockey-relations|race-entries|race-runs/(${uuid})(/log)?)$`,
       ).test(path)
     ) {
       return reply(404, '지원하지 않는 저장 경로입니다.')
     }
-    if (path !== '/v1/careers/workspace' && browserUrl.search) {
+    if (
+      path !== '/v1/careers/workspace' &&
+      (!history || history[2] === 'retirement') &&
+      browserUrl.search
+    ) {
       return reply(400, '지원하지 않는 조회 조건입니다.')
     }
     for (const [key, value] of browserUrl.searchParams) {
       if (
         !['page', 'pageSize'].includes(key) ||
+        browserUrl.searchParams.getAll(key).length !== 1 ||
+        !Number.isSafeInteger(Number(value)) ||
+        (key === 'page' && Number(value) > 100000) ||
         !/^[1-9]\d*$/.test(value) ||
         (key === 'pageSize' && Number(value) > 100)
       ) {
@@ -206,19 +218,27 @@ export async function handleServerSave(
     const result: unknown = await response.json()
     const valid =
       request.method === 'GET'
-        ? path === '/v1/careers/workspace'
-          ? validateCareerWorkspace(result)
-          : path === '/v1/catalog/horses'
-            ? validateHorseCatalog(result)
-            : path.endsWith('/expedition')
-              ? validateExpeditionResponse(result)
-              : path.endsWith('/jockey-relations')
-                ? validateJockeyRelationsResponse(result)
-                : path.endsWith('/race-entries')
-                  ? validateRaceEntryOptions(result)
-                  : path.endsWith('/log')
-                    ? validateRaceLogResponse(result)
-                    : validateRaceRunResponse(result)
+        ? history
+          ? validHistory(
+              history[2] as HistoryPath,
+              result,
+              history[1],
+              Number(browserUrl.searchParams.get('page') ?? 1),
+              Number(browserUrl.searchParams.get('pageSize') ?? 20),
+            )
+          : path === '/v1/careers/workspace'
+            ? validateCareerWorkspace(result)
+            : path === '/v1/catalog/horses'
+              ? validateHorseCatalog(result)
+              : path.endsWith('/expedition')
+                ? validateExpeditionResponse(result)
+                : path.endsWith('/jockey-relations')
+                  ? validateJockeyRelationsResponse(result)
+                  : path.endsWith('/race-entries')
+                    ? validateRaceEntryOptions(result)
+                    : path.endsWith('/log')
+                      ? validateRaceLogResponse(result)
+                      : validateRaceRunResponse(result)
         : validateSaveResponse(command?.kind ?? 'create', result)
     if (!valid) {
       return reply(502, '서버 저장 응답이 계약과 다릅니다. 같은 요청으로 다시 확인해 주세요.')

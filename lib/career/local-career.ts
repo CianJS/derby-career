@@ -59,6 +59,10 @@ export function retireLocalCareer(career: Career) {
     travel: closeLocalTravel(migrateTravel(saved).travel),
   }
   // The archive and retirement tombstone are durable together or neither is changed.
-  writeBrowserSave({ career: null, lifecycle: retired })
-  return retired
+  const committed = writeBrowserSave({ career: null, lifecycle: retired })
+  return {
+    ...retired,
+    ...committed.lifecycle,
+    archive: committed.lifecycle?.archive ?? retired.archive,
+  }
 }

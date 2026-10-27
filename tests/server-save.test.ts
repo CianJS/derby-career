@@ -260,3 +260,67 @@ test('private trust read bridge validates current and retired identities and nev
     Response.json({ ...body, data: [{ jockeyId: 'SEO_JIAN', starts: 2, trust: 101 }] })
   assert.equal((await handleServerSave(new Request(url), env, malformed)).status, 502)
 })
+
+test('history bridge allows only bounded single page queries, validates every envelope and keeps errors private', async () => {
+  const id = randomUUID()
+  let calls = 0
+  const request = (path: string, query = '') =>
+    new Request(`http://localhost:3000/api/server-save/v1/careers/${id}/${path}${query}`, {
+      headers: { Authorization: 'Bearer browser-secret', Cookie: 'private=1' },
+    })
+  const invalid: typeof fetch = async (_target, options) => {
+    calls += 1
+    assert.equal(options?.method, 'GET')
+    const headers = new Headers(options?.headers)
+    assert.equal(headers.get('Authorization'), `Bearer ${env.DERBY_API_DEV_SESSION_TOKEN}`)
+    assert.equal(headers.get('Cookie'), null)
+    assert.equal(options?.credentials, 'omit')
+    return Response.json({ token: env.DERBY_API_DEV_SESSION_TOKEN })
+  }
+  for (const path of ['actions', 'events', 'records', 'expeditions/history']) {
+    for (const query of [
+      '?page=0',
+      '?page=100001',
+      '?pageSize=101',
+      '?page=1&page=2',
+      '?pageSize=2&pageSize=3',
+      '?token=leak',
+    ]) {
+      assert.equal((await handleServerSave(request(path, query), env, invalid)).status, 400)
+    }
+    assert.equal(
+      (
+        await handleServerSave(request(path), env, async () =>
+          Response.json({
+            data: [],
+            page: 1,
+            pageSize: 20,
+            token: env.DERBY_API_DEV_SESSION_TOKEN,
+          }),
+        )
+      ).status,
+      502,
+    )
+    const previous = calls
+    assert.equal(
+      (await handleServerSave(request(path, '?page=2&pageSize=20'), env, invalid)).status,
+      502,
+    )
+    assert.equal(calls, previous + 1)
+    const response = await handleServerSave(request(path), env, async () =>
+      Response.json({ error: { message: env.DERBY_API_DEV_SESSION_TOKEN } }, { status: 401 }),
+    )
+    assert.equal(response.status, 401)
+    assert.equal((await response.text()).includes(env.DERBY_API_DEV_SESSION_TOKEN), false)
+    assert.equal(
+      (
+        await handleServerSave(request(path, '?page=1&pageSize=20'), env, async () =>
+          Response.json({ data: [], page: 2, pageSize: 20 }),
+        )
+      ).status,
+      502,
+    )
+  }
+  assert.equal((await handleServerSave(request('retirement', '?page=1'), env, invalid)).status, 400)
+  assert.equal((await handleServerSave(request('retirement'), env, invalid)).status, 502)
+})

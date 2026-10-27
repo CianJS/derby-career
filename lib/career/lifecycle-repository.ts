@@ -100,7 +100,11 @@ export function writeLifecycleSave(value: unknown, draftChange?: StarterDraftCha
   if (Object.hasOwn(saved, 'career')) {
     next = saved.career
       ? applyCareer(
-          { ...next, activeHorse: next.activeHorse ?? null, month: next.month ?? 4 },
+          {
+            ...next,
+            activeHorse: saved.lifecycle?.activeHorse ?? next.activeHorse ?? null,
+            month: next.month ?? 4,
+          },
           saved.career,
         )
       : {

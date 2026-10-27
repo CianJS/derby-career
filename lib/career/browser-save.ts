@@ -1,3 +1,4 @@
+import { projectLocalStory } from './local-story'
 import { assertCareer, type Career } from './model'
 import { normalizeCareerAge } from './career-time'
 import { assertLifecycleSave, type LifecycleSave } from './lifecycle-save'
@@ -70,7 +71,10 @@ export function readBrowserSave(): Save {
   return decode(text)
 }
 /** Called inside the store's shared Web Lock. Both records commit in one atomic setItem. */
-export function writeBrowserSave(patch: { career?: Career | null; lifecycle?: unknown }): void {
+export function writeBrowserSave(
+  patch: { career?: Career | null; lifecycle?: unknown },
+  options: { storyStart?: boolean } = {},
+): Save {
   const target = storage()
   let before: string | null
   try {
@@ -85,9 +89,12 @@ export function writeBrowserSave(patch: { career?: Career | null; lifecycle?: un
   if (Object.hasOwn(patch, 'lifecycle')) {
     assertLifecycleSave(patch.lifecycle)
   }
-  const next = { ...current, ...patch, revision: current.revision + 1 }
+  const next = { ...current, ...patch, revision: current.revision + 1 } as Save
   if (next.career && (!current.career || !current.localCareerId)) {
     next.localCareerId = crypto.randomUUID()
+  }
+  if (Object.hasOwn(patch, 'career') || (next.career && Object.hasOwn(patch, 'lifecycle'))) {
+    next.lifecycle = projectLocalStory(current, next, options.storyStart === true)
   }
   let text: string
   try {
@@ -118,6 +125,7 @@ export function writeBrowserSave(patch: { career?: Career | null; lifecycle?: un
     }
     throw error
   }
+  return next
 }
 /** Legacy cookies are read-only; blocked cookies never prevent a browser-storage save. */
 export function legacyCookie(name: string): string | null {
