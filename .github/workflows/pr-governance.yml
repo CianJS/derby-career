@@ -1,0 +1,32 @@
+name: PR governance
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-governance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  risk-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Base/head merge-base and first-parent policy adoption history are both needed.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Report changed paths and declared risk (no product tests)
+        # Read the JSON event file in Node; never interpolate PR text into a shell command.
+        run: node scripts/pr-risk-report.mjs
+      - name: Check risk analyzer input and failure cases
+        if: ${{ !cancelled() }}
+        run: node --test scripts/pr-risk-report.test.mjs

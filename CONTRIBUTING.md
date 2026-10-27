@@ -4,11 +4,12 @@
 
 ## 협업 브랜치와 담당 범위
 
-- 통합 브랜치는 `develop`, Backend 개발 브랜치는 `api/develop`이다. Frontend 개발 브랜치 이름은 해당 Work의 지정을 따르며 `api/develop`에서 작업하지 않는다. 기능별 작은 PR을 `develop`에 병합한다.
+- 통합 브랜치는 `develop`, Backend 개발 브랜치는 `api/develop`이다. Frontend 개발 브랜치 이름은 해당 Work의 지정을 따르며 `api/develop`에서 작업하지 않는다. 기존 `feature/frontend` 등 담당 Work의 브랜치를 다른 Work가 변경하지 않는다. 기능별 작은 PR을 `develop` 대상으로 생성한다.
 - 작업 시작 전과 PR 병합 전에 최신 `develop`을 확인하고 반영한다. 다른 담당의 변경으로 코드나 검증 기준이 바뀌면 필요한 검사를 다시 실행한다.
-- Backend는 `services/api`, `contracts`, `packages/shared`와 서버가 사용하는 공유 게임 계산을 담당한다. Frontend는 Next 화면·스타일·브라우저 저장·클라이언트 연동과 Sites 미리보기를 담당한다. `lib/career`는 파일별로 공유 여부를 확인하며 서버용 계산 사본을 만들지 않는다.
+- Backend는 `services/api`, `contracts`, `packages/shared`와 서버가 사용하는 공유 게임 계산을 담당한다. Frontend는 Next 화면·스타일·브라우저 저장·클라이언트 연동과 Sites 미리보기를 담당한다. `lib/career`는 파일별로 공유 여부를 확인하며 서버용 계산 사본을 만들지 않는다. 파일별 기술적 경계는 [코드 책임 지도](docs/codebase-architecture.md)를 따른다.
 - 공유 계약·계산 변경은 PR에 호환성, 연동 예시와 상대 담당이 해야 할 일을 남긴다. 다른 담당의 진행 상태는 최신 원격 코드와 PR에서 확인한다.
-- 리뷰 댓글과 최신 PR 커밋의 CI 성공을 확인한 뒤 병합하고, 병합 결과를 해당 개발 브랜치에 반영한다.
+- 통합 개발 환경 Work는 지침·PR 템플릿·CI와 검증 도구를 담당하며 FE/BE 런타임 코드·공유 파일을 임의로 변경하거나 이동하지 않는다. 범위 밖 수정이 필요하면 파일·이유·담당 Work를 PR에 기록한다.
+- 리뷰와 증거는 [PR 리뷰 정책](docs/pr-review-policy.md), 승인·병합·배포 권한은 [병합·배포 정책](docs/release-policy.md)을 따른다. 승인된 병합 결과는 해당 개발 브랜치에 반영한다.
 - 개발 브랜치를 작업 완료 후 수동 삭제하지 않는다. GitHub의 병합 후 자동 삭제가 적용되면 병합 커밋에서 같은 이름으로 복원한다.
 
 ## 기본 형식
@@ -52,6 +53,8 @@ npm test
 ```
 
 CI는 `format:check`와 `lint`를 실행하며 린트 경고도 실패로 처리한다. 코드 변경 후 검사 결과가 통과해야 한다.
+
+변경 범위에 맞는 기존 검사를 선택하고 PR에 실행 결과와 미실행 사유를 남긴다. 문서·템플릿·위험도 도구 변경은 [경량 검증 절차](docs/pr-review-policy.md#경량-검증과-실행-방법)를 따른다. 기존 제품 CI가 실행되는 변경에서 그 검사를 경량 검사로 대체하지 않는다.
 
 `packages/shared/src/generated`의 타입과 이벤트 응답·서버 저장 검증기는 `npm run contract:generate`로 함께 갱신하고 `contract:check`로 계약 일치를 검사한다. 이벤트 Seed는 변환기로 갱신하고, 적용된 SQL migration은 체크섬을 보존하여 새 migration으로 변경한다. 이 파일들은 일괄 포맷 대상에서 제외한다.
 
