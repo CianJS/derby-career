@@ -7,7 +7,7 @@ import { Stable, StableActiveHorse, stableActiveState } from '../components/care
 import type { careerStore } from '../lib/career/store'
 import { legacyCareer } from './helpers/legacy-career'
 import { Races } from '../components/career/race-catalog'
-import { Jockeys } from '../components/career/jockey-record'
+import { Jockeys, compareRidingDates } from '../components/career/jockey-record'
 import { Sidebar } from '../components/career/navigation'
 import type { CareerHorse } from '../components/career/legacy-types'
 
@@ -40,6 +40,32 @@ const horse: CareerHorse = {
   ],
 }
 const setView = () => {}
+
+test('riding dates retain descending numeric comparison, stable ties and unknown source order without mutation', () => {
+  const dates = ['2028.04', '2030.02', '2029.01', '2028-4', '2028.04.02', '', '미기록', '9999.13']
+  const records = dates.map((date, index) => ({ date, index }))
+  const before = JSON.stringify(records)
+  const sorted = records.toSorted(compareRidingDates)
+  assert.deepEqual(
+    sorted.map((r) => r.index),
+    [1, 2, 4, 0, 3, 5, 6, 7],
+  )
+  assert.equal(compareRidingDates({ date: '2028.4' }, { date: '2028-04' }), 0)
+  assert.equal(compareRidingDates({ date: '2028.04.00' }, { date: '' }), 0)
+  assert.equal(compareRidingDates({ date: '2028' }, { date: '미기록' }), 0)
+  assert.equal(JSON.stringify(records), before)
+  const many = Array.from({ length: 3000 }, (_, index) => ({
+    ...records[index % records.length],
+    index,
+  }))
+  const sortedMany = many.toSorted(compareRidingDates)
+  for (let i = 1; i < sortedMany.length; i++) {
+    assert.ok(compareRidingDates(sortedMany[i - 1], sortedMany[i]) <= 0)
+    if (compareRidingDates(sortedMany[i - 1], sortedMany[i]) === 0) {
+      assert.ok(sortedMany[i - 1].index < sortedMany[i].index)
+    }
+  }
+})
 
 test('stable active projection uses the current saved career and suppresses stale summaries during uncertain states', () => {
   const career = {

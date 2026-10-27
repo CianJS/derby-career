@@ -7,13 +7,20 @@ import { act, createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NoticeCenter, NoticeList, NoticeDetails } from '../components/notices/notice-center'
 import { expeditionControls } from '../components/career/expedition-panel'
-import { localEventChoiceAvailability, canTrain } from '../packages/shared/src/domain'
+import {
+  localEventChoiceAvailability,
+  canTrain,
+  jockeyCatalog,
+} from '../packages/shared/src/domain'
 import { serverMonthEventAvailability } from '../components/career/event-choice-guidance'
 import { defaultEventCatalog } from '../lib/career/events/repository'
 import { healthGuidance, recoveryGuidance } from '../lib/career/health-presentation'
 import { normalizeHealth } from '../lib/career/health'
 import { migrateTravel } from '../lib/career/local-travel'
 import { stableActiveState } from '../components/career/stable'
+import { HorseSelection } from '../components/career/horse-selection'
+import { horseSelectionTitle } from '../components/career/horse-selection-history'
+import { Jockey } from '../components/career/jockey-record'
 import { catalogGameplayTarget } from '../components/career/catalog-gameplay-bridge'
 import { gameplayUrl, readGameplayView } from '../lib/race-catalog/model'
 import { updateNotices, noticeCenterDescription } from '../lib/notices/updates'
@@ -543,6 +550,187 @@ function activeServerWorkspace() {
   })
 }
 
+test('selection title uses confirmed Local/Server history, retaining neutral text for partial/loading/error states', () => {
+  const fixture = managementFixture()
+  const base = {
+    ...careerStore.getSnapshot(),
+    ready: true,
+    busy: false,
+    pending: false,
+    error: null,
+    mode: 'local' as const,
+    career: null,
+    workspace: null,
+    lifecycle: {
+      archive: fixture.lifecycle.archive,
+      lastRetiredId: fixture.lifecycle.lastRetiredId,
+    },
+  }
+  const before = JSON.stringify(base)
+  assert.equal(horseSelectionTitle(base), '새 육성마를 선택하세요')
+  assert.equal(
+    horseSelectionTitle({ ...base, lifecycle: { archive: [fixture.lifecycle.archive[0]] } }),
+    '새 육성마를 선택하세요',
+  )
+  assert.equal(
+    horseSelectionTitle({ ...base, lifecycle: { lastRetiredId: fixture.lifecycle.archive[0].id } }),
+    '새 육성마를 선택하세요',
+  )
+  assert.equal(
+    horseSelectionTitle({ ...base, lifecycle: { archive: [] } }),
+    '첫 육성마를 선택하세요',
+  )
+  for (const patch of [
+    { ready: false },
+    { busy: true },
+    { pending: true },
+    { error: '기록 확인 실패' },
+    { mode: null },
+    { lifecycle: null },
+    { lifecycle: {} },
+    { lifecycle: { activeHorse: fixture.lifecycle.activeHorse, archive: [] } },
+  ]) {
+    assert.equal(horseSelectionTitle({ ...base, ...patch }), '육성마를 선택하세요')
+  }
+  assert.equal(
+    horseSelectionTitle({ ...base, lifecycle: { archive: [] } }, true),
+    '육성마를 선택하세요',
+  )
+  const workspace = activeServerWorkspace()
+  workspace.career = null
+  const server = { ...base, mode: 'server' as const, workspace }
+  // Local archives must not influence a known-empty Server history.
+  assert.equal(horseSelectionTitle(server), '첫 육성마를 선택하세요')
+  assert.equal(horseSelectionTitle({ ...server, workspace: null }), '육성마를 선택하세요')
+  for (const total of [1, 2, 21]) {
+    assert.equal(
+      horseSelectionTitle({
+        ...server,
+        workspace: {
+          ...workspace,
+          retirements: [],
+          pagination: { ...workspace.pagination, total, page: 2 },
+        },
+      }),
+      '새 육성마를 선택하세요',
+    )
+  }
+  for (const patch of [
+    { ready: false },
+    { busy: true },
+    { pending: true },
+    { error: '서버 미연결' },
+  ]) {
+    assert.equal(horseSelectionTitle({ ...server, ...patch }), '육성마를 선택하세요')
+  }
+  assert.equal(JSON.stringify(base), before)
+})
+
+test('selection and jockey DOM are read-only; duplicate-name tied records keep archive and race links distinct', async () => {
+  const fixture = managementFixture()
+  // Exercise old separators and ties using the existing saved records, not new games or riders.
+  for (const [index, horse] of fixture.lifecycle.archive.entries()) {
+    for (const record of horse.raceRecords!) {
+      if (record.jockeyId === 'HAN_DOYUN') {
+        record.date = index === 0 ? '2028.4' : '2028-04'
+      }
+    }
+  }
+  const h = await harness('local', '/', undefined, () => writeBrowserSave(fixture))
+  const element = h.dom.window.document.createElement('div')
+  h.dom.window.document.body.appendChild(element)
+  const { createRoot } = await import('react-dom/client')
+  const root = createRoot(element)
+  try {
+    const source = JSON.stringify(fixture)
+    const before = h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY)
+    const requests = h.requests.length
+    await act(async () => root.render(createElement(HorseSelection, { busy: false })))
+    assert.equal(element.querySelector('h1')?.textContent, '새 육성마를 선택하세요')
+    const links: [string, string | undefined][] = []
+    await act(async () =>
+      root.render(
+        createElement(Jockey, {
+          setView: () => {},
+          jockeyId: 'HAN_DOYUN',
+          horses: fixture.lifecycle.archive,
+          onSelectHorse: (id, run) => {
+            links.push([id, run])
+          },
+        }),
+      ),
+    )
+    assert.match(element.textContent!, /기승 기록/)
+    assert.doesNotMatch(element.textContent!, /최근 기승 기록|추후 영입/)
+    assert.match(element.textContent!, /기수의 공통 능력치와 다릅니다/)
+    const rows = [...element.querySelectorAll<HTMLElement>('[data-riding-record]')]
+    assert.equal(rows.length, 2)
+    assert.deepEqual(
+      rows.map((r) => r.dataset.horseId),
+      fixture.lifecycle.archive.map((horse) => horse.id),
+    )
+    for (const row of rows) {
+      for (const kind of ['date', 'horse', 'race']) {
+        await act(async () =>
+          row.querySelector<HTMLButtonElement>(`[data-record-link="${kind}"]`)!.click(),
+        )
+        assert.deepEqual(links.at(-1), [row.dataset.horseId, row.dataset.raceRunId])
+      }
+    }
+    await act(async () =>
+      root.render(
+        createElement(Jockey, {
+          setView: () => {},
+          jockeyId: 'HAN_DOYUN',
+          horses: fixture.lifecycle.archive.map((horse) => ({
+            ...horse,
+            raceRecords: horse.raceRecords!.map((record) =>
+              record.jockeyId === 'HAN_DOYUN' ? { ...record, date: '' } : record,
+            ),
+          })),
+        }),
+      ),
+    )
+    assert.equal(
+      [...element.querySelectorAll('[data-riding-record]')].filter((row) =>
+        row.textContent!.includes('날짜 확인 불가'),
+      ).length,
+      2,
+    )
+    assert.equal(JSON.stringify(fixture), source)
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), before)
+    assert.equal(h.requests.length, requests)
+  } finally {
+    await act(async () => root.unmount())
+    element.remove()
+    await h.close()
+  }
+})
+
+test('actual App legacy Local history distinguishes preserved retirements from incomplete archive fields', async () => {
+  for (const partial of [false, true]) {
+    const saved = { ...managementFixture().lifecycle, activeHorse: null }
+    const { archive: _archive, lastRetiredId: _retired, ...incomplete } = saved
+    const h = await harness('local', '/?view=candidates', undefined, () => {
+      document.cookie = `derby-career-lifecycle=${encodeURIComponent(JSON.stringify(partial ? incomplete : saved))}`
+    })
+    try {
+      await h.waitFor(() => h.container.querySelectorAll('input[name="horse"]').length === 3)
+      assert.equal(
+        h.container.querySelector('h1')?.textContent,
+        partial ? '육성마를 선택하세요' : '새 육성마를 선택하세요',
+      )
+      assert.equal(h.container.querySelectorAll('input[name="starter-jockey"]').length, 0)
+      assert.deepEqual(readBrowserSave().lifecycle!.contractedJockeyIds, saved.contractedJockeyIds)
+      if (!partial) {
+        assert.deepEqual(readBrowserSave().lifecycle!.archive, saved.archive)
+      }
+    } finally {
+      await h.close()
+    }
+  }
+})
+
 test('catalog gameplay destinations use current Local/Server authority and keep unknown states unconfirmed', () => {
   const fixture = managementFixture()
   const career = { ...fixture.career, month: 3, careerTurnIndex: 3 }
@@ -966,6 +1154,7 @@ test('actual App: new Local starter is explicit, recovers failed draft saves/rel
     storagePrototype.setItem = originalWrite
     await clickText('이 기수 선택 확정')
     await h.waitFor(() => h.container.querySelectorAll('input[name="horse"]').length === 3)
+    assert.equal(h.container.querySelector('h1')?.textContent, '첫 육성마를 선택하세요')
     assert.equal(readBrowserSave().lifecycle!.starterJockeyId, 'KANG_HAJUN')
     assert.equal(readBrowserSave().lifecycle!.contractedJockeyIds, undefined)
     assert.equal(readBrowserSave().career, null)
@@ -1050,10 +1239,40 @@ test('actual App: new Local starter is explicit, recovers failed draft saves/rel
     await clickText('JOCKEYS')
     assert.match(h.container.textContent!, /계약 기수 1/)
     assert.match(h.container.textContent!, /박서윤/)
+    const selectedJockey = jockeyCatalog.find((jockey) => jockey.id === 'PARK_SEOYUN')!
+    const card = [...h.container.querySelectorAll('main button')].find((button) =>
+      button.textContent!.includes(selectedJockey.name),
+    )!
+    assert.equal(card.textContent!.split(selectedJockey.style).length - 1, 1)
     assert.doesNotMatch(h.container.textContent!, /한도윤|서지안|윤태성|최대 3명/)
     await clickText('미계약 기수')
-    assert.match(h.container.textContent!, /추후 영입 예정/)
+    assert.match(h.container.textContent!, /추가 영입은 지원하지 않습니다/)
     assert.match(h.container.textContent!, /한도윤/)
+    // Real successive Local careers reuse the saved contract and funds, not the starter draft.
+    for (const generation of [2, 3]) {
+      await act(async () => {
+        assert.ok(await careerStore.release())
+      })
+      const retired = readBrowserSave()
+      assert.equal(retired.lifecycle!.archive!.length, generation - 1)
+      const archives = JSON.stringify(retired.lifecycle!.archive)
+      const funds = retired.lifecycle!.fundsKRW
+      await h.reload()
+      await clickText('새 육성마 시작')
+      await h.waitFor(
+        () => h.container.querySelector('h1')?.textContent === '새 육성마를 선택하세요',
+      )
+      assert.equal(h.container.querySelectorAll('input[name="starter-jockey"]').length, 0)
+      assert.equal(h.container.querySelectorAll('[data-starter-combination]').length, 0)
+      await act(async () =>
+        h.container.querySelector<HTMLInputElement>('input[name="horse"]')!.click(),
+      )
+      await clickText('이 말로 육성 시작')
+      await h.waitFor(() => !!readBrowserSave().career)
+      assert.deepEqual(readBrowserSave().career!.contractedJockeyIds, ['PARK_SEOYUN'])
+      assert.equal(readBrowserSave().lifecycle!.fundsKRW, funds)
+      assert.equal(JSON.stringify(readBrowserSave().lifecycle!.archive), archives)
+    }
   } finally {
     storagePrototype.setItem = originalWrite
     await h.close()
@@ -1157,6 +1376,7 @@ test('actual App: developer Server creation submits the explicit starter and pre
     )
     await clickText('이 기수 선택 확정')
     assert.equal(h.container.querySelectorAll('input[name="horse"]').length, 3)
+    assert.equal(h.container.querySelector('h1')?.textContent, '첫 육성마를 선택하세요')
     assert.equal(bodies.length, 0)
     assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
     await h.reload()

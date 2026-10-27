@@ -12,6 +12,36 @@ import { Section } from './presentation'
 import { Management } from './management'
 import { jockeys } from './legacy-catalog'
 
+function savedRidingDate(date: string): number[] | null {
+  if (typeof date !== 'string') {
+    return null
+  }
+  const parts = date.trim().match(/^(\d{4})[.-](\d{1,2})(?:[.-](\d{1,2}))?$/)
+  if (!parts) {
+    return null
+  }
+  const [year, month, day = 0] = date.match(/\d+/g)!.map(Number)
+  return year > 0 && month >= 1 && month <= 12 && (!parts[3] || (day >= 1 && day <= 31))
+    ? [year, month, day]
+    : null
+}
+
+export function compareRidingDates(a: { date: string }, b: { date: string }): number {
+  const left = savedRidingDate(a.date)
+  const right = savedRidingDate(b.date)
+  if (!left || !right) {
+    // Unknown dates follow known dates. Stable sort retains source order for ties/unknowns.
+    return Number(!!right) - Number(!!left)
+  }
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const delta = (right[i] ?? 0) - (left[i] ?? 0)
+    if (delta) {
+      return delta
+    }
+  }
+  return 0
+}
+
 function savedJockeyContracts(snapshot: ReturnType<typeof useCareer>): readonly string[] | null {
   if (!snapshot.ready) {
     return null
@@ -41,7 +71,7 @@ export function Jockeys({
     <Management
       title="기수"
       eyebrow="JOCKEYS"
-      description="저장된 계약 기수와 전체 기수 도감을 확인합니다. 추가 영입은 추후 지원 예정입니다."
+      description="저장된 계약 상태와 기수 정보를 확인합니다. 추가 영입은 지원하지 않습니다."
     >
       <div className="flex w-fit gap-1 rounded-xl border border-border bg-card p-1">
         <button
@@ -85,9 +115,8 @@ export function Jockeys({
                 <p className="text-[11px] text-muted-foreground">{j.meta}</p>
               </div>
             </div>
-            <p className="mt-4 text-xs text-muted-foreground">{j.style}</p>
             <p className="mt-1 text-xs text-primary">
-              {contractedIds?.includes(j.id) ? '계약 중' : '미계약 · 추후 영입 예정'}
+              {contractedIds?.includes(j.id) ? '계약 중' : '미계약'}
             </p>
             <p className="mt-1 text-xs">
               {career?.horse ? `${career.horse.name}와 신뢰도 · ` : '신뢰도 · '}
@@ -134,24 +163,14 @@ export function Jockey({
     .flatMap((h) =>
       (h.raceRecords ?? [])
         .filter((r) => r.jockeyId === j.id)
-        .map((r) => ({ ...r, horseId: h.id, horseName: h.name })),
+        .map((r, index) => ({ ...r, horseId: h.id, horseName: h.name, sourceIndex: index })),
     )
-    .sort((a, b) => {
-      const left = a.date.match(/\d+/g)?.map(Number) ?? []
-      const right = b.date.match(/\d+/g)?.map(Number) ?? []
-      for (let i = 0; i < Math.max(left.length, right.length); i++) {
-        const delta = (right[i] ?? 0) - (left[i] ?? 0)
-        if (delta) {
-          return delta
-        }
-      }
-      return 0
-    })
+    .sort(compareRidingDates)
   return (
     <Management
       title={j.name}
       eyebrow="JOCKEY RECORD"
-      description="기수의 능력과 기승 기록을 조회합니다."
+      description="저장된 계약과 경기 기록을 기준으로 표시합니다."
     >
       <button
         onClick={() => setView('jockeys')}
@@ -207,7 +226,13 @@ export function Jockey({
           ))}
         </div>
       </Section>
-      <Section eyebrow="RIDING RECORD" title="최근 기승 기록">
+      <Section eyebrow="RIDING RECORD" title="기승 기록">
+        <p className="mb-3 text-xs text-muted-foreground">
+          {snapshot.mode === 'server'
+            ? '현재 불러온 현역마·은퇴마 기록을 저장 날짜가 최신인 순서로 표시합니다. 아직 불러오지 않은 은퇴마의 기록은 포함되지 않습니다.'
+            : '저장된 현역마·은퇴마 기록을 날짜가 최신인 순서로 표시합니다.'}{' '}
+          날짜를 확인할 수 없으면 원래 값을 함께 표시하며 목록 뒤에 둡니다.
+        </p>
         <div className="overflow-x-auto">
           <div className="grid min-w-[620px] grid-cols-[100px_1.2fr_1.3fr_70px_70px] border-b border-border px-3 pb-2 text-[10px] text-muted-foreground">
             <span>날짜</span>
@@ -217,11 +242,11 @@ export function Jockey({
             <span>결과</span>
           </div>
           {records.length === 0 && (
-            <p className="py-4 text-sm text-muted-foreground">최근 기승 기록이 없습니다.</p>
+            <p className="py-4 text-sm text-muted-foreground">확인된 기승 기록이 없습니다.</p>
           )}
-          {records.map((r, index) => (
+          {records.map((r) => (
             <div
-              key={`${r.horseId}:${r.raceRunId ?? index}`}
+              key={`${r.horseId}:${r.raceRunId ?? `legacy:${r.sourceIndex}`}`}
               data-riding-record
               data-horse-id={r.horseId}
               data-race-run-id={r.raceRunId}
@@ -229,7 +254,12 @@ export function Jockey({
             >
               {(
                 [
-                  ['date', r.date],
+                  [
+                    'date',
+                    savedRidingDate(r.date)
+                      ? r.date
+                      : `날짜 확인 불가${r.date ? ` · ${r.date}` : ''}`,
+                  ],
                   ['horse', r.horseName],
                   ['race', r.race],
                 ] as const
