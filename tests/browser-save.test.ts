@@ -1,3 +1,5 @@
+import { buildLocalBackup, captureLocalSave, type BackupContext } from '../lib/career/save-backup'
+import { simulateRace, summarizeRaceLog } from '../lib/career/race-simulation'
 import { canTrain } from '../lib/career/health'
 import { defaultEventCatalog } from '../lib/career/events/repository'
 import { localEventChoiceAvailability } from '../lib/career/events/availability'
@@ -770,6 +772,27 @@ test('actual Local 65-turn story survives retries, trips, races, archive and the
   writeLifecycleSave(archiveStale)
   assert.equal(JSON.stringify(readBrowserSave().lifecycle!.archive![0]), frozen)
   assert.deepEqual(readBrowserSave().career!.contractedJockeyIds, ['HAN_DOYUN'])
+  assert.ok(await careerStore.release())
+  assert.equal(await careerStore.select('DEV_HORSE_SERENE_STEP'), true)
+  const beforeExport = [...storage.data]
+  const raw = storage.data.get(BROWSER_SAVE_KEY)!
+  assert.equal(readBrowserSave().lifecycle!.archive!.length, 2)
+  for (let repeat = 0; repeat < 2; repeat += 1) {
+    const captured = await captureLocalSave(careerStore.getSnapshot)
+    assert.equal(captured.status, 'valid')
+    if (captured.status !== 'valid') {
+      throw new Error('snapshot')
+    }
+    const backup = buildLocalBackup(captured.raw, captured.log, '2026-10-27T12:34:00.000Z')
+    assert.deepEqual(backup.payload.save, JSON.parse(raw))
+    assert.ok(
+      backup.payload.save.lifecycle!.archive!.some((horse) =>
+        horse.story?.entries.some((entry) => entry.turn === 65),
+      ),
+    )
+    assert.ok(backup.payload.save.lifecycle!.economyLedger!.length >= 2)
+    assert.deepEqual([...storage.data], beforeExport)
+  }
 })
 
 test('legacy partial story imports only persisted evidence, pending commitment recovers once and failed retirement adds nothing', async () => {
@@ -843,5 +866,191 @@ test('story projection preserves legacy-cookie archives when migrating a career-
       (entry) => entry.kind === 'treatment',
     ).length,
     1,
+  )
+})
+
+test('pure backup copies the original JSON, including old age and unknown preserved metadata, without storage access', () => {
+  const fixture = buildFixture('normal').career!
+  const raw = JSON.stringify({
+    version: 1,
+    revision: 14,
+    localCareerId: 'saved-identity',
+    career: { ...fixture, age: 9 },
+    lifecycle: fixtureLifecycle(true),
+    preservedMetadata: { note: '원본 그대로' },
+  })
+  const storage = browserStorage()
+  storage.target.getItem = () => {
+    throw new Error('pure builder must not read storage')
+  }
+  const result = buildLocalBackup(raw, null, '2026-10-27T12:34:00.000Z')
+  assert.deepEqual(result.payload.save, JSON.parse(raw))
+  assert.deepEqual(JSON.parse(result.json).save, JSON.parse(raw))
+  assert.equal(result.payload.save.career!.age, 9, 'backup must not normalize old age')
+  assert.equal(result.payload.format, 'derby-career-local-backup')
+  assert.equal(result.payload.formatVersion, 1)
+  assert.equal('activeRaceLog' in result.payload, false)
+  assert.equal(result.filename, 'derby-career-local-backup-20261027-1234.json')
+  assert.doesNotMatch(result.filename, /세레네|마방/)
+  for (const bad of [
+    '{',
+    JSON.stringify({ version: 2, revision: 0 }),
+    JSON.stringify({ version: 1, revision: -1 }),
+    JSON.stringify({ version: 1, revision: 1, localCareerId: '' }),
+  ]) {
+    assert.throws(() => buildLocalBackup(bad, null, '2026-10-27T12:34:00.000Z'))
+  }
+  assert.throws(() => buildLocalBackup(raw, null, 'not-a-date'), /내보내기 시각/)
+})
+
+for (const version of ['race-sim-v1', 'race-sim-v2', 'race-sim-v3', 'race-sim-v4'] as const) {
+  test(`backup ${version}: only the exact persisted locked log is included and incomplete/corrupt logs fail closed`, async () => {
+    const fixture = buildFixture('playback-12')
+    const run = fixture.career!.raceRun!
+    const log = simulateRace(run, version)
+    const career = { ...fixture.career!, raceRun: { ...run, simulation: summarizeRaceLog(log) } }
+    const raw = JSON.stringify({
+      version: 1,
+      revision: 7,
+      career,
+      lifecycle: fixtureLifecycle(true),
+    })
+    const result = buildLocalBackup(raw, log, '2026-10-27T12:34:00.000Z')
+    assert.deepEqual(result.payload.save, JSON.parse(raw))
+    assert.deepEqual(result.payload.activeRaceLog, log)
+    const storage = browserStorage()
+    storage.data.set(BROWSER_SAVE_KEY, raw)
+    storage.data.set(`derby-race-log-v1:${run.raceRunId}`, JSON.stringify(log))
+    storage.data.set('derby-race-log-v1:unrelated', JSON.stringify(buildFixture('playback-18').log))
+    storage.data.set('derby-career-server-command-v1', 'private-journal')
+    const context = { mode: 'local' as const, ready: true, busy: false, pending: false }
+    locks()
+    const before = [...storage.data]
+    const snapshot = await captureLocalSave(() => context)
+    assert.equal(snapshot.status, 'valid')
+    if (snapshot.status !== 'valid') {
+      throw new Error('snapshot')
+    }
+    assert.equal(snapshot.raceError, null)
+    assert.equal(JSON.stringify(snapshot.log), JSON.stringify(log))
+    const copy = buildLocalBackup(snapshot.raw, snapshot.log, '2026-10-27T12:34:00.000Z')
+    assert.equal(copy.json.includes('private-journal'), false)
+    assert.deepEqual([...storage.data], before)
+    for (const invalid of [
+      null,
+      {},
+      buildFixture('playback-18').log,
+      { ...log, seed: 'damaged' },
+      { ...log, durationMs: log.durationMs + 1 },
+    ]) {
+      assert.throws(() => buildLocalBackup(raw, invalid, '2026-10-27T12:34:00.000Z'), /완전한 백업/)
+    }
+    storage.data.delete(`derby-race-log-v1:${run.raceRunId}`)
+    const missing = await captureLocalSave(() => context)
+    assert.ok(missing.status === 'valid' && missing.raceError)
+    storage.data.set(`derby-race-log-v1:${run.raceRunId}`, '{')
+    const corrupt = await captureLocalSave(() => context)
+    assert.ok(corrupt.status === 'valid' && corrupt.raceError)
+    assert.equal(storage.data.get(BROWSER_SAVE_KEY), raw)
+  })
+}
+
+test('read-only backup distinguishes no document/legacy-only/corrupt/blocked saves and rejects busy/server/changed lock contexts', async () => {
+  const storage = browserStorage()
+  locks()
+  let context: BackupContext = { mode: 'local', ready: true, busy: false, pending: false }
+  assert.deepEqual(await captureLocalSave(() => context), { status: 'absent', legacy: 'absent' })
+  storage.cookies.set(
+    'derby-career-lifecycle',
+    encodeURIComponent(JSON.stringify(fixtureLifecycle(true))),
+  )
+  assert.deepEqual(await captureLocalSave(() => context), { status: 'absent', legacy: 'present' })
+  assert.equal(storage.data.has(BROWSER_SAVE_KEY), false)
+  const cookies = [...storage.cookies]
+  storage.data.set(BROWSER_SAVE_KEY, '{')
+  await assert.rejects(
+    captureLocalSave(() => context),
+    /손상/,
+  )
+  storage.data.set(BROWSER_SAVE_KEY, JSON.stringify({ version: 2, revision: 1 }))
+  await assert.rejects(
+    captureLocalSave(() => context),
+    /형식/,
+  )
+  storage.data.set(
+    BROWSER_SAVE_KEY,
+    JSON.stringify({ version: 1, revision: 0, lifecycle: fixtureLifecycle(true) }),
+  )
+  storage.rejectWrites(true)
+  const frozen = [...storage.data]
+  assert.equal((await captureLocalSave(() => context)).status, 'valid')
+  assert.deepEqual([...storage.data], frozen)
+  assert.deepEqual([...storage.cookies], cookies)
+  context = { ...context, busy: true }
+  await assert.rejects(
+    captureLocalSave(() => context),
+    /처리하는 중/,
+  )
+  context = { ...context, busy: false, pending: true }
+  await assert.rejects(
+    captureLocalSave(() => context),
+    /처리하는 중/,
+  )
+  context = { ...context, pending: false, mode: 'server' }
+  await assert.rejects(
+    captureLocalSave(() => context),
+    /Local 저장 모드/,
+  )
+  context = { ...context, mode: 'local' }
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {} })
+  await assert.rejects(
+    captureLocalSave(() => context),
+    /Web Lock/,
+  )
+  let release!: () => void
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: {
+      locks: {
+        request: (_key: string, fn: () => unknown) =>
+          new Promise((resolve, reject) => {
+            release = () => {
+              try {
+                resolve(fn())
+              } catch (error) {
+                reject(error)
+              }
+            }
+          }),
+      },
+    },
+  })
+  // Reject a mode change while queued behind a writer; never mix Local and Server.
+  const queued = captureLocalSave(() => context)
+  const rejected = assert.rejects(queued, /변경/)
+  context = { ...context, mode: 'server' }
+  release()
+  await rejected
+  locks()
+  context = { ...context, mode: 'local' }
+  const getItem = storage.target.getItem
+  let reads = 0
+  storage.target.getItem = (key) => {
+    const raw = getItem(key)
+    if (key === BROWSER_SAVE_KEY && ++reads === 1) {
+      storage.data.set(key, raw!.replace('"revision":0', '"revision":1'))
+    }
+    return raw
+  }
+  await assert.rejects(
+    captureLocalSave(() => context),
+    /변경/,
+  )
+  storage.target.getItem = () => {
+    throw new DOMException('blocked', 'SecurityError')
+  }
+  await assert.rejects(
+    captureLocalSave(() => context),
+    /저장소에 접근/,
   )
 })
