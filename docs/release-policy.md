@@ -3,14 +3,18 @@
 ## Branch roles
 
 - `feature/*`, `fix/*`, `api/*` (and other work branches): development and testing only. Submit implementation pull requests into **`develop`**, not `main`.
-- **`develop`**: integrated development state; Frontend and Backend changes may merge here after CI, code review, and integration checks. **Does not trigger Vercel Git automatic deployment.**
+- **`develop`**: integrated development state; Frontend and Backend changes may merge here after relevant existing CI, code review, and explicit user approval. **Does not trigger Vercel Git automatic deployment.**
 - **`main`**: release and production branch. Only an approved, **batched release** from `develop` is merged into `main`. **Only `main` triggers Vercel Git automatic deployment.**
 
 ## What counts as a release
 
 Group related, completed functionality into a cohesive release rather than publishing every small development PR. Ideally the unit contains the matching frontend, backend, migrations/configuration (where applicable), regression tests and validated user flows. There is no fixed release cadence or minimum count of commits. The release unit is based on **end-to-end readiness** rather than the size of a diff.
 
-The project manager reviews and explicitly approves a **`develop` → `main` PR**. No developer Work agent should merge it autonomously. Smaller implementation PRs into `develop` continue as usual.
+The project manager (user) explicitly approves every merge, including implementation PRs into `develop` and release PRs from **`develop` → `main`**. Work agents create PRs and leave them unmerged unless the user explicitly authorizes that merge. AI review or green CI alone is not merge approval. Do not enable auto-merge.
+
+Work branches and ownership are defined in [CONTRIBUTING.md](../CONTRIBUTING.md); risk, independent review and evidence requirements are defined in [pr-review-policy.md](pr-review-policy.md). Work agents must not directly push to `develop` or `main`, or push to another Work's development branch.
+
+Preview deployment of `develop` is manual and user-controlled. Neither Production nor Preview deployment, repository settings, branch protection, Secrets, nor Vercel settings may be changed or executed without explicit user authorization. A request to implement code and create a PR does not authorize those actions.
 
 ## Release checklist
 

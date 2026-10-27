@@ -10,6 +10,7 @@ on:
       - 'app/**'
       - 'components/**'
       - 'lib/**'
+      - 'public/**'
       - 'services/api/**'
       - 'packages/shared/**'
       - 'contracts/**'
@@ -21,8 +22,20 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'next.config.mjs'
+      # Request interception can affect every browser/API flow, including authentication.
+      - 'middleware.ts'
+      - 'middleware.js'
+      - 'proxy.ts'
+      - 'proxy.js'
+      - 'src/middleware.ts'
+      - 'src/middleware.js'
+      - 'src/proxy.ts'
+      - 'src/proxy.js'
+      - 'postcss.config.mjs'
       - 'tsconfig.json'
       - '.github/workflows/browser-e2e.yml'
+      # Markdown under services/api or packages/shared is documentation, not executable MDX.
+      - '!**/*.md'
 
 permissions:
   contents: read
