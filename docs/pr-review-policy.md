@@ -4,11 +4,11 @@
 
 ## 위험도와 기존 검사 선택
 
-| 위험도 | 변경 예시                                                           | 필수 처리                                             |
-| ------ | ------------------------------------------------------------------- | ----------------------------------------------------- |
-| LOW    | 문서, 설명 문구, 단순 스타일                                        | 관련 경량 검사와 PR 리뷰                              |
-| MEDIUM | 화면 동작, 상태 표시, 일반 API 연동                                 | 관련 기존 CI와 독립 AI 리뷰                           |
-| HIGH   | 자금, 저장, DB, 인증, 게임 규칙, 엔진, 공유 계약, CI/배포/보안 설정 | 관련 기존 검사의 실제 실행 여부·결과 확인과 강화 리뷰 |
+| 위험도 | 변경 예시                                                                         | 필수 처리                                             |
+| ------ | --------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| LOW    | 문서, 설명 문구, 단순 스타일                                                      | 관련 경량 검사와 PR 리뷰                              |
+| MEDIUM | 화면 동작, 상태 표시, 일반 API 연동                                               | 관련 기존 CI와 독립 AI 리뷰                           |
+| HIGH   | 자금, 저장, DB, 인증, 게임 규칙, 엔진, 공유 계약, 의존성·빌드·검증·배포·보안 설정 | 관련 기존 검사의 실제 실행 여부·결과 확인과 강화 리뷰 |
 
 PR 본문에 `Risk-Level: LOW`, `Risk-Level: MEDIUM`, `Risk-Level: HIGH` 중 **한 줄만** 선언한다. 누락·빈 값·`UNSET`·알 수 없는 값·중복 선언은 무효다. 주석·인용·코드 예제 안의 선언은 인정하지 않는다. [PR 템플릿](../.github/pull_request_template.md)의 영향 항목은 문서 변경처럼 영향이 없으면 `해당 없음`으로 묶어 기록해도 된다.
 
@@ -25,7 +25,20 @@ PR 본문에 `Risk-Level: LOW`, `Risk-Level: MEDIUM`, `Risk-Level: HIGH` 중 **�
 - 인증·권한·세션 파일, middleware/proxy, `.env*`, `vercel.json`, Docker/npm 환경 설정: 권한·배포·보안 후보.
 - `.github/**`, 위험도 분석기·그 단위 검사, 게임 감사/개발 서버 저장/DB 배포 스크립트: 검증 기준·실행 환경의 변경.
 
-Markdown 문서는 LOW 후보, 스타일/이미지도 LOW 후보, 그 밖의 일반 코드·설정과 미분류 경로는 MEDIUM 후보다. 미분류 경로는 안전하다는 뜻이 아니며, 추천 검사 목록에 제품 검사가 없어도 리뷰어가 경로 누락 여부를 확인해야 한다. 생성물·테스트·fixture의 변경도 실제 영향을 검토한다. HIGH 변경이 이름 변경으로 문서 폴더에 이동해도 삭제된 원본 경로까지 분석한다.
+다음은 저장소에 **실제로 존재하는** 의존성·실행 명령·빌드·검증 입력이다. `EXECUTION_SETTINGS`와 `VERIFICATION_SCRIPTS`의 정확한 경로로 HIGH를 적용한다. 임의 폴더의 `package.json`, `config.ts`나 일반 `run-*`/`prepare-*` 스크립트를 이름만으로 모두 HIGH로 올리지 않는다.
+
+| 용도                            | HIGH로 분류하는 실제 경로                                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 의존성·실행 명령                | `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `services/api/package.json`, `services/api/package-lock.json`, `packages/shared/package.json`  |
+| 빌드·타입·테스트 설정           | `next.config.mjs`, `postcss.config.mjs`, `tsconfig.json`, `tsconfig.frontend-integration.json`, `services/api/tsconfig.json`, `playwright.config.ts`    |
+| 검증 규칙                       | `services/api/eslint.config.mjs`, `.editorconfig`, `.prettierrc.json`, `.prettierignore`                                                                |
+| 브라우저 검사 실행·준비         | `scripts/run-browser-e2e.mjs`, `scripts/prepare-browser-e2e.mjs`                                                                                        |
+| API 포맷·린트·계약 검사 및 입력 | `services/api/scripts/` 아래 `format.mjs`, `lint.mjs`, `check-contract.ts`, `api-types.ts`, `event-validation.ts`, `save-validation.ts`                 |
+| 기존 데이터 준비·HTTP 검사      | `services/api/scripts/` 아래 `convert-events.ts`, `expand-events.ts`, `prepare-racing.ts`, `http-smoke.mjs`, `catalog-smoke.mjs`, `preflight-events.ts` |
+
+이와 별도로 루트의 `middleware.ts`, `middleware.js`, `proxy.ts`, `proxy.js` 및 각각의 `src/` 경로는 **아직 없는 합리적인 신규 요청 진입점**으로 취급한다. 현재는 루트 `app/` 구조이며 `src/`는 향후 구조 전환을 대비한 경로다. 이 8개 정확한 경로를 `REQUEST_ENTRYPOINTS`에서 HIGH·Frontend로 분류한다. 실제 런타임 파일을 만들지는 않는다.
+
+Markdown 문서는 LOW 후보, 스타일/이미지도 LOW 후보, 위 HIGH 후보에 해당하지 않는 일반 코드·설정과 미분류 경로는 MEDIUM 후보다. 미분류 경로는 안전하다는 뜻이 아니며, 추천 검사 목록에 제품 검사가 없어도 리뷰어가 경로 누락 여부를 확인해야 한다. 생성물·테스트·fixture의 변경도 실제 영향을 검토한다. HIGH 변경이 이름 변경으로 문서 폴더에 이동해도 삭제된 원본 경로까지 분석한다.
 
 ### 기존 CI의 증거 연결
 
@@ -36,6 +49,8 @@ Markdown 문서는 LOW 후보, 스타일/이미지도 LOW 후보, 그 밖의 일
 | `Backend foundation` / `verify-frontend` | Next 타입·루트 의존성만의 빌드·Frontend 단위/통합 타입·실행 검사                     |
 | `Browser E2E` / `catalog-chromium`       | 기존 Chromium·실제 HTTP·PostgreSQL 흐름과 실패 증거 artifact                         |
 | `PR governance` / `risk-report`          | 변경 경로·위험도 선언·분석기 입력/실패 사례만 검사                                   |
+
+`recommendedChecks()`와 두 제품 workflow의 PR `paths`는 함께 유지한다. 위 요청 진입점 8개는 Backend의 Frontend 타입·빌드·통합 검사와 Browser의 실제 HTTP 흐름에 영향을 주므로 두 workflow를 권장하고 실행 경로에도 포함한다. 위 실존 설정·스크립트도 기존 경로 조건을 따른다. 루트 `tsconfig.frontend-integration.json`·포맷 설정 3개는 Backend만 권장하고, 나머지는 두 제품 workflow를 권장한다. API 내부 설정·스크립트는 기존 `services/api/**` 조건을 유지하며 검사 범위를 줄이지 않는다. 문서 전용 PR은 제품 CI를 실행하지 않고, 문서와 요청 진입점이 함께 바뀌면 두 제품 CI를 실행한다.
 
 PR의 **최신 head commit**과 Checks의 해당 workflow run/job URL을 함께 기록한다. 로컬 검사는 명령·환경·결과를 기록하고 CI 성공과 혼동하지 않는다. 오래된 head의 성공은 새 변경의 증거가 아니다. `pending`, `cancelled`, `skipped`, 실행 누락·조회 불가는 통과로 표시하지 않는다. 예상되는 검사가 없으면 실제 workflow의 `paths`, 이벤트와 GitHub 제한을 확인해 미실행 사유를 남긴다.
 
@@ -110,24 +125,26 @@ node services/api/node_modules/prettier/bin/prettier.cjs --check <changed-files>
 git diff --check
 ```
 
-단위 사례는 위험도 상향/하향·누락·중복·UNSET·악성 입력·3,000개 초과 경로·이름 변경/삭제·base 전용 변경·정책 병합일·기존/신규 PR·CLI 실패 코드를 검사한다. 실제 게임 테스트를 복제하지 않는다. 문서 변경에 신규 브라우저 QA를 요구하지 않는다.
+단위 사례는 위험도 상향/하향·누락·중복·UNSET·악성 입력·3,000개 초과 경로·이름 변경/삭제·base 전용 변경·정책 병합일·기존/신규 PR·CLI 실패 코드를 검사한다. 실존 설정·검사 스크립트와 예정 요청 진입점의 HIGH 분류·권장 검사, 일반 코드의 과잉 분류 방지, 전체 추적 파일·예정 진입점과 실제 workflow `paths`의 일치, 문서 전용/혼합 PR도 검증한다. 경량 검사는 현재 YAML의 단순 경로 목록·glob만 지원하며 구문이 바뀌면 실패하므로 검증 방식도 함께 갱신한다. 실제 게임 테스트를 복제하지 않는다. 문서 변경에 신규 브라우저 QA를 요구하지 않는다.
 
 ## DEV-OPS-01 도입 시 변경·제약 기록
 
 기준: `develop`의 `6c9ffba746818f08452239fef9a0f9ae3a311d39`.
 
-| 항목              | 변경 전                                                                     | 변경 후                                                                                    |
-| ----------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| AI 지침           | AGENTS에 협업·포맷·생성물·검사 명령 일부 중복                               | 공식 원본 링크와 AI 작업·증거 보고 원칙으로 정리; Next 블록/CLAUDE 참조 보존               |
-| 병합 권한         | CONTRIBUTING은 CI/리뷰 후 병합으로 읽히고 release-policy는 main 승인만 명시 | 사용자의 명시적 정책에 따라 develop 구현 PR도 사용자 승인 필요; 승인 원본은 release-policy |
-| FE/BE 책임        | 기존 Work와 공유 코드 경계                                                  | 그대로 유지; 통합 개발 환경 Work 범위와 상대 담당 인계 경로만 명확화                       |
-| Backend PR 경로   | README/AGENTS/CONTRIBUTING 및 API/공유 패키지 내부 문서로 무거운 검사 실행  | Markdown만 변경 시 제품 CI 제외; 혼합 PR의 코드/테스트는 계속 검사                         |
-| Backend 누락 경로 | public, PostCSS, 루트 Vercel 설정, Playwright 설정이 누락                   | `public/**`, `postcss.config.mjs`, `vercel.json`, `playwright.config.ts` 추가              |
-| Browser PR 경로   | public/PostCSS 누락, API/공유 문서 변경에도 브라우저 실행                   | public/PostCSS 추가; Markdown만 변경 시 제외                                               |
-| 위험도 스크립트   | 없음; scripts 변경은 Backend 전체 실행                                      | 분석기와 그 단위 검사 두 파일만 경량 workflow로 분리; 다른 scripts 조건 유지               |
-| 실행 명령/이벤트  | 기존 Backend push와 Browser push/수동 실행, 모든 job·테스트·timeout         | 전부 유지; 위험도 보고 PR 이벤트만 추가                                                    |
+| 항목                  | 변경 전                                                                     | 변경 후                                                                                    |
+| --------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| AI 지침               | AGENTS에 협업·포맷·생성물·검사 명령 일부 중복                               | 공식 원본 링크와 AI 작업·증거 보고 원칙으로 정리; Next 블록/CLAUDE 참조 보존               |
+| 병합 권한             | CONTRIBUTING은 CI/리뷰 후 병합으로 읽히고 release-policy는 main 승인만 명시 | 사용자의 명시적 정책에 따라 develop 구현 PR도 사용자 승인 필요; 승인 원본은 release-policy |
+| FE/BE 책임            | 기존 Work와 공유 코드 경계                                                  | 그대로 유지; 통합 개발 환경 Work 범위와 상대 담당 인계 경로만 명확화                       |
+| Backend PR 경로       | README/AGENTS/CONTRIBUTING 및 API/공유 패키지 내부 문서로 무거운 검사 실행  | Markdown만 변경 시 제품 CI 제외; 혼합 PR의 코드/테스트는 계속 검사                         |
+| Backend 누락 경로     | public, PostCSS, 루트 Vercel 설정, Playwright 설정이 누락                   | `public/**`, `postcss.config.mjs`, `vercel.json`, `playwright.config.ts` 추가              |
+| Browser PR 경로       | public/PostCSS 누락, API/공유 문서 변경에도 브라우저 실행                   | public/PostCSS 추가; Markdown만 변경 시 제외                                               |
+| 요청 진입점 경로      | 신규 루트·src middleware/proxy가 HIGH여도 제품 검사 권장·실행 경로에 없음   | `.ts`/`.js` 진입점 8개를 두 제품 CI의 권장 목록과 PR 경로에 함께 추가                      |
+| 실행·검증 설정 위험도 | 의존성·빌드·검사 설정과 일부 검사 스크립트가 MEDIUM                         | 위 실존 경로만 정확히 HIGH로 분류; 일반 코드·설정의 광범위 상향 없음                       |
+| 위험도 스크립트       | 없음; scripts 변경은 Backend 전체 실행                                      | 분석기와 그 단위 검사 두 파일만 경량 workflow로 분리; 다른 scripts 조건 유지               |
+| 실행 명령/이벤트      | 기존 Backend push와 Browser push/수동 실행, 모든 job·테스트·timeout         | 전부 유지; 위험도 보고 PR 이벤트만 추가                                                    |
 
-루트 Vercel 설정은 배포 설정 후보라 Backend의 기존 Frontend 빌드/통합 결과와 설정 diff를 확인하지만 로컬 CI가 실제 배포 설정의 정확성까지 보장하지는 않는다. Browser는 실제 소비하는 public/PostCSS 변경만 추가한다. 공통 계약은 기존처럼 두 제품 workflow 모두 실행된다. workflow 자체 변경은 각각 자신의 기존 검사를 실행하며, 새 governance workflow만 변경한 경우 제품 검사를 추가하지 않는다. Backend의 기존 브랜치 push 검사는 문서만 병합되어도 그대로 실행한다. 통합 이후 검사를 임의로 줄이지 않는다.
+루트 Vercel 설정은 배포 설정 후보라 Backend의 기존 Frontend 빌드/통합 결과와 설정 diff를 확인하지만 로컬 CI가 실제 배포 설정의 정확성까지 보장하지는 않는다. Browser에는 실제 소비하는 public/PostCSS와 HTTP 흐름을 가로챌 수 있는 위 요청 진입점 경로를 추가한다. 공통 계약은 기존처럼 두 제품 workflow 모두 실행된다. workflow 자체 변경은 각각 자신의 기존 검사를 실행하며, 새 governance workflow만 변경한 경우 제품 검사를 추가하지 않는다. Backend의 기존 브랜치 push 검사는 문서만 병합되어도 그대로 실행한다. 통합 이후 검사를 임의로 줄이지 않는다.
 
 Backend의 단위/HTTP/PostgreSQL 검사, Frontend의 bridge/controller 통합 검사, Browser의 실제 Chromium 흐름은 관찰하는 경계가 달라 중복 게임 테스트로 제거하지 않았다. Browser 실행 준비의 빌드도 실제 HTTP 서버를 띄우는 데 필요하다. 새 workflow에는 이 명령을 복제하지 않았다.
 

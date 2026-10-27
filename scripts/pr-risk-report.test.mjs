@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -14,6 +14,179 @@ import {
 } from './pr-risk-report.mjs'
 
 const script = fileURLToPath(new URL('./pr-risk-report.mjs', import.meta.url))
+const root = new URL('../', import.meta.url)
+const governance = 'PR governance: risk-report'
+const backend = 'Backend foundation: verify, verify-vercel, verify-frontend'
+const browser = 'Browser E2E: catalog-chromium'
+const bothProducts = [governance, backend, browser]
+const requestEntrypoints = [
+  'middleware.ts',
+  'middleware.js',
+  'proxy.ts',
+  'proxy.js',
+  'src/middleware.ts',
+  'src/middleware.js',
+  'src/proxy.ts',
+  'src/proxy.js',
+]
+
+test('실존 의존성·빌드·검증 설정은 HIGH이고 관련 기존 CI를 권장', () => {
+  const cases = [
+    ['package.json', bothProducts],
+    ['pnpm-lock.yaml', bothProducts],
+    ['pnpm-workspace.yaml', bothProducts],
+    ['services/api/package.json', bothProducts],
+    ['services/api/package-lock.json', bothProducts],
+    ['packages/shared/package.json', bothProducts],
+    ['next.config.mjs', bothProducts],
+    ['postcss.config.mjs', bothProducts],
+    ['playwright.config.ts', bothProducts],
+    ['tsconfig.json', bothProducts],
+    ['services/api/tsconfig.json', bothProducts],
+    ['services/api/eslint.config.mjs', bothProducts],
+    ['tsconfig.frontend-integration.json', [governance, backend]],
+    ['.editorconfig', [governance, backend]],
+    ['.prettierrc.json', [governance, backend]],
+    ['.prettierignore', [governance, backend]],
+  ]
+  for (const [path, checks] of cases) {
+    assert.ok(existsSync(new URL(path, root)), `실존 설정 경로를 갱신해야 함: ${path}`)
+    const report = buildReport({ paths: [path], body: 'Risk-Level: LOW' })
+    assert.equal(report.minimum, 'HIGH', path)
+    assert.deepEqual(report.checks, checks, path)
+    assert.equal(report.warnings.length, 1, `${path}: LOW 과소 선언 경고 누락`)
+  }
+})
+
+test('기존 검사 실행·준비·계약 검증 스크립트도 HIGH로 분류', () => {
+  for (const path of [
+    'scripts/run-browser-e2e.mjs',
+    'scripts/prepare-browser-e2e.mjs',
+    'services/api/scripts/format.mjs',
+    'services/api/scripts/lint.mjs',
+    'services/api/scripts/check-contract.ts',
+    'services/api/scripts/api-types.ts',
+    'services/api/scripts/event-validation.ts',
+    'services/api/scripts/save-validation.ts',
+    'services/api/scripts/convert-events.ts',
+    'services/api/scripts/expand-events.ts',
+    'services/api/scripts/prepare-racing.ts',
+    'services/api/scripts/http-smoke.mjs',
+    'services/api/scripts/catalog-smoke.mjs',
+    'services/api/scripts/preflight-events.ts',
+  ]) {
+    assert.ok(existsSync(new URL(path, root)), `실존 스크립트 경로를 갱신해야 함: ${path}`)
+    const report = buildReport({ paths: [path], body: 'Risk-Level: HIGH' })
+    assert.equal(report.minimum, 'HIGH', path)
+    assert.deepEqual(report.checks, bothProducts, path)
+  }
+})
+
+test('신규 Next 요청 진입점은 파일 생성 전에도 HIGH 및 Frontend/HTTP 검사 권장', () => {
+  for (const path of requestEntrypoints) {
+    // Prospective paths: do not require these files to exist or add fake runtime files.
+    const report = buildReport({ paths: [path], body: 'Risk-Level: LOW' })
+    assert.equal(report.minimum, 'HIGH', path)
+    assert.ok(report.areas.includes('Frontend'), path)
+    assert.deepEqual(report.checks, bothProducts, path)
+    assert.equal(report.warnings.length, 1, path)
+  }
+})
+
+test('일반 코드의 config/package/스크립트 이름만으로 HIGH를 확대하지 않음', () => {
+  for (const path of [
+    'components/config.ts',
+    'lib/notices/config.ts',
+    'docs/next.config.mjs',
+    'services/worker/package.json',
+    'scripts/run-demo.mjs',
+    'scripts/prepare-report.mjs',
+    'tests/e2e/example.spec.ts',
+    'components.json',
+  ]) {
+    assert.equal(classifyPath(path).level, 'MEDIUM', path)
+  }
+})
+
+function workflowPaths(name) {
+  const source = readFileSync(new URL(`.github/workflows/${name}.yml`, root), 'utf8')
+  // Guard the actual literal paths list, without adding YAML/glob dependencies to CI.
+  // A syntax change must update this narrow test reader rather than silently skip coverage.
+  const marker = '\n  pull_request:\n    paths:\n'
+  const start = source.indexOf(marker)
+  assert.notEqual(start, -1, `${name}: pull_request.paths 구문을 확인해야 함`)
+  const patterns = []
+  for (const line of source.slice(start + marker.length).split('\n')) {
+    if (!line.trim() || line.startsWith('      #')) {
+      continue
+    }
+    if (!line.startsWith('      ')) {
+      break
+    }
+    const entry = /^      - '([^']+)'$/.exec(line)
+    assert.ok(entry, `${name}: 지원하지 않는 paths 구문: ${line}`)
+    patterns.push(entry[1])
+  }
+  assert.ok(patterns.length > 0, name)
+  return patterns
+}
+
+function pathMatches(patterns, path) {
+  let included = false
+  for (const entry of patterns) {
+    const exclude = entry.startsWith('!')
+    const pattern = exclude ? entry.slice(1) : entry
+    let matches
+    if (pattern === '**/*.md') {
+      matches = path.endsWith('.md')
+    } else if (pattern.endsWith('/**')) {
+      matches = path.startsWith(pattern.slice(0, -2))
+    } else {
+      assert.ok(!/[*?{}\[\]]/.test(pattern), `새 glob은 검증 방식을 갱신해야 함: ${pattern}`)
+      matches = path === pattern
+    }
+    if (matches) {
+      included = !exclude
+    }
+  }
+  return included
+}
+
+test('전체 추적 파일·예정 진입점의 권장 제품 검사가 실제 workflow paths와 일치', () => {
+  const workflows = [
+    [backend, workflowPaths('backend-foundation')],
+    [browser, workflowPaths('browser-e2e')],
+  ]
+  const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
+    .split('\0')
+    .filter(Boolean)
+  for (const path of [...tracked, ...requestEntrypoints]) {
+    const expected = [governance]
+    for (const [check, patterns] of workflows) {
+      if (pathMatches(patterns, path)) {
+        expected.push(check)
+      }
+    }
+    assert.deepEqual(
+      buildReport({ paths: [path], body: 'Risk-Level: HIGH' }).checks,
+      expected,
+      path,
+    )
+  }
+})
+
+test('문서 전용 PR은 경량 검사를 유지하고 요청 진입점 혼합 PR은 제품 검사 포함', () => {
+  const docs = ['README.md', 'docs/pr-review-policy.md', 'services/api/docs/career-seasons.md']
+  const workflows = [workflowPaths('backend-foundation'), workflowPaths('browser-e2e')]
+  assert.deepEqual(buildReport({ paths: docs, body: 'Risk-Level: LOW' }).checks, [governance])
+  for (const patterns of workflows) {
+    assert.ok(!docs.some((path) => pathMatches(patterns, path)))
+    assert.ok([...docs, 'proxy.ts'].some((path) => pathMatches(patterns, path)))
+  }
+  const mixed = buildReport({ paths: [...docs, 'proxy.ts'], body: 'Risk-Level: HIGH' })
+  assert.equal(mixed.minimum, 'HIGH')
+  assert.deepEqual(mixed.checks, bothProducts)
+})
 
 test('대표 경로의 최소 위험도와 영향 영역', () => {
   for (const path of [

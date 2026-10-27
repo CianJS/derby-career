@@ -9,6 +9,55 @@ const BROWSER = 'Browser E2E: catalog-chromium'
 const GOVERNANCE = 'PR governance: risk-report'
 const SHA = /^[a-f0-9]{40}$/
 
+// Existing build, dependency and verification inputs. Keep exact paths: a file named
+// config.ts or package.json elsewhere is not automatically a project-level setting.
+const EXECUTION_SETTINGS = new Set([
+  'package.json',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'services/api/package.json',
+  'services/api/package-lock.json',
+  'packages/shared/package.json',
+  'next.config.mjs',
+  'postcss.config.mjs',
+  'tsconfig.json',
+  'tsconfig.frontend-integration.json',
+  'services/api/tsconfig.json',
+  'playwright.config.ts',
+  'services/api/eslint.config.mjs',
+  '.editorconfig',
+  '.prettierrc.json',
+  '.prettierignore',
+])
+const VERIFICATION_SCRIPTS = new Set([
+  'scripts/run-browser-e2e.mjs',
+  'scripts/prepare-browser-e2e.mjs',
+  'services/api/scripts/format.mjs',
+  'services/api/scripts/lint.mjs',
+  'services/api/scripts/check-contract.ts',
+  'services/api/scripts/api-types.ts',
+  'services/api/scripts/event-validation.ts',
+  'services/api/scripts/save-validation.ts',
+  'services/api/scripts/convert-events.ts',
+  'services/api/scripts/expand-events.ts',
+  'services/api/scripts/prepare-racing.ts',
+  'services/api/scripts/http-smoke.mjs',
+  'services/api/scripts/catalog-smoke.mjs',
+  'services/api/scripts/preflight-events.ts',
+])
+// Prospective Next.js entrypoints, not files currently present in this repository.
+// Root app/ is used today; src/ entries also cover Next's supported alternative layout.
+const REQUEST_ENTRYPOINTS = new Set([
+  'middleware.ts',
+  'middleware.js',
+  'proxy.ts',
+  'proxy.js',
+  'src/middleware.ts',
+  'src/middleware.js',
+  'src/proxy.ts',
+  'src/proxy.js',
+])
+
 function isGovernanceScript(path) {
   return /^scripts\/pr-risk-report(?:\.test)?\.mjs$/.test(path)
 }
@@ -22,7 +71,7 @@ export function classifyPath(path) {
     throw new Error('변경 파일 경로가 유효하지 않음')
   }
   const areas = []
-  if (/^(app|components|lib|public)\//.test(path)) {
+  if (/^(app|components|lib|public)\//.test(path) || REQUEST_ENTRYPOINTS.has(path)) {
     areas.push('Frontend')
   }
   if (path.startsWith('services/api/')) {
@@ -46,6 +95,9 @@ export function classifyPath(path) {
   }
 
   const high =
+    EXECUTION_SETTINGS.has(path) ||
+    VERIFICATION_SCRIPTS.has(path) ||
+    REQUEST_ENTRYPOINTS.has(path) ||
     /^(lib\/(career|server-save)|packages\/shared\/src|contracts)\//.test(path) ||
     /^services\/api\/(src\/(repositories|modules\/(auth|events|racing))|migrations|seeds)\//.test(
       path,
@@ -132,6 +184,7 @@ function recommendedChecks(paths) {
     }
     // These are review recommendations, not a second test runner or a claim that CI ran.
     if (
+      REQUEST_ENTRYPOINTS.has(path) ||
       /^(app|components|lib|public|services\/api|packages\/shared|contracts)\//.test(path) ||
       /^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|next\.config\.mjs|postcss\.config\.mjs|tsconfig\.json|playwright\.config\.ts)$/.test(
         path,
