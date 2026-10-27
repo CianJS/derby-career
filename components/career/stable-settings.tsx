@@ -1,6 +1,7 @@
 'use client'
 
 import type { View } from './legacy-types'
+import { SaveBackupPanel } from './save-backup-panel'
 import { Management } from './management'
 
 export function StableSettings({
@@ -34,6 +35,7 @@ export function StableSettings({
         기존 마방 정보 수정 기능은 아직 제공되지 않습니다. 육성 기록과 은퇴 기록은 그대로
         유지됩니다.
       </p>
+      <SaveBackupPanel mode={mode} />
       {canCreate && (
         <button
           onClick={() => setView('setup')}

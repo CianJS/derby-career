@@ -61,6 +61,12 @@ function decode(text: string | null): Save {
   }
   return value as Save
 }
+/** Validate with the existing rules, but retain the original JSON fields (including legacy age).
+ * This read-only copy must not run normalization/projection on the exported document. */
+export function parseBrowserSaveSnapshot(text: string): Save {
+  decode(text)
+  return JSON.parse(text) as Save
+}
 export function readBrowserSave(): Save {
   let text: string | null
   try {

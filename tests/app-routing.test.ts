@@ -2061,3 +2061,224 @@ test('actual App Local: real archived A/B stories paginate, preserve identity an
     await old.close()
   }
 })
+
+test('actual App Local settings: verified JSON downloads are read-only, explicit about limits and refreshed per click', async () => {
+  const fixture = managementFixture()
+  const h = await harness('local', '/', undefined, () => writeBrowserSave(fixture))
+  const create = Object.getOwnPropertyDescriptor(URL, 'createObjectURL')
+  const revoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL')
+  const blobs: Blob[] = []
+  const revoked: string[] = []
+  const anchors: { filename: string; href: string }[] = []
+  URL.createObjectURL = (blob) => {
+    assert.ok(blob instanceof Blob)
+    blobs.push(blob)
+    return `blob:backup-${blobs.length}`
+  }
+  URL.revokeObjectURL = (url) => {
+    revoked.push(url)
+  }
+  h.dom.window.HTMLAnchorElement.prototype.click = function () {
+    anchors.push({ filename: this.download, href: this.href })
+  }
+  const click = async (name: string) => {
+    const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === name,
+    )!
+    assert.ok(button, name)
+    assert.equal(button.disabled, false)
+    await act(async () => button.click())
+  }
+  const stored = () =>
+    Object.fromEntries(
+      Object.keys(h.dom.window.localStorage)
+        .sort()
+        .map((key) => [key, h.dom.window.localStorage.getItem(key)]),
+    )
+  try {
+    await act(async () =>
+      h.container.querySelector<HTMLButtonElement>('button[aria-label="설정"]')!.click(),
+    )
+    await h.waitFor(() => h.container.textContent!.includes('저장 문서 검증 완료'))
+    const panel = h.container.querySelector('[aria-labelledby="save-backup-heading"]')!
+    assert.match(panel.textContent!, /백업 가져오기·복원 기능이 없으며/)
+    assert.match(panel.textContent!, /자동 복원·동기화되지 않습니다/)
+    assert.match(panel.textContent!, /마지막 저장 시각은 표시하지 않습니다/)
+    assert.equal(blobs.length, 0)
+    h.dom.window.localStorage.setItem('derby-race-log-v1:unrelated', 'unrelated-log-private')
+    h.dom.window.sessionStorage.setItem('derby-career-server-command-v1', 'session-journal-private')
+    h.dom.window.document.cookie = 'unrelated=private-cookie'
+    const before = stored()
+    const cookie = h.dom.window.document.cookie
+    const requests = h.requests.length
+    await click('저장 상태 다시 확인')
+    await h.waitFor(() => h.container.textContent!.includes('저장 문서 검증 완료'))
+    assert.deepEqual(stored(), before)
+    await click('내 Local 저장 내보내기 (.json)')
+    await h.waitFor(() => anchors.length === 1)
+    const first = JSON.parse(await blobs[0].text())
+    assert.deepEqual(first.save, JSON.parse(before[BROWSER_SAVE_KEY]!))
+    assert.equal(first.formatVersion, 1)
+    assert.equal(first.format, 'derby-career-local-backup')
+    assert.equal('activeRaceLog' in first, false)
+    assert.match(anchors[0].filename, /^derby-career-local-backup-\d{8}-\d{4}\.json$/)
+    assert.match(panel.textContent!, /다운로드를 요청했습니다/)
+    assert.match(panel.textContent!, /다운로드 폴더에서 파일을 확인/)
+    assert.deepEqual(stored(), before)
+    assert.equal(h.dom.window.document.cookie, cookie)
+    assert.equal(
+      h.dom.window.sessionStorage.getItem('derby-career-server-command-v1'),
+      'session-journal-private',
+    )
+    assert.equal(h.requests.length, requests)
+    assert.doesNotMatch(
+      await blobs[0].text(),
+      /session-journal-private|private-cookie|unrelated-log-private/,
+    )
+    // A later tab save is a new source snapshot; the second click must not reuse the first JSON.
+    const later = JSON.parse(before[BROWSER_SAVE_KEY]!)
+    later.revision += 1
+    h.dom.window.localStorage.setItem(BROWSER_SAVE_KEY, JSON.stringify(later))
+    const secondSource = stored()
+    await click('내 Local 저장 내보내기 (.json)')
+    await h.waitFor(() => anchors.length === 2)
+    assert.deepEqual(JSON.parse(await blobs[1].text()).save, later)
+    assert.deepEqual(stored(), secondSource)
+    assert.equal(h.container.querySelectorAll('a[download]').length, 0)
+    assert.equal(h.dom.window.document.querySelectorAll('a[download]').length, 0)
+    await new Promise((resolve) => setTimeout(resolve, 1100))
+    assert.deepEqual(revoked.sort(), ['blob:backup-1', 'blob:backup-2'])
+    const nativeClick = h.dom.window.HTMLAnchorElement.prototype.click
+    h.dom.window.HTMLAnchorElement.prototype.click = () => {
+      throw new Error('click blocked')
+    }
+    await click('내 Local 저장 내보내기 (.json)')
+    await h.waitFor(() => panel.textContent!.includes('다운로드 요청 중 오류'))
+    assert.ok(revoked.includes('blob:backup-3'))
+    assert.equal(h.dom.window.document.querySelectorAll('a[download]').length, 0)
+    h.dom.window.HTMLAnchorElement.prototype.click = nativeClick
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    })
+    await click('내 Local 저장 내보내기 (.json)')
+    await h.waitFor(() =>
+      panel.textContent!.includes('이 브라우저에서 파일 다운로드를 시작할 수 없습니다'),
+    )
+    URL.createObjectURL = () => {
+      throw new Error('다운로드 제한')
+    }
+    await click('내 Local 저장 내보내기 (.json)')
+    await h.waitFor(() => panel.textContent!.includes('다운로드 요청 중 오류'))
+    assert.deepEqual(stored(), secondSource)
+    h.dom.window.localStorage.setItem(BROWSER_SAVE_KEY, '{')
+    await click('내 Local 저장 내보내기 (.json)')
+    await h.waitFor(() => panel.textContent!.includes('손상'))
+    const download = [...panel.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('내 Local 저장'),
+    )!
+    assert.equal(download.disabled, true)
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), '{')
+    assert.doesNotMatch(panel.textContent!, /저장 문서 검증 완료/)
+    h.dom.window.localStorage.removeItem(BROWSER_SAVE_KEY)
+    h.dom.window.document.cookie = `derby-career-lifecycle=${encodeURIComponent(JSON.stringify(fixture.lifecycle))}`
+    const legacyCookie = h.dom.window.document.cookie
+    await click('저장 상태 다시 확인')
+    await h.waitFor(() => panel.textContent!.includes('이전 쿠키 저장 흔적'))
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
+    assert.equal(h.dom.window.document.cookie, legacyCookie)
+    h.dom.window.document.cookie = 'derby-career-lifecycle=; max-age=0'
+    await click('저장 상태 다시 확인')
+    await h.waitFor(() => panel.textContent!.includes('아직 내보낼 저장 문서가 없습니다'))
+    assert.equal(h.dom.window.localStorage.getItem(BROWSER_SAVE_KEY), null)
+  } finally {
+    if (create) {
+      Object.defineProperty(URL, 'createObjectURL', create)
+    } else {
+      Reflect.deleteProperty(URL, 'createObjectURL')
+    }
+    if (revoke) {
+      Object.defineProperty(URL, 'revokeObjectURL', revoke)
+    } else {
+      Reflect.deleteProperty(URL, 'revokeObjectURL')
+    }
+    await h.close()
+  }
+})
+
+test('actual App Server settings never inspect or export leftover Local data', async () => {
+  const workspace = activeServerWorkspace()
+  const h = await harness('server', '/', workspace)
+  const storage = h.dom.window.localStorage
+  storage.setItem(BROWSER_SAVE_KEY, '{damaged-local-private')
+  const proto = Object.getPrototypeOf(storage) as Storage
+  const getItem = proto.getItem
+  let reads = 0
+  proto.getItem = function (key: string) {
+    if (this === storage && key === BROWSER_SAVE_KEY) {
+      reads += 1
+    }
+    return getItem.call(this, key)
+  }
+  try {
+    await act(async () =>
+      h.container.querySelector<HTMLButtonElement>('button[aria-label="설정"]')!.click(),
+    )
+    const panel = h.container.querySelector('[aria-labelledby="save-backup-heading"]')!
+    assert.match(panel.textContent!, /개발용 서버 저장 모드/)
+    assert.match(
+      panel.textContent!,
+      /Local 백업 다운로드와 원격 서버 백업 기능은 제공하지 않습니다/,
+    )
+    assert.equal(panel.querySelectorAll('button').length, 0)
+    assert.equal(reads, 0)
+    assert.doesNotMatch(panel.textContent!, /damaged-local-private|리비전|Archive.*건/)
+    assert.equal(getItem.call(storage, BROWSER_SAVE_KEY), '{damaged-local-private')
+  } finally {
+    proto.getItem = getItem
+    await h.close()
+  }
+})
+
+test('actual App Local settings refuses a missing locked log without repairing it and retries after an existing valid log is restored', async () => {
+  const fixture = buildFixture('playback-12')
+  const runId = fixture.career!.raceRun!.raceRunId
+  const key = `derby-race-log-v1:${runId}`
+  const h = await harness('local', '/', undefined, () => {
+    writeBrowserSave({ career: fixture.career!, lifecycle: managementFixture().lifecycle })
+    localStorage.setItem(key, JSON.stringify(fixture.log))
+  })
+  const click = async (name: string) => {
+    const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === name,
+    )!
+    assert.ok(button)
+    assert.equal(button.disabled, false)
+    await act(async () => button.click())
+  }
+  try {
+    await act(async () =>
+      h.container.querySelector<HTMLButtonElement>('button[aria-label="설정"]')!.click(),
+    )
+    const panel = h.container.querySelector('[aria-labelledby="save-backup-heading"]')!
+    await h.waitFor(() => panel.textContent!.includes('경주의 저장 로그 검증 완료'))
+    const raw = localStorage.getItem(BROWSER_SAVE_KEY)
+    localStorage.removeItem(key)
+    await click('내 Local 저장 내보내기 (.json)')
+    await h.waitFor(() => panel.textContent!.includes('완전한 백업을 내보낼 수 없습니다'))
+    assert.equal(localStorage.getItem(key), null)
+    assert.equal(localStorage.getItem(BROWSER_SAVE_KEY), raw)
+    assert.equal(panel.querySelectorAll('[role="alert"]').length, 1)
+    const button = [...panel.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('내 Local 저장'),
+    )!
+    assert.equal(button.disabled, true)
+    localStorage.setItem(key, JSON.stringify(fixture.log))
+    await click('저장 상태 다시 확인')
+    await h.waitFor(() => button.disabled === false)
+    assert.equal(localStorage.getItem(BROWSER_SAVE_KEY), raw)
+  } finally {
+    await h.close()
+  }
+})
