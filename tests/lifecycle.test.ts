@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { assertCareerStory } from '../lib/career/career-story'
 import { archiveActiveHorse } from '../lib/career/lifecycle'
 
 test('retirement preserves each career with a unique archive ID and the current world month', () => {
@@ -32,4 +33,54 @@ test('retirement cannot duplicate an archive entry or remove a different active 
   assert.equal(archiveActiveHorse(state, 'active', 'already-saved'), state)
   const retired = archiveActiveHorse(state, 'active', 'new')
   assert.equal(archiveActiveHorse(retired, 'active', 'new'), retired)
+})
+
+test('story chronology uses saved dates for legacy races, stable type/ID ties and does not mutate entries', async () => {
+  const { sortStory } = await import('../lib/career/career-story')
+  const { buildFixture } = await import('../lib/career/fixtures')
+  const { newStory, captureCareer } = await import('../lib/career/career-story')
+  const career = buildFixture('result-win').career!
+  const story = captureCareer(newStory(career, 'historical-career'), career)
+  assertCareerStory(story)
+  assert.equal(story.coverage, 'partial')
+  assert.equal(story.initialStats, undefined)
+  assert.equal(
+    story.entries.some((entry) => entry.kind === 'start'),
+    false,
+  )
+  const race = story.entries.find((entry) => entry.kind === 'race')
+  // A locked run alone is not a confirmed race result.
+  assert.equal(race, undefined)
+  const { completeRace } = await import('../lib/career/model')
+  const log = buildFixture('result-win').log!
+  const completed = completeRace(
+    career,
+    career.raceRun!.raceRunId,
+    log.result.placing,
+    log.result.prizeMoney,
+  )
+  const result = captureCareer(story, completed)
+  const recorded = result.entries.find((entry) => entry.kind === 'race')!
+  assert.equal(recorded.raceRunId, career.raceRun!.raceRunId)
+  assert.ok(
+    recorded.details.some((text) =>
+      text.includes(String(log.result.prizeMoney.toLocaleString('ko-KR'))),
+    ),
+  )
+  const { browserStorage } = await import('./helpers/browser-storage')
+  const { writeBrowserSave, readBrowserSave } = await import('../lib/career/browser-save')
+  const { retireLocalCareer } = await import('../lib/career/local-career')
+  browserStorage()
+  writeBrowserSave({ career: completed })
+  retireLocalCareer(completed)
+  const archived = readBrowserSave().lifecycle!.archive![0].story!
+  const entries = archived.entries
+    .map((entry) => (entry.kind === 'race' ? { ...entry, turn: undefined } : entry))
+    .reverse()
+  const frozen = JSON.stringify(entries)
+  const sorted = sortStory(entries)
+  assert.equal(sorted[0].raceRunId, career.raceRun!.raceRunId)
+  assert.equal(sorted.at(-1)!.kind, 'retirement')
+  assert.equal(JSON.stringify(entries), frozen)
+  assert.deepEqual(captureCareer(result, completed), result)
 })

@@ -23,6 +23,7 @@ import { horses, commitAction, resolveAction, advanceMonth, startCareer } from '
 import { buildFixture } from '../lib/career/fixtures'
 import { parseSaveWorkspace, type SaveWorkspace } from '../lib/server-save/workspace'
 import { validateRaceEntryOptions } from '../packages/shared/src/generated/save-validation.mjs'
+import { retireLocalCareer } from '../lib/career/local-career'
 import { BROWSER_SAVE_KEY, readBrowserSave, writeBrowserSave } from '../lib/career/browser-save'
 import { careerStore } from '../lib/career/store'
 import { managementFixture } from './helpers/management-fixture'
@@ -1957,3 +1958,106 @@ for (const mode of ['local', 'server'] as const) {
     })
   }
 }
+
+test('actual App Local: real archived A/B stories paginate, preserve identity and never invent a legacy start', async () => {
+  let firstId = ''
+  let secondId = ''
+  const h = await harness('local', '/', undefined, () => {
+    const fixture = managementFixture()
+    const initial = startCareer(horses[0].id, { contractedJockeyIds: ['HAN_DOYUN'] })
+    writeBrowserSave(
+      { career: initial, lifecycle: { ...fixture.lifecycle, activeHorse: null, archive: [] } },
+      { storyStart: true },
+    )
+    for (let i = 0; i < 65; i += 1) {
+      const current = readBrowserSave().career!
+      const done = resolveAction(
+        commitAction(
+          current,
+          canTrain(current.health) ? (i % 3 === 0 ? 'rest' : 'speed') : 'treatment',
+        ),
+      )
+      writeBrowserSave({ career: done })
+      if (i < 64) {
+        writeBrowserSave({ career: advanceMonth(done, done.action!.actionId) })
+      }
+    }
+    const a = retireLocalCareer(readBrowserSave().career!)
+    assert.ok(a.lastRetiredId)
+    firstId = a.lastRetiredId
+    const next = startCareer(horses[0].id, { contractedJockeyIds: ['HAN_DOYUN'] })
+    writeBrowserSave({ career: next }, { storyStart: true })
+    writeBrowserSave({ career: resolveAction(commitAction(next, 'rest')) })
+    const b = retireLocalCareer(readBrowserSave().career!)
+    assert.ok(b.lastRetiredId)
+    secondId = b.lastRetiredId
+  })
+  const click = async (name: string) => {
+    const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === name,
+    )!
+    assert.ok(button, name)
+    await act(async () => button.click())
+  }
+  try {
+    const stable = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('STABLE'),
+    )!
+    await act(async () => stable.click())
+    const frozen = JSON.stringify(readBrowserSave().lifecycle!.archive)
+    await act(async () =>
+      h.container.querySelector<HTMLButtonElement>(`[data-archive-id="${firstId}"]`)!.click(),
+    )
+    const a = readBrowserSave().lifecycle!.archive!.find((horse) => horse.id === firstId)!
+    await h.waitFor(() => h.container.querySelector('[data-career-story]') !== null)
+    assert.equal(
+      h.container.querySelector('[data-career-story]')!.getAttribute('data-career-story'),
+      `local:${a.story!.careerId}`,
+    )
+    assert.equal(h.container.querySelectorAll('[data-story-id]').length, 20)
+    assert.match(h.container.textContent!, /실제로 저장한 최초 능력치/)
+    while (
+      [...h.container.querySelectorAll('button')].some(
+        (b) => b.textContent?.trim() === '기록 더 보기',
+      )
+    ) {
+      await click('기록 더 보기')
+    }
+    assert.equal(h.container.querySelectorAll('[data-story-id]').length, a.story!.entries.length)
+    assert.match(
+      h.container.querySelector('[data-story-id="retirement"]')!.textContent!,
+      /육성 65턴/,
+    )
+    await click('← 마구간으로')
+    await act(async () =>
+      h.container.querySelector<HTMLButtonElement>(`[data-archive-id="${secondId}"]`)!.click(),
+    )
+    const b = readBrowserSave().lifecycle!.archive!.find((horse) => horse.id === secondId)!
+    assert.notEqual(a.story!.careerId, b.story!.careerId)
+    assert.equal(h.container.querySelectorAll('[data-story-id]').length, 3)
+    assert.doesNotMatch(h.container.querySelector('[data-career-story]')!.textContent!, /육성 65턴/)
+    assert.equal(JSON.stringify(readBrowserSave().lifecycle!.archive), frozen)
+  } finally {
+    await h.close()
+  }
+
+  const legacy = managementFixture()
+  const old = await harness('local', '/', undefined, () => writeBrowserSave(legacy))
+  try {
+    const stable = [...old.container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('STABLE'),
+    )!
+    await act(async () => stable.click())
+    await act(async () =>
+      old.container
+        .querySelector<HTMLButtonElement>(`[data-archive-id="${legacy.lifecycle.archive[0].id}"]`)!
+        .click(),
+    )
+    const timeline = old.container.querySelector('[data-career-story]')!
+    assert.match(timeline.textContent!, /부분 기록/)
+    assert.equal(timeline.querySelectorAll('[data-story-id="start"]').length, 0)
+    assert.match(timeline.textContent!, /성장 비교를 생략/)
+  } finally {
+    await old.close()
+  }
+})

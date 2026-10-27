@@ -9,6 +9,7 @@ import { Management } from './management'
 import { useArchivedRelations } from '@/lib/career/use-jockey-relations'
 import { storedTrust, jockeyTrust } from '@/lib/career/jockey-trust-presentation'
 import { JockeyTrustValue, TrustChangeValue } from './jockey-trust'
+import { CareerTimeline } from './career-timeline'
 import { jockeys } from './legacy-catalog'
 
 function useRaceRecordFocus(raceRunId?: string) {
@@ -173,18 +174,7 @@ export function Horse({
             )}
           </Section>
           <Section eyebrow="CAREER TIMELINE" title="주요 사건">
-            <div className="flex flex-col gap-3 text-xs">
-              {summary.careerTimeline.length === 0 ? (
-                <p className="text-muted-foreground">아직 기록이 없습니다.</p>
-              ) : (
-                summary.careerTimeline.map((event, index) => (
-                  <p key={`${event.date}-${index}`}>
-                    <span className="mr-4 text-muted-foreground">{event.date}</span>
-                    {event.text}
-                  </p>
-                ))
-              )}
-            </div>
+            <CareerTimeline horse={horse} selectedRaceRunId={selectedRaceRunId} />
           </Section>
         </div>
       </div>
@@ -316,11 +306,6 @@ function ArchivedHorseHistory({
       ])
     }
   }
-  const timeline = [
-    ['육성 시작', '육성을 시작했습니다'],
-    ...records.slice(0, 4).map((r) => [r.date, `${r.race} ${r.result}`]),
-    [horse.retiredAt || '은퇴', '은퇴'],
-  ]
   return (
     <>
       <Section eyebrow="RACE RECORD" title="출전 기록">
@@ -405,17 +390,7 @@ function ArchivedHorseHistory({
         )}
       </Section>
       <Section eyebrow="CAREER TIMELINE" title="커리어 타임라인">
-        <ol>
-          {timeline.map(([when, what], i) => (
-            <li
-              key={`${when}-${i}`}
-              className="flex gap-4 border-b border-border py-2 text-xs last:border-b-0"
-            >
-              <span className="w-24 shrink-0 tabular-nums text-muted-foreground">{when}</span>
-              <span>{what}</span>
-            </li>
-          ))}
-        </ol>
+        <CareerTimeline horse={horse} archived selectedRaceRunId={selectedRaceRunId} />
       </Section>
     </>
   )

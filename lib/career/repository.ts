@@ -52,7 +52,13 @@ export function readCareer(): Career | null {
 }
 export function writeCareer(state: Career): void {
   assertCareer(state)
-  writeBrowserSave({ career: state })
+  // A career-only primary document may still keep the archive in legacy cookies.
+  // Carry that lifecycle into the same commit before story projection creates active metadata.
+  const lifecycle = readLifecycleSave()
+  if (lifecycle !== null) {
+    assertLifecycleSave(lifecycle)
+  }
+  writeBrowserSave({ career: state, ...(lifecycle ? { lifecycle } : {}) })
 }
 function normalizeSavedCareer(value: unknown): Career {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
