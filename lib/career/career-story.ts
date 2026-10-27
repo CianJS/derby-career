@@ -205,7 +205,7 @@ export function captureCareer(
       entry.details = entry.details
         .filter((text) => !text.startsWith('확인된 행동 보정'))
         .concat(
-          `확인된 행동 보정: 성장 ${applied.growth}, 피로 ${applied.fatigue}, 신체 부하 ${applied.bodyLoad} (행동 변화량에 포함)`,
+          '확인된 행동 보정: 이벤트 적용 기록이 있습니다. 상·하한을 반영한 실제 변화량은 같은 턴의 행동 결과에서 확인하세요.',
         )
     }
     const selectedNow =

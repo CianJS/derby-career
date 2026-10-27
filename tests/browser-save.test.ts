@@ -11,7 +11,13 @@ import { readCareer, writeCareer, clearCareer } from '../lib/career/repository'
 import { readLifecycleSave, writeLifecycleSave } from '../lib/career/lifecycle-repository'
 import { startLocalCareer, retireLocalCareer } from '../lib/career/local-career'
 import { applyCareer } from '../lib/career/lifecycle'
-import { assertCareer, commitAction, resolveAction, advanceMonth } from '../lib/career/model'
+import {
+  assertCareer,
+  commitAction,
+  resolveAction,
+  advanceMonth,
+  statKeys,
+} from '../lib/career/model'
 import { buildFixture, fixtureLifecycle } from '../lib/career/fixtures'
 import { readRaceLog, writeRaceLog } from '../lib/career/race-log-repository'
 import { raceLogDigest } from '../lib/career/race-simulation'
@@ -720,6 +726,18 @@ test('actual Local 65-turn story survives retries, trips, races, archive and the
     64,
   )
   assert.equal(entries.filter((entry) => entry.kind === 'race').length, 1)
+  for (const key of statKeys) {
+    const recordedGain = entries
+      .filter((entry) => entry.kind === 'training')
+      .flatMap((entry) => entry.changes ?? [])
+      .filter((change) => change.key === key)
+      .reduce((sum, change) => sum + change.after - change.before, 0)
+    assert.equal(
+      active.career!.values[key] - initial[key],
+      recordedGain,
+      'growth uses bounded final results, never raw event modifiers',
+    )
+  }
   assert.equal(entries.filter((entry) => entry.kind === 'departure').length, 6)
   assert.equal(entries.filter((entry) => entry.kind === 'return').length, 6)
   assert.ok(entries.some((entry) => entry.kind === 'treatment'))
