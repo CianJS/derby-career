@@ -536,11 +536,11 @@ export function RaceCatalogDetail({
         <Facts rows={[['출처', <Source key="race-source" url={race.sourceUrl} />]]} />
         <details className="mt-4 min-w-0 rounded-lg border border-border p-3 [&_dd]:break-all">
           <summary className="cursor-pointer text-sm font-semibold">
-            내부 검토 정보 · 식별자·검증 상태·메모
+            내부 검토 정보 · Source ID·검증 상태·메모
           </summary>
           <Facts
             rows={[
-              ['공식 경주 ID (Source ID)', race.id],
+              ['경주 ID', race.id],
               ['검증 상태', race.verificationStatus],
               ['중복 후보 그룹', race.duplicateGroup || '없음'],
               ['메모', race.notes || '없음'],
