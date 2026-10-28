@@ -45,6 +45,7 @@ export async function generateSaveValidation() {
     'Racecourse',
     'Course',
     'RaceSchedule',
+    'ReferenceRacePlayability',
     'RacecourseList',
     'RacecourseDetail',
     'RaceScheduleList',

@@ -1,3 +1,4 @@
+import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -1036,6 +1037,70 @@ export function registerExpeditionTests(label: string, database?: () => Database
       assert.equal(active.endReason, null)
       assert.equal(active.endedAt, null)
       assert.equal(active.createdAt, started.json().career.travel.activeExpedition.createdAt)
+    } finally {
+      await f.close()
+    }
+  })
+  test(`${label}: reference browse is owner scoped, non-playable and read-only across countries and 61 turns`, async () => {
+    const f = await setup()
+    try {
+      const imported = await importRacingCatalog(
+        f.db,
+        await readRacingSource(['seeds/racing.notion.source.json']),
+      )
+      assert.equal(imported.committed, true)
+      const { id } = await ready(f)
+      const before = await historyReadSnapshot(f)
+      const catalog = (await f.db.query('SELECT payload FROM race_schedules ORDER BY id')).rows
+      const entries = (await f.call('GET', path(id) + '/race-entries')).json()
+      assert.ok(entries.races.length > 0)
+      for (const country of ['KOR', 'JPN', 'USA']) {
+        const ref = catalog.find((r) => r.payload.country === country)!.payload
+        const url = path(id) + '/race-entries?referenceRaceId=' + ref.id
+        const result = await f.call('GET', url)
+        assert.equal(result.statusCode, 200, result.body)
+        assert.deepEqual(result.json().races, [])
+        assert.equal(result.json().referenceRace.sourceRaceId, ref.id)
+        assert.equal(result.json().referenceRace.raceDefinitionId, null)
+        assert.equal(result.json().referenceRace.eligible, false)
+        assert.equal((await f.call('GET', url, undefined, f.other.token)).statusCode, 404)
+        const rejected = await f.call('POST', path(id) + '/race-entries', {
+          ...entry('KOR'),
+          raceRunId: randomUUID(),
+          raceDefinitionId: ref.id,
+        })
+        assert.equal(rejected.statusCode, 422)
+      }
+      assert.equal(
+        (await f.call('GET', path(id) + '/race-entries?referenceRaceId=RACE_MISSING')).statusCode,
+        404,
+      )
+      for (const suffix of [
+        'referenceRaceId=bad/id',
+        'referenceRaceId=RACE_A&referenceRaceId=RACE_B',
+        'eligible=true',
+      ]) {
+        assert.equal((await f.call('GET', path(id) + '/race-entries?' + suffix)).statusCode, 400)
+      }
+      assert.deepEqual((await f.call('GET', path(id) + '/race-entries')).json(), entries)
+      assert.deepEqual(await historyReadSnapshot(f), before)
+      assert.deepEqual(
+        (await f.db.query('SELECT payload FROM race_schedules ORDER BY id')).rows,
+        catalog,
+      )
+      const original = (await current(f, id)).state
+      for (const turn of [4, 15, 61]) {
+        await f.db.query('UPDATE careers SET turn=$2,state=$3 WHERE id=$1', [
+          id,
+          turn,
+          JSON.stringify({ ...original, month: turn, careerTurnIndex: turn }),
+        ])
+        const ref = catalog[0].payload.id
+        assert.deepEqual(
+          (await f.call('GET', path(id) + '/race-entries?referenceRaceId=' + ref)).json().races,
+          [],
+        )
+      }
     } finally {
       await f.close()
     }
