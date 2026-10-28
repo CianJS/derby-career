@@ -6,12 +6,27 @@ import { createApiClient } from '../packages/shared/src/client'
 import { ServerSaveController, type SaveSnapshot } from '../lib/server-save/controller'
 import { jockeyTrust } from '../lib/career/jockey-trust-presentation'
 import { readServerRelations } from '../lib/server-save/jockey-relations'
+import { horseSelectionTitle } from '../components/career/horse-selection-history'
+import { parseSaveWorkspace } from '../lib/server-save/workspace'
 
 // Real Fastify + generated validators + PostgreSQL engine. SQL values below are isolated test
 // data, not a frontend relationship calculation or an application API fallback.
 test('current server relationship values survive controller reconnect, stay owner-scoped and reset for a new horse', async () => {
   const f = await fixture()
   try {
+    const fresh = parseSaveWorkspace((await f.call('GET', '/v1/careers/workspace')).json())
+    assert.equal(
+      horseSelectionTitle({
+        mode: 'server',
+        ready: true,
+        busy: false,
+        pending: false,
+        error: null,
+        workspace: fresh,
+        lifecycle: null,
+      }),
+      '첫 육성마를 선택하세요',
+    )
     const { id } = await f.create()
     let snapshot: SaveSnapshot
     let unavailable = false
@@ -93,6 +108,12 @@ test('current server relationship values survive controller reconnect, stay owne
       true,
     )
     assert.equal(snapshot!.workspace!.career, null)
+    const selectionTitle = () =>
+      horseSelectionTitle({ ...snapshot!, mode: 'server', lifecycle: null })
+    assert.equal(selectionTitle(), '새 육성마를 선택하세요')
+    const frozenArchive = JSON.stringify(snapshot!.workspace!.retirements)
+    const funds = snapshot!.workspace!.stable!.funds
+    const contracts = snapshot!.workspace!.stable!.contractedJockeyIds
     const retirement = snapshot!.workspace!.retirements[0]
     const identity = {
       careerId: id,
@@ -121,6 +142,34 @@ test('current server relationship values survive controller reconnect, stay owne
     assert.deepEqual(trust('SEO_JIAN'), { status: 'available', value: 0 })
     assert.equal(journal, null)
     assert.equal((await readServerRelations(api, identity)).SEO_JIAN.trust, 72)
+    assert.equal(snapshot!.workspace!.stable!.funds, funds)
+    assert.deepEqual(snapshot!.workspace!.stable!.contractedJockeyIds, contracts)
+    assert.equal(JSON.stringify(snapshot!.workspace!.retirements), frozenArchive)
+    const second = snapshot!.workspace!.career!
+    assert.equal(
+      await c.send({
+        kind: 'retire',
+        careerId: second.id,
+        body: { commandId: randomUUID(), expectedRevision: second.revision },
+      }),
+      true,
+    )
+    assert.equal(snapshot!.workspace!.retirements.length, 2)
+    assert.equal(selectionTitle(), '새 육성마를 선택하세요')
+    assert.equal(
+      await c.send({
+        kind: 'create',
+        body: { careerId: randomUUID(), horseDefinitionId: 'DEV_HORSE_SERENE_STEP' },
+      }),
+      true,
+    )
+    assert.equal(snapshot!.workspace!.career!.state.careerTurnIndex, 1)
+    assert.equal(snapshot!.workspace!.stable!.funds, funds)
+    assert.deepEqual(snapshot!.workspace!.stable!.contractedJockeyIds, contracts)
+    assert.equal(
+      JSON.stringify(snapshot!.workspace!.retirements.find((r) => r.careerId === id)),
+      frozenArchive.slice(1, -1),
+    )
     c.dispose()
   } finally {
     await f.close()

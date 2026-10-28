@@ -9,15 +9,19 @@ import { Button } from '@/components/ui/button'
 import { horses, labels, statKeys } from '@/lib/career/model'
 import { careerStore, useCareer } from '@/lib/career/store'
 import { cn } from '@/lib/utils'
+import { horseSelectionTitle } from './horse-selection-history'
 
 export function HorseSelection({
   busy,
   starterJockeyId,
+  historyUnknown = false,
 }: {
   busy: boolean
   starterJockeyId?: StarterJockeyId
+  historyUnknown?: boolean
 }) {
-  const { mode, candidates, workspace, ready, error } = useCareer()
+  const snapshot = useCareer()
+  const { mode, candidates, workspace, ready, error } = snapshot
   const options = mode === 'server' ? candidates.map((h) => h.definition) : horses
   const [homeCountry, setHomeCountry] = useState<SupportedCountry>('KOR')
   const [selected, setSelected] = useState<string | null>(null)
@@ -32,7 +36,7 @@ export function HorseSelection({
       <div className="mb-7">
         <p className="ui-label text-primary">HORSE SELECTION</p>
         <h1 ref={title} tabIndex={-1} className="mt-3 text-3xl font-semibold tracking-tight">
-          첫 육성마를 선택하세요
+          {horseSelectionTitle(snapshot, historyUnknown)}
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
           실제 후보의 능력과 적성을 비교하고, 함께할 한 마리를 선택하세요.

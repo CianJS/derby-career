@@ -515,6 +515,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
     }
   };
   const [hydrated, setHydrated] = useState(false);
+  const [localHistoryKnown, setLocalHistoryKnown] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   useEffect(() => {
     careerStore.configure(saveMode)
@@ -536,7 +537,10 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
       return
     }
     try {
-      const saved = { ...initialLifecycle, ...readLifecycle() };
+      const preserved = readLifecycle();
+      // Display defaults must not turn a partial legacy history into proof of a first career.
+      setLocalHistoryKnown(Array.isArray(preserved.archive));
+      const saved = { ...initialLifecycle, ...preserved };
       setState(saved);
       setHydrated(true);
     } catch (error) {
@@ -583,6 +587,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const createStable = async (name: string, country: string) => {
     if (!canCreateStable) throw new Error("마방 기록을 다시 불러와 주세요.");
     await careerStore.saveLifecycle({ ...state, stableName: name, country, lifecycleView: "candidates" });
+    setLocalHistoryKnown(true);
     setState({ ...initialLifecycle, ...careerStore.getSnapshot().lifecycle } as LifecycleState);
     setView("candidates");
   };
@@ -720,6 +725,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           )}{" "}
           {(view === "training" || view === "candidates") && (saveMode === "server" || !!state.stableName || !!career) && (
             <CareerCheckpoint
+                  selectionHistoryUnknown={!compatibleMode || (saveMode === 'local' && (!hydrated || !!saveError || (!localHistoryKnown && !snapshot.lifecycle?.archive?.length && !snapshot.lifecycle?.lastRetiredId)))}
                   onHome={() => setView("home")}
                   onHorse={() => setView("horse")}
                   horseSummary={
