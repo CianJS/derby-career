@@ -1,3 +1,4 @@
+import { referenceRacePlayability } from '../../../../packages/shared/src/race-playability'
 import {
   readTravel,
   expeditionDto,
@@ -522,10 +523,22 @@ export class CareerRepository {
       }
     })
   }
-  async raceEntryOptions(owner: string, id: string) {
+  async raceEntryOptions(owner: string, id: string, referenceRaceId?: string) {
     return this.db.transaction(async (tx) => {
       await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
       const row = await readCareerRow(tx, owner, id)
+      const reference = referenceRaceId
+        ? (
+            await tx.query<{ payload: components['schemas']['RaceSchedule'] }>(
+              'SELECT payload FROM race_schedules WHERE id=$1',
+              [referenceRaceId],
+            )
+          ).rows[0]?.payload
+        : undefined
+      if (referenceRaceId && !reference) {
+        throw notFound()
+      }
+      const referenceRace = reference ? referenceRacePlayability(reference) : undefined
       const history = await readCareerHistory(tx, row)
       const definitions = (
         await tx.query<{
@@ -553,10 +566,13 @@ export class CareerRepository {
             ? '계약 기수 중에서 선택해 주세요.'
             : null)
       return {
+        ...(referenceRace ? { referenceRace } : {}),
         career: await this.dto(tx, row),
         defaultEngineVersion: API_RACE_ENGINE_VERSION,
-        restrictionReason,
-        races: definitions.map(({ payload, source_kind, country_code }) => {
+        restrictionReason: referenceRace
+          ? '참고 경주의 게임 출전 매핑이 아직 승인되지 않았습니다.'
+          : restrictionReason,
+        races: (referenceRace ? [] : definitions).map(({ payload, source_kind, country_code }) => {
           const race = raceOccurrenceForTurn(withRaceCountry(payload, country_code), row.turn)!
           const reason =
             restrictionReason ??

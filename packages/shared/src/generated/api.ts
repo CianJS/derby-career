@@ -1124,6 +1124,7 @@ export interface components {
             engineVersion?: "race-sim-v1" | "race-sim-v2" | "race-sim-v3" | "race-sim-v4";
         };
         RaceEntryOptions: {
+            referenceRace?: components["schemas"]["ReferenceRacePlayability"];
             career: components["schemas"]["Career"];
             /** @enum {string} */
             defaultEngineVersion: "race-sim-v1" | "race-sim-v2" | "race-sim-v3" | "race-sim-v4";
@@ -1351,7 +1352,22 @@ export interface components {
             notes: string;
             reviewIssues: string[];
         };
+        ReferenceRacePlayability: {
+            sourceRaceId: string;
+            sourceYear: number;
+            sourceMonth: number | null;
+            /** @enum {string|null} */
+            raceDefinitionId: null;
+            /** @enum {string} */
+            status: "blocked";
+            /** @enum {boolean} */
+            eligible: false;
+            /** @enum {string} */
+            calendarPolicy: "not_approved";
+            reasons: ("mapping_not_approved" | "opponents_not_approved" | "recurrence_not_approved" | "win_conditions_not_approved" | "source_not_verified" | "duplicate_review" | "not_run" | "date_unconfirmed" | "course_unassigned" | "age_unconfirmed" | "sex_rule_unsupported" | "eligibility_unconfirmed" | "surface_unsupported" | "grade_unsupported" | "distance_unconfirmed" | "runners_unconfirmed" | "game_economy_unapproved")[];
+        };
         RaceSchedule: {
+            playability?: components["schemas"]["ReferenceRacePlayability"];
             id: string;
             name: string;
             year: number;
@@ -2168,7 +2184,10 @@ export interface operations {
     };
     getRaceEntryOptions: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 공개 참고 경주 ID. 미지원이면 referenceRace에 사유를 반환하고 races는 빈 배열이다. 출전 ID로 치환하지 않는다. */
+                referenceRaceId?: string;
+            };
             header?: never;
             path: {
                 careerId: string;

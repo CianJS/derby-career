@@ -132,3 +132,20 @@ test('expedition history is an authenticated read with encoded Career identity a
   assert.equal(calls[0].init?.credentials, 'omit')
   assert.equal(new Headers(calls[0].init?.headers).get('authorization'), 'Bearer history-session')
 })
+
+test('reference entry query preserves an encoded source identity without changing entry commands', async () => {
+  const urls: string[] = []
+  const client = createApiClient({
+    baseUrl: 'https://api.example.test',
+    getSessionToken: () => 'session',
+    fetch: async (url) => {
+      urls.push(String(url))
+      return Response.json({})
+    },
+  })
+  await client.getRaceEntryOptions('career/id', { referenceRaceId: 'RACE_A' })
+  assert.equal(
+    urls[0],
+    'https://api.example.test/v1/careers/career%2Fid/race-entries?referenceRaceId=RACE_A',
+  )
+})

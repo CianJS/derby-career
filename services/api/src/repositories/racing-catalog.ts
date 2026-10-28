@@ -1,3 +1,4 @@
+import { withReferencePlayability } from '../../../../packages/shared/src/race-playability'
 import type { Database } from '../db'
 import type { operations } from '../../../../packages/shared/src/generated/api'
 import type { Racecourse, Course, RaceSchedule } from '../modules/racing/catalog'
@@ -91,7 +92,12 @@ export class RacingCatalogRepository {
           `SELECT payload FROM ${source} ORDER BY ${order} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
           [...values, query.pageSize, (query.page - 1) * query.pageSize],
         )
-      ).rows.map((r) => r.payload as T)
+      ).rows.map(
+        (r) =>
+          (table === 'race_schedules'
+            ? withReferencePlayability(r.payload as RaceSchedule)
+            : r.payload) as T,
+      )
       return {
         data,
         pagination: {
@@ -127,7 +133,8 @@ export class RacingCatalogRepository {
     })
   }
   async getSchedule(id: string) {
-    return (await this.db.query('SELECT payload FROM race_schedules WHERE id=$1', [id])).rows[0]
-      ?.payload as RaceSchedule | undefined
+    const race = (await this.db.query('SELECT payload FROM race_schedules WHERE id=$1', [id]))
+      .rows[0]?.payload as RaceSchedule | undefined
+    return race ? withReferencePlayability(race) : undefined
   }
 }

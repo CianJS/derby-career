@@ -68,8 +68,11 @@ export function createApiClient(options: ApiClientOptions) {
         undefined,
         true,
       ),
-    getRaceEntryOptions: (id: string) =>
-      request<Models['RaceEntryOptions']>(careerPath(id) + '/race-entries', undefined, true),
+    getRaceEntryOptions: (
+      id: string,
+      query: operations['getRaceEntryOptions']['parameters']['query'] = {},
+    ) =>
+      request<Models['RaceEntryOptions']>(careerPath(id) + '/race-entries', undefined, true, query),
     enterRace: (id: string, body: Models['EnterRace']) =>
       request<Models['RaceEntryResponse']>(careerPath(id) + '/race-entries', body, true),
     getRaceRun: (id: string, runId: string) =>

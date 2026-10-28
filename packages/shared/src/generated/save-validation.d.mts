@@ -8,6 +8,7 @@ export declare function validateReturnExpedition(value: unknown): value is compo
 export declare function validateRacecourse(value: unknown): value is components['schemas']['Racecourse']
 export declare function validateCourse(value: unknown): value is components['schemas']['Course']
 export declare function validateRaceSchedule(value: unknown): value is components['schemas']['RaceSchedule']
+export declare function validateReferenceRacePlayability(value: unknown): value is components['schemas']['ReferenceRacePlayability']
 export declare function validateRacecourseList(value: unknown): value is components['schemas']['RacecourseList']
 export declare function validateRacecourseDetail(value: unknown): value is components['schemas']['RacecourseDetail']
 export declare function validateRaceScheduleList(value: unknown): value is components['schemas']['RaceScheduleList']

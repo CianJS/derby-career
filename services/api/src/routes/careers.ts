@@ -141,8 +141,10 @@ export function careerRoutes(
   register<{ Params: CareerParams }>('GET', '/v1/careers/{careerId}/jockey-relations', (r, o) =>
     careers.jockeyRelations(o, r.params.careerId),
   )
-  register<{ Params: CareerParams }>('GET', '/v1/careers/{careerId}/race-entries', (r, o) =>
-    careers.raceEntryOptions(o, r.params.careerId),
+  register<{ Params: CareerParams; Querystring: { referenceRaceId?: string } }>(
+    'GET',
+    '/v1/careers/{careerId}/race-entries',
+    (r, o) => careers.raceEntryOptions(o, r.params.careerId, r.query.referenceRaceId),
   )
   register<{ Params: CareerParams; Body: Models['EnterRace'] }>(
     'POST',

@@ -1,3 +1,7 @@
+import {
+  referenceRacePlayability,
+  referenceRaceReport,
+} from '../../../packages/shared/src/race-playability'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, mkdtemp, writeFile, rm } from 'node:fs/promises'
@@ -216,7 +220,10 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
         const list = await client.listRaceSchedule({ country: 'KOR' })
         assert.ok(validateRaceScheduleList(list))
         assert.equal(list.pagination.total, 51)
-        assert.ok(validateRaceSchedule(await client.getRaceSchedule('RACE_KOR_2026_KOREA_CUP')))
+        const detail = await client.getRaceSchedule('RACE_KOR_2026_KOREA_CUP')
+        assert.ok(validateRaceSchedule(detail))
+        assert.deepEqual(detail.playability, referenceRacePlayability(detail))
+        assert.ok(list.data.every((r) => r.playability?.eligible === false))
       },
     )
     await t.test('combined filters and literal search are applied before counting', async () => {
@@ -359,4 +366,30 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
   } finally {
     await f.close()
   }
+})
+
+test('reference playability audits all 851 rows without inferring rules or changing snapshots', async () => {
+  const { races } = normalizeRacingCatalog(await source())
+  const before = digest(races)
+  const report = referenceRaceReport(races)
+  assert.equal(report.referenceRows, 851)
+  assert.equal(report.publicDistinctRows, 848)
+  assert.equal(report.playable, 0)
+  assert.equal(report.reasonCounts.game_economy_unapproved, 851)
+  assert.equal(report.reasonCounts.course_unassigned, 851)
+  assert.equal(report.reasonCounts.duplicate_review, 6)
+  assert.equal(report.reasonCounts.not_run, 18)
+  assert.equal(report.reasonCounts.date_unconfirmed, 41)
+  for (const race of races) {
+    const state = referenceRacePlayability(race)
+    assert.equal(state.sourceRaceId, race.id)
+    assert.equal(state.sourceYear, 2026)
+    assert.equal(state.raceDefinitionId, null)
+    assert.equal(state.eligible, false)
+    assert.equal(state.calendarPolicy, 'not_approved')
+  }
+  assert.equal(digest(races), before)
+  assert.throws(() => referenceRaceReport([...races, races[0]]))
+  const stored = JSON.parse(await readFile('reports/race-playability.json', 'utf8'))
+  assert.deepEqual(stored, { sourceDigest: digest(await source()), ...report })
 })
