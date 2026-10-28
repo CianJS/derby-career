@@ -80,7 +80,7 @@ test('real catalog: 848 distinct races, 90 venues and 48 matching DOM rows on pa
   const venueResponse = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/racing-catalog/v1/racecourses',
   )
-  await page.goto('/?view=races')
+  await page.goto('/?view=races&raceCatalog=reference')
   expect((await listResponse).status()).toBe(200)
   expect((await venueResponse).status()).toBe(200)
   const list = await (await listResponse).json()
@@ -130,7 +130,7 @@ test('real catalog: 848 distinct races, 90 venues and 48 matching DOM rows on pa
 test('actual row opens API detail and browser Back/Forward restores the catalog', async ({
   page,
 }, testInfo) => {
-  await page.goto('/?view=races')
+  await page.goto('/?view=races&raceCatalog=reference')
   await expect(page.getByRole('heading', { level: 1, name: '경주 정보' })).toBeVisible()
   await page.getByRole('combobox', { name: '개최국', exact: true }).selectOption('KOR')
   const row = page.locator(`#catalog-${raceId}`)

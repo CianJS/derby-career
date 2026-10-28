@@ -1,6 +1,7 @@
 'use client'
 
 import { HealthGuidance } from './health-guidance'
+import { entryBrowseContext, type GameEntrySelection } from './game-race-schedule'
 import { useState } from 'react'
 import { ExpeditionLink } from './expedition-navigation'
 import { GameRaceSource, GameRaceDisclosure } from './game-race-source'
@@ -76,7 +77,15 @@ export function RaceAction({ onOpen }: { onOpen: () => void }) {
   )
 }
 
-export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }) {
+export function RaceEntryWorkspace({
+  onStartRace,
+  selection,
+  onBrowseRaces,
+}: {
+  onStartRace?: () => void
+  selection?: GameEntrySelection
+  onBrowseRaces?: () => void
+}) {
   const snapshot = useCareer()
   const { ready, career, busy, pending, error, mode, localCareerId, workspace, raceOptions } =
     snapshot
@@ -101,24 +110,45 @@ export function RaceEntryWorkspace({ onStartRace }: { onStartRace?: () => void }
       </p>
     )
   }
+  const currentContext = entryBrowseContext(snapshot)
+  const staleSelection = !!selection && !career.raceRun && selection.context !== currentContext
   return (
-    <RaceEntryForm
-      key={`${mode}:${workspace?.career?.id ?? localCareerId ?? career.horse.id}:${career.month}:${stableTravel(snapshot)?.revision ?? 0}`}
-      career={career}
-      busy={busy || pending}
-      error={error}
-      onStartRace={onStartRace}
-      canConfirm={mode === 'local' ? stableFunds(snapshot) !== null : !!raceOptions}
-      availableFunds={mode === 'local' ? (stableFunds(snapshot) ?? undefined) : undefined}
-      travel={stableTravel(snapshot) ?? undefined}
-      balance={stableFunds(snapshot)}
-      serverOptions={mode === 'server' ? raceOptions : undefined}
-      trustForJockey={(id) => jockeyTrust(snapshot, id)}
-    />
+    <>
+      {staleSelection && (
+        <div role="alert" className="py-6 text-sm">
+          <p>
+            말·마방·월·체류 또는 출전 조건이 변경되어 이전 경주 선택을 적용하지 않았습니다. 아래
+            최신 후보 또는 경주 일정에서 다시 선택해 주세요.
+          </p>
+          {onBrowseRaces && (
+            <button className="mt-3 min-h-11 text-primary underline" onClick={onBrowseRaces}>
+              게임 경주 일정 다시 선택
+            </button>
+          )}
+        </div>
+      )}
+      <RaceEntryForm
+        discardInitialSelection={staleSelection}
+        key={`${mode}:${workspace?.career?.id ?? localCareerId ?? career.horse.id}:${career.month}:${stableTravel(snapshot)?.revision ?? 0}:${staleSelection ? currentContext : (selection?.raceId ?? 'recommended')}`}
+        initialRaceId={selection?.raceId}
+        career={career}
+        busy={busy || pending}
+        error={error}
+        onStartRace={onStartRace}
+        canConfirm={mode === 'local' ? stableFunds(snapshot) !== null : !!raceOptions}
+        availableFunds={mode === 'local' ? (stableFunds(snapshot) ?? undefined) : undefined}
+        travel={stableTravel(snapshot) ?? undefined}
+        balance={stableFunds(snapshot)}
+        serverOptions={mode === 'server' ? raceOptions : undefined}
+        trustForJockey={(id) => jockeyTrust(snapshot, id)}
+      />
+    </>
   )
 }
 
 export function RaceEntryForm({
+  initialRaceId,
+  discardInitialSelection = false,
   career,
   busy,
   error,
@@ -130,6 +160,8 @@ export function RaceEntryForm({
   balance = null,
   trustForJockey = (id) => raceEntryJockeyTrust(serverOptions, id),
 }: {
+  initialRaceId?: string
+  discardInitialSelection?: boolean
   career: Career
   busy: boolean
   error: string | null
@@ -142,7 +174,15 @@ export function RaceEntryForm({
   balance?: number | null
 }) {
   const [draft, setDraft] = useState<RaceEntryDraft>(() =>
-    recommendRaceEntry(career, undefined, serverOptions ?? undefined, availableFunds, travel),
+    discardInitialSelection
+      ? { raceId: null, jockeyId: null, tactic: null }
+      : recommendRaceEntry(
+          career,
+          initialRaceId,
+          serverOptions ?? undefined,
+          availableFunds,
+          travel,
+        ),
   )
   const availableJockeys =
     serverOptions === undefined ? contractedRoster(career) : (serverOptions?.jockeys ?? [])
@@ -191,6 +231,12 @@ export function RaceEntryForm({
     )
   return (
     <div className="lab-entry mt-5 flex flex-col gap-5">
+      {initialRaceId && !locked && !draft.raceId && (
+        <p role="alert" className="text-sm">
+          선택한 경주가 현재 출전 후보·자격에 맞지 않아 자동으로 다른 경주를 선택하지 않았습니다.
+          아래 최신 조건을 확인하세요.
+        </p>
+      )}
       <header>
         <p className="ui-label text-primary">RACE ENTRY · 육성 {career.careerTurnIndex}개월차</p>
         <h1 className="ui-page-title mt-2 font-serif">

@@ -3,6 +3,7 @@
 import { HealthGuidance } from './career/health-guidance'
 import { healthGuidance } from '@/lib/career/health-presentation'
 import { ExpeditionPanel } from './career/expedition-panel'
+import { entryBrowseContext, readEntrySelection, type GameEntrySelection } from './career/game-race-schedule'
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CareerCheckpoint } from "@/components/career/checkpoint";
 import { RetirementConfirm } from '@/components/career/retirement-confirm';
@@ -433,7 +434,7 @@ function Cockpit({
     </Section>
   );
 }
-function RaceEntry({ setView }: { setView: (v: View) => void }) {
+function RaceEntry({ setView, selection }: { setView: (v: View) => void; selection?: GameEntrySelection }) {
   const { busy } = useCareer();
   return (
     <FocusShell
@@ -441,7 +442,7 @@ function RaceEntry({ setView }: { setView: (v: View) => void }) {
       backLabel="육성으로 돌아가기"
       backDisabled={busy}
     >
-      <RaceEntryWorkspace onStartRace={() => setView("raceexperimental")} />
+      <RaceEntryWorkspace selection={selection} onBrowseRaces={() => setView("races")} onStartRace={() => setView("raceexperimental")} />
     </FocusShell>
   );
 }
@@ -449,20 +450,24 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [localState, setState] = useState<LifecycleState>(initialLifecycle);
   const [selectedJockeyId, setSelectedJockeyId] = useState(jockeys[0].id);
   const [view, updateView] = useState<View>("home");
+  const [entrySelection, setEntrySelection] = useState<GameEntrySelection | undefined>(undefined);
 
   const setView = useCallback((next: View) => {
     const url = new URL(window.location.href)
+    setEntrySelection(undefined)
+    if (next === 'races' && !['race','races'].includes(url.searchParams.get('view') ?? '')) { url.searchParams.set('raceCatalog', 'game') }
     if (next === 'races' || next === 'race') {
       url.searchParams.set('view', next)
-      if (next === 'races') { url.searchParams.delete('raceId') }
+      if (next === 'races') { url.searchParams.delete('raceId'); url.searchParams.delete('gameRaceId') }
     } else if (['race', 'races'].includes(url.searchParams.get('view') ?? '')) {
       url.searchParams.delete('view')
       url.searchParams.delete('raceId')
+      url.searchParams.delete('gameRaceId')
     }
-    if (url.href !== window.location.href || history.state?.catalogGameplayView) { history.replaceState({ ...history.state, catalogGameplayView: null }, '', url) }
+    if (url.href !== window.location.href || (history.state?.catalogGameplayView || history.state?.gameEntrySelection)) { history.replaceState({ ...history.state, catalogGameplayView: null, gameEntrySelection: null }, '', url) }
     updateView(next)
   }, []);
-  const openCatalogGameplay = useCallback((next: GameplayView) => {
+  const openCatalogGameplay = useCallback((next: GameplayView, raceId?: string) => {
     const detail = new URLSearchParams(window.location.search).get('view') === 'race'
     history.replaceState({
       ...history.state,
@@ -472,13 +477,18 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
         raceCatalogTableScroll: document.getElementById('race-catalog-table')?.scrollLeft ?? 0,
       }),
     }, '')
-    history.pushState({ ...history.state, catalogGameplayView: next, catalogGameplayFocus: false }, '', gameplayUrl(window.location.href))
+    const selection = raceId ? { raceId, context: entryBrowseContext(careerStore.getSnapshot()) } : undefined
+    setEntrySelection(selection)
+    const targetUrl = gameplayUrl(window.location.href)
+    targetUrl.searchParams.delete('gameRaceId')
+    history.pushState({ ...history.state, catalogGameplayView: next, gameEntrySelection: selection, catalogGameplayFocus: false }, '', targetUrl)
     updateView(next)
     window.scrollTo(0, 0)
   }, [])
   useEffect(() => {
     const restore = () => {
       const requested = new URLSearchParams(window.location.search).get('view')
+      setEntrySelection(readEntrySelection(history.state?.gameEntrySelection))
       updateView(requested === 'race' || requested === 'races' ? requested : readGameplayView(history.state?.catalogGameplayView) ?? 'home')
     }
     window.addEventListener('popstate', restore)
@@ -511,6 +521,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [saveError, setSaveError] = useState<string | null>(null);
   useEffect(() => {
     careerStore.configure(saveMode)
+    setEntrySelection(readEntrySelection(history.state?.gameEntrySelection))
     const requested = new URLSearchParams(window.location.search).get('view')
     // Restore once without invoking navigation's URL cleanup. Public routes are mode-independent.
     if (requested === 'races' || requested === 'race') {
@@ -723,7 +734,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
                   raceEntry={<RaceAction onOpen={() => setView("entry")} />}
                 />
           )}{" "}
-          {view === "entry" && <RaceEntry setView={setView} />}{" "}
+          {view === "entry" && <RaceEntry setView={setView} selection={entrySelection} />}{" "}
           {(view === "raceplay" || view === "raceexperimental") && (
             <FocusShell setView={setView} backLabel="육성으로 돌아가기">
               <RacePlayback
@@ -778,8 +789,8 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           {saveMode === 'server' && view === 'stable' && workspace && workspace.pagination.page < workspace.pagination.totalPages && (
             <button disabled={busy || pending} onClick={() => void careerStore.loadMoreRetirements()} className="m-4 text-sm underline">이전 은퇴 기록 더 불러오기</button>
           )}
-          {view === 'races' && <Races setView={setView} onGameplay={openCatalogGameplay} />}
-          {view === 'race' && <Race setView={setView} onGameplay={openCatalogGameplay} />}
+          {view === 'races' && <Races mode={saveMode} setView={setView} onGameplay={openCatalogGameplay} />}
+          {view === 'race' && <Race mode={saveMode} setView={setView} onGameplay={openCatalogGameplay} />}
         </main>
       </div>
     </div>

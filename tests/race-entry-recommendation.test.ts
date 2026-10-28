@@ -194,6 +194,26 @@ test('the real entry form renders all three recommended radio choices checked an
   assert.ok(/<button\b[^>]*>출전 확정<\/button>/.test(html))
   assert.ok(!/<button\b[^>]*\sdisabled(?:=|\s|>)[^>]*>출전 확정<\/button>/.test(html))
   assert.equal((html.match(/checked=""/g) ?? []).length, 3)
+  const exact = renderToStaticMarkup(
+    createElement(RaceEntryForm, {
+      career,
+      busy: false,
+      error: null,
+      initialRaceId: 'DEV_M6_ONE_WIN_LONG_2400',
+    }),
+  )
+  assert.equal(selected(exact, 'entry-race'), 'DEV_M6_ONE_WIN_LONG_2400')
+  for (const initialRaceId of [
+    'RACE_KOR_2026_KOREA_CUP',
+    'DEV_M3_MILE_1600',
+    'DEV_M6_MAIDEN_MILE_1600',
+  ]) {
+    const unavailable = renderToStaticMarkup(
+      createElement(RaceEntryForm, { career, busy: false, error: null, initialRaceId }),
+    )
+    assert.equal(selected(unavailable, 'entry-race'), null)
+    assert.match(unavailable, /자동으로 다른 경주를 선택하지 않았습니다/)
+  }
   assert.deepEqual(career, before)
 })
 

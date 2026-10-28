@@ -55,11 +55,22 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
       await expect.poll(async () => (await get()).career.state.careerTurnIndex).toBe(month + 1)
       continue
     }
-    await page
-      .getByRole('group', { name: '월간 행동 선택' })
-      .getByRole('button', { name: /^경주 / })
-      .click()
-    await page.getByRole('button', { name: '경주 출전 준비', exact: true }).click()
+    if (month === 3) {
+      await home()
+      await page.getByRole('button', { name: /RACE DATABASE 경주 정보/ }).click()
+      await page.locator('[data-game-race="DEV_M3_SPRINT_1400"] button').click()
+      await expect(page.getByText('₩500,000', { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: '현재 말로 출전 준비', exact: true }).click()
+      await expect(page.locator('input[name="entry-race"]:checked')).toHaveValue(
+        'DEV_M3_SPRINT_1400',
+      )
+    } else {
+      await page
+        .getByRole('group', { name: '월간 행동 선택' })
+        .getByRole('button', { name: /^경주 / })
+        .click()
+      await page.getByRole('button', { name: '경주 출전 준비', exact: true }).click()
+    }
     await expect(
       page.locator('[aria-label="출전 요약"] [data-trust-status="available"]'),
     ).toBeVisible()

@@ -16,7 +16,7 @@ for (const viewport of sizes) {
     page,
   }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/?view=races')
+    await page.goto('/?view=races&raceCatalog=reference')
     for (const [country, total] of [
       ['KOR', 51],
       ['JPN', 176],
@@ -142,7 +142,7 @@ for (const viewport of sizes) {
     page,
   }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/?view=races')
+    await page.goto('/?view=races&raceCatalog=reference')
     const country = page.getByRole('combobox', { name: '개최국', exact: true })
     await country.focus()
     await country.selectOption('USA')
@@ -326,7 +326,7 @@ for (const viewport of sizes) {
     page,
   }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/?view=races')
+    await page.goto('/?view=races&raceCatalog=reference')
     let release!: () => void
     let held!: () => void
     const gated = new Promise<void>((resolve) => {

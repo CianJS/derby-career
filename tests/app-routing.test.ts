@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { NoticeCenter, NoticeList, NoticeDetails } from '../components/notices/notice-center'
 import { expeditionControls } from '../components/career/expedition-panel'
 import { focusExpedition } from '../components/career/expedition-navigation'
+import { entryBrowseContext, gameRaceSchedule } from '../components/career/game-race-schedule'
 import {
   localEventChoiceAvailability,
   canTrain,
@@ -830,6 +831,73 @@ test('catalog gameplay destinations use current Local/Server authority and keep 
   assert.equal(url.searchParams.get('rc_page'), '9')
   assert.equal(url.searchParams.get('other'), 'keep')
   assert.equal(readGameplayView('race'), null)
+  const board = gameRaceSchedule(local)
+  assert.equal(board.definitionCount, 19)
+  assert.equal(board.currentCount, localRacesForTurn(3).length)
+  assert.equal(board.readyCount, 3)
+  assert.ok(board.rows.every((row) => row.definition.id.startsWith('DEV_')))
+  assert.equal(
+    board.rows.find((row) => row.definition.id === 'DEV_JPN_M3_MILE_1600')!.canPrepare,
+    false,
+  )
+  for (const patch of [
+    { ready: false },
+    { busy: true },
+    { pending: true },
+    { error: '연결 실패' },
+    { career: null },
+  ]) {
+    const unknown = gameRaceSchedule({ ...local, ...patch })
+    assert.equal(unknown.readyCount, null)
+    assert.equal(
+      unknown.rows.some((row) => row.canPrepare),
+      false,
+    )
+  }
+  assert.equal(gameRaceSchedule(local, 'server').currentCount, null)
+  for (const patch of [
+    { career: { ...career, health: '중상' as const } },
+    { career: commitAction(career, 'rest') },
+    { career: { ...career, contractedJockeyIds: [] } },
+  ]) {
+    assert.equal(gameRaceSchedule({ ...local, ...patch }).readyCount, 0)
+  }
+  for (const turn of [12, 60, 61, 63]) {
+    const later = gameRaceSchedule({
+      ...local,
+      career: { ...career, month: turn, careerTurnIndex: turn },
+    })
+    assert.equal(later.currentCount, localRacesForTurn(turn).length)
+    assert.ok(later.rows.every((row) => row.turn! >= turn))
+    assert.ok(later.rows.filter((row) => row.current).every((row) => row.definition.month === turn))
+  }
+  const bound = entryBrowseContext(local)
+  for (const patch of [
+    { localCareerId: 'next-career' },
+    { mode: 'server' as const },
+    { career: { ...career, month: 4, careerTurnIndex: 4 } },
+    { lifecycle: { ...local.lifecycle, travel: { ...local.lifecycle!.travel!, revision: 1 } } },
+  ]) {
+    assert.notEqual(entryBrowseContext({ ...local, ...patch }), bound)
+  }
+  assert.equal(gameRaceSchedule(server).currentCount, null)
+  const serverBoard = gameRaceSchedule({ ...server, raceOptions: options })
+  assert.equal(serverBoard.currentCount, options.races.length)
+  assert.equal(serverBoard.readyCount, options.races.filter((row) => row.eligible).length)
+  assert.equal(
+    serverBoard.rows.find((row) => row.definition.id === 'DEV_M6_LISTED_2000')!.moneyKnown,
+    false,
+  )
+  assert.equal(
+    gameRaceSchedule({ ...server, raceOptions: { ...options, races: [] } }).readyCount,
+    0,
+  )
+  assert.equal(
+    gameRaceSchedule({ ...server, raceOptions: { ...options, restrictionReason: '서버 제한' } })
+      .readyCount,
+    0,
+  )
+  assert.equal(JSON.stringify(local), before)
 })
 
 for (const mode of ['local', 'server'] as const) {
@@ -867,6 +935,60 @@ for (const mode of ['local', 'server'] as const) {
       options,
     )
     try {
+      await h.waitFor(() => !!h.container.querySelector('tbody button'))
+      const clickText = async (text: string) => {
+        const button = [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+          (b) => b.textContent?.trim() === text,
+        )
+        assert.ok(button, text)
+        await act(async () => button.click())
+      }
+      const gameSaved = readBrowserSave()
+      const serverSaved = JSON.stringify(workspace)
+      await clickText('게임 경주 일정')
+      await h.waitFor(() => h.container.querySelectorAll('[data-game-race]').length === 19)
+      assert.equal(h.container.querySelector('h1')?.textContent, '게임 경주 일정')
+      const target = 'DEV_M3_MIDDLE_2000'
+      await act(async () =>
+        h.container
+          .querySelector<HTMLButtonElement>(`[data-game-race="${target}"] button`)!
+          .click(),
+      )
+      await clickText('현재 말로 출전 준비')
+      await h.waitFor(() => !!h.container.querySelector('input[name="entry-race"]:checked'))
+      assert.equal(
+        h.container.querySelector<HTMLInputElement>('input[name="entry-race"]:checked')!.value,
+        target,
+      )
+      assert.equal(h.container.querySelectorAll('input[name="entry-jockey"]:checked').length, 1)
+      assert.equal(h.container.querySelectorAll('input[name="entry-tactic"]').length, 4)
+      assert.equal(careerStore.getSnapshot().career!.raceRun, undefined)
+      assert.deepEqual(readBrowserSave(), gameSaved)
+      assert.equal(JSON.stringify(workspace), serverSaved)
+      await act(async () => {
+        h.dom.window.history.back()
+        await new Promise((resolve) => setTimeout(resolve, 25))
+      })
+      await h.waitFor(() => h.container.querySelector('h1')?.textContent === '미들 트라이얼')
+      await act(async () => {
+        h.dom.window.history.forward()
+        await new Promise((resolve) => setTimeout(resolve, 25))
+      })
+      await h.waitFor(() => !!h.container.querySelector('input[name="entry-race"]:checked'))
+      assert.equal(
+        h.container.querySelector<HTMLInputElement>('input[name="entry-race"]:checked')!.value,
+        target,
+      )
+      h.dom.window.history.replaceState(
+        { ...history.state, gameEntrySelection: { raceId: target, context: 'old-career-context' } },
+        '',
+        h.dom.window.location.href,
+      )
+      await h.reload()
+      await h.waitFor(() => h.container.textContent!.includes('이전 경주 선택'))
+      assert.equal(h.container.querySelectorAll('input[name="entry-race"]:checked').length, 0)
+      await clickText('게임 경주 일정 다시 선택')
+      await clickText('공식 참고 자료')
       await h.waitFor(() => !!h.container.querySelector('tbody button'))
       await h.waitFor(
         () =>

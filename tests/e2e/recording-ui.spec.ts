@@ -262,7 +262,7 @@ for (const viewport of [
         json: { error: { code: 'API_NOT_CONFIGURED', message: '일시 연결 실패' } },
       }),
     )
-    await page.goto('/?view=races')
+    await page.goto('/?view=races&raceCatalog=reference')
     // Next.js has its own empty route-announcer alert outside main.
     const errors = page.getByRole('main').getByRole('alert')
     await expect(errors).toHaveCount(1)

@@ -26,7 +26,43 @@ import { Section } from './presentation'
 import { Management } from './management'
 import { RaceCatalogFilters } from './race-catalog-filters'
 import { CatalogGameplayBridge } from './catalog-gameplay-bridge'
+import { GameRaceBrowser, RaceBrowserTabs, useRaceBrowser } from './game-race-browser'
 
+type BrowserProps = {
+  setView: (view: View) => void
+  onGameplay: (view: GameplayView, raceId?: string) => void
+  mode?: 'local' | 'server'
+}
+function RaceBrowser({ detail, ...props }: BrowserProps & { detail: boolean }) {
+  const location = useRaceBrowser()
+  if (!location) {
+    return (
+      <p role="status" className="p-4">
+        경주 화면을 불러오는 중…
+      </p>
+    )
+  }
+  return (
+    <>
+      <RaceBrowserTabs reference={location.reference} />
+      {location.reference ? (
+        detail ? (
+          <ReferenceRace {...props} />
+        ) : (
+          <ReferenceRaces {...props} />
+        )
+      ) : (
+        <GameRaceBrowser {...props} detail={detail} />
+      )}
+    </>
+  )
+}
+export function Races(props: BrowserProps) {
+  return <RaceBrowser {...props} detail={false} />
+}
+export function Race(props: BrowserProps) {
+  return <RaceBrowser {...props} detail />
+}
 type Page = components['schemas']['RaceScheduleList']
 export function CatalogStatus({
   resource,
@@ -86,7 +122,7 @@ function useLocation() {
   }
   return { location, error, change }
 }
-export function Races({
+function ReferenceRaces({
   setView,
   onGameplay,
 }: {
@@ -265,6 +301,11 @@ export function RaceCatalogList({
                       >
                         {race.name}
                       </button>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {race.playability?.sourceRaceId === race.id
+                          ? '참고 전용 · 게임 연결 보류'
+                          : '게임 연결 정보 미조회'}
+                      </p>
                       {race.duplicateGroup && (
                         <p className="mt-1 text-xs text-muted-foreground">중복 검토 후보</p>
                       )}
@@ -336,7 +377,7 @@ export function RaceCatalogList({
     </section>
   )
 }
-export function Race({
+function ReferenceRace({
   setView,
   onGameplay,
 }: {
@@ -440,6 +481,7 @@ export function RaceCatalogDetail({
 }) {
   return (
     <>
+      <ReferencePlayability race={race} />
       <Section eyebrow="RACE SUMMARY" title={`${gradeText(race)} · ${dateText(race)}`}>
         <Facts
           rows={[
@@ -512,5 +554,59 @@ export function RaceCatalogDetail({
         </p>
       </Section>
     </>
+  )
+}
+
+function ReferencePlayability({ race }: { race: CatalogRace }) {
+  const data = race.playability?.sourceRaceId === race.id ? race.playability : null
+  const reasonLabels: Record<NonNullable<CatalogRace['playability']>['reasons'][number], string> = {
+    mapping_not_approved: '게임 경주 매핑 미승인',
+    opponents_not_approved: '상대마 구성 미승인',
+    recurrence_not_approved: '육성 시즌 반복 규칙 미승인',
+    win_conditions_not_approved: '승수 조건 미승인',
+    source_not_verified: '원본 자료 검증 필요',
+    duplicate_review: '중복 검토 필요',
+    not_run: '취소·미개최',
+    date_unconfirmed: '개최 일자 미확인',
+    course_unassigned: '게임 코스 미연결',
+    age_unconfirmed: '연령 조건 미확인',
+    sex_rule_unsupported: '성별 규칙 미지원',
+    eligibility_unconfirmed: '참가 자격 미확인',
+    surface_unsupported: '게임 노면 미지원',
+    grade_unsupported: '게임 등급 미지원',
+    distance_unconfirmed: '거리 미확인',
+    runners_unconfirmed: '출전 두수 미확인',
+    game_economy_unapproved: '게임 등록비·상금 미승인',
+  }
+  return (
+    <Section eyebrow="REFERENCE PLAYABILITY" title="공식 참고 자료 · 게임 연결 상태">
+      <p className="text-sm">
+        {data
+          ? '연결 보류 · 실제 출전 대상이 아닙니다.'
+          : '연결 정보를 확인하지 못했습니다. 출전 가능으로 판단하지 않습니다.'}
+      </p>
+      <Facts
+        rows={[
+          ['Source ID', race.id],
+          ['Game Definition ID', data?.raceDefinitionId ?? '미연결'],
+          ['연결 상태 (status)', data?.status ?? '미조회'],
+          ['육성 달력 반복 승인', data?.calendarPolicy ?? '미조회'],
+        ]}
+      />
+      {data && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm font-semibold">연결 보류 사유</summary>
+          <ul className="mt-2 space-y-1 text-sm">
+            {data.reasons.map((reason) => (
+              <li key={reason}>{reasonLabels[reason]}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        공식 개최 연도·월과 원본 상금을 육성 시즌·게임 상금으로 바꾸지 않습니다. Backend의 승인된
+        연결과 실제 출전 후보가 확인되어야 합니다.
+      </p>
+    </Section>
   )
 }
