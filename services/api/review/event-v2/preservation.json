@@ -1,0 +1,16 @@
+{
+  "hashes": {
+    "seeds/events.catalog.json": "51e205b4d5da98e340cf0a879b824218143c6ecba33720b35b191a2f133835f8",
+    "seeds/events.expansion.catalog.json": "d7f4db57318c2a72233a5f2109519ecb8cbfa70c06ef94353a5735c17aae7917",
+    "seeds/events.expansion.source.json": "c6ac6ee823608ff77f272e19f89b04315089a7be6337ea1fb9650ebc4c792037",
+    "seeds/events.import.json": "0e36db16ed26458a0f1cd016ed71bf4a107aebec77a8b854e49a1cf307e52222",
+    "../../lib/career/events/fixtures.ts": "76ce231eac00dceb3d625cacdcc4de8cdfa883a1b897cffa42917e149792a242",
+    "../../lib/career/balance.ts": "e97b252a5fc5aa83c890b12c580deed456ff4e26989c6523ea73f2bda2366f29",
+    "../../packages/shared/src/events.ts": "3bb640db868fb6cf84cf462dd215f434b7863bacdeb6261a1fa6d1d859e3807e",
+    "../../lib/career/events/director.ts": "fe0b6df787e433825d99d499354062b89fb60dfed288cefa154361b4ed34a613",
+    "src/modules/events/director.ts": "6a944c4ae257ba8a4e8772686f20c561fee3d09048eef40fb1904025852596d8",
+    "src/modules/events/resolver.ts": "d06c7b7671fbf5435868f173f89a7477e67fe486fb09dc209cd763de30746172"
+  },
+  "runtimeChanged": 0,
+  "activationAllowed": false
+}
