@@ -47,6 +47,8 @@ services/api/reports/race-playability.json은 모든 851 ID/국가/기준연도/
 
 공식 총상금은 gamePrizeMoney로 대체하지 않는다. 현재 엔진에서 표현할 수 없는 G1/G2/G3, dirt/sand/synthetic, 성별 제한, 명목 환산 거리, 불명확한 두수/코스는 차단한다. 상태 이름이 verified여도 실제 출전 승인과 같지 않다.
 
+원본 `courseId=null`은 별도 승인된 `mapping.courseId/courseSnapshot`으로 검증할 수 있다. 이때도 원본 `racecourseId` 일치, verified 코스 자료, 코스 snapshot/hash 및 `decisions.course` 승인이 필수다. 원본 courseId가 있으면 그 ID도 일치해야 한다. 원본의 게임 등록비/상금이 null이면 `mapping.economy`와 `decisions.economy`의 독립적인 게임 밸런스 승인 및 game definition의 정확한 수치 일치를 요구한다. 원본 게임 수치가 있으면 각각 추가로 일치 검증한다. 공식 총상금은 승인 경제값을 대신하지 않는다. 원본 null은 덮어쓰지 않으며 원본 snapshot/sourceDigest 검증도 그대로 유지한다.
+
 ## 후보 보고서
 
 기존 재생성 명령 `node --import tsx scripts/report-race-playability.ts`를 재사용하면 1단계 보고서에 더해 `reports/race-mapping-candidates.json`을 생성한다. 별도 API나 DB importer를 추가하지 않았다.

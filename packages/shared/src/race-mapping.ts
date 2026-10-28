@@ -227,12 +227,11 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
     ) {
       fail('game_economy_unapproved')
     }
-    // Official total purse is never a substitute for first-place game prize.
+    // Missing source game values may be approved independently in the mapping.
+    // Present source values must agree; official total purse is never a substitute.
     if (
-      ref.entryFee === null ||
-      ref.gamePrizeMoney === null ||
-      ref.entryFee !== game.entryFee ||
-      ref.gamePrizeMoney !== game.prize
+      (ref.entryFee !== null && ref.entryFee !== game.entryFee) ||
+      (ref.gamePrizeMoney !== null && ref.gamePrizeMoney !== game.prize)
     ) {
       fail('game_economy_source_unconfirmed')
     }
@@ -258,7 +257,7 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
     !hash.test(mapping.courseDigest) ||
     canonicalMappingValue(mapping.courseSnapshot) !== canonicalMappingValue(course) ||
     course.id !== mapping.courseId ||
-    ref.courseId !== mapping.courseId ||
+    (ref.courseId !== null && ref.courseId !== mapping.courseId) ||
     course.racecourseId !== ref.racecourseId ||
     course.surface !== 'turf' ||
     course.verificationStatus !== 'verified' ||

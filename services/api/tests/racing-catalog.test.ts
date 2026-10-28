@@ -455,7 +455,8 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
     scheduleStatus: 'dated' as const,
     country: 'KOR' as const,
     racecourseId: 'RC_TEST',
-    courseId: 'COURSE_TEST',
+    // Match the actual normalized catalog: approval must not rewrite source nulls.
+    courseId: null,
     grade: 'Listed' as const,
     surface: 'turf' as const,
     distanceMeters: 1400,
@@ -464,8 +465,8 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
     sexCondition: null,
     originalEligibility: '2세 이상',
     maxRunners: 10,
-    entryFee: 500000,
-    gamePrizeMoney: 8000000,
+    entryFee: null,
+    gamePrizeMoney: null,
     duplicateGroup: null,
     verificationStatus: 'verified' as const,
     sourceUrl: 'https://example.invalid/official-test',
@@ -534,6 +535,87 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
     context = { reference: ref, course, definition: game }
   assert.deepEqual(inspectRaceMapping(mapping, ref, course, game).reasons, [])
   assert.deepEqual(validateRaceMapping(mapping, context), [])
+  const sourceBefore = digest(ref)
+  // Re-pin all source proofs so conflicts fail on their own rule, not stale provenance.
+  const inspectSource = (reference: (typeof catalog.races)[number]) => {
+    const updated = {
+      ...body,
+      source: mappingSourceFacts(reference),
+      sourceDigest: digest(reference),
+    }
+    return inspectRaceMapping({ ...updated, revision: digest(updated) }, reference, course, game)
+  }
+  assert.deepEqual(inspectSource({ ...ref, courseId: course.id }).reasons, [])
+  assert.ok(
+    inspectSource({ ...ref, courseId: 'COURSE_OTHER' }).reasons.includes(
+      'course_unassigned_or_unverified',
+    ),
+  )
+  assert.ok(
+    inspectSource({ ...ref, racecourseId: 'RC_OTHER' }).reasons.includes(
+      'course_unassigned_or_unverified',
+    ),
+  )
+  const unverifiedCourse = { ...course, verificationStatus: 'unverified' as const }
+  const unverifiedBody = {
+    ...body,
+    courseSnapshot: unverifiedCourse,
+    courseDigest: digest(unverifiedCourse),
+  }
+  assert.ok(
+    inspectRaceMapping(
+      { ...unverifiedBody, revision: digest(unverifiedBody) },
+      ref,
+      unverifiedCourse,
+      game,
+    ).reasons.includes('course_unassigned_or_unverified'),
+  )
+  for (const entryFee of [null, game.entryFee]) {
+    for (const gamePrizeMoney of [null, game.prize]) {
+      assert.deepEqual(inspectSource({ ...ref, entryFee, gamePrizeMoney }).reasons, [])
+    }
+  }
+  for (const reference of [
+    { ...ref, entryFee: game.entryFee + 1 },
+    { ...ref, gamePrizeMoney: game.prize + 1 },
+  ]) {
+    assert.ok(inspectSource(reference).reasons.includes('game_economy_source_unconfirmed'))
+  }
+  for (const economy of [
+    null,
+    { ...body.economy, entryFee: game.entryFee + 1 },
+    { ...body.economy, firstPrize: game.prize + 1 },
+    { ...body.economy, firstPrize: ref.prizeMoney ?? 1600000000 },
+  ]) {
+    const updated = { ...body, economy }
+    assert.ok(
+      inspectRaceMapping(
+        { ...updated, revision: digest(updated) },
+        ref,
+        course,
+        game,
+      ).reasons.includes('game_economy_unapproved'),
+    )
+  }
+  const purseBody = { ...body, economy: { ...body.economy, basis: 'official_total' } }
+  assert.ok(
+    inspectRaceMapping(
+      { ...purseBody, revision: digest(purseBody) },
+      ref,
+      course,
+      game,
+    ).reasons.includes('mapping_schema_invalid'),
+  )
+  for (const reference of [
+    { ...ref, courseId: course.id },
+    { ...ref, entryFee: game.entryFee },
+    { ...ref, gamePrizeMoney: game.prize },
+  ]) {
+    const reasons = inspectRaceMapping(mapping, reference, course, game).reasons
+    assert.ok(reasons.includes('reference_changed'))
+    assert.ok(reasons.includes('source_digest_changed'))
+  }
+  assert.equal(digest(ref), sourceBefore)
   for (const field of mappingDecisionFields) {
     const altered = structuredClone(mapping)
     delete altered.decisions[field]
