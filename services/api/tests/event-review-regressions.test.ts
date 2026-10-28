@@ -315,3 +315,102 @@ test('current import properties match the checked Notion revision while archived
     assert.equal(event.review!.executable, false)
   }
 })
+
+test('quality audit covers all versions, preserves active definitions and emits tamper-evident non-importable review rows', async () => {
+  const { auditEventQuality, reviewPacketSchema, distributionAudit } =
+    await import('../src/modules/events/quality-audit')
+  const common = JSON.parse(await readFile('seeds/events.catalog.json', 'utf8'))
+  const expansion = JSON.parse(await readFile('seeds/events.expansion.catalog.json', 'utf8'))
+  const input = {
+    common: common.events,
+    expansion: expansion.events,
+    source: await source(),
+    legacySource: JSON.parse(await readFile('seeds/events.import.json', 'utf8')),
+  }
+  const before = digest(input)
+  const result = auditEventQuality(input)
+  assert.equal(digest(input), before)
+  assert.equal(result.report.summary.total, 1000)
+  assert.equal(result.report.summary.common, 350)
+  assert.equal(result.report.summary.expansion, 650)
+  assert.equal(result.report.summary.activeCommon, 315)
+  assert.equal(result.report.summary.activeExpansion, 0)
+  assert.equal(result.report.summary.localFixtures, 30)
+  assert.equal(result.report.summary.promotableNow, 0)
+  assert.equal(new Set(result.report.records.map((r) => r.id)).size, 1000)
+  assert.ok(
+    result.packet.rows.every(
+      (r) => !r.enabled && !r.executable && r.manualStoryReview === 'pending',
+    ),
+  )
+  for (const record of result.report.records) {
+    if (record.server.category === 'hidden' || record.server.review?.executable === false) {
+      assert.equal(record.proposal.state, 'hold')
+      assert.deepEqual(record.proposal.after, record.proposal.before)
+      assert.equal(record.observations.skipped, 'hold_or_unmapped_no_fallback')
+    }
+    assert.equal(record.proposal.before.weight, record.proposal.after.weight)
+    assert.deepEqual(record.proposal.before.conditions, record.proposal.after.conditions)
+  }
+  assert.ok(!('events' in result.packet))
+  const { catalogSchema } = await import('../src/modules/events/schema')
+  assert.equal(catalogSchema.safeParse(result.packet).success, false)
+  const { draftCatalogSchema } = await import('../src/modules/events/drafts')
+  assert.equal(draftCatalogSchema.safeParse(result.packet).success, false)
+  const tampered = structuredClone(result.packet)
+  tampered.rows[0].after.name = 'tampered'
+  assert.equal(reviewPacketSchema.safeParse(tampered).success, false)
+  assert.deepEqual(
+    result.distribution,
+    JSON.parse(await readFile('review/event-v2/distribution.json', 'utf8')),
+  )
+  assert.deepEqual(distributionAudit(input.common, 120), distributionAudit(input.common, 120))
+  assert.ok(result.distribution.server.draws <= 6000 && result.distribution.local.draws <= 6000)
+  const reportManifest = JSON.parse(await readFile('review/event-v2/report.json', 'utf8'))
+  const packetManifest = JSON.parse(await readFile('review/event-v2/packet.json', 'utf8'))
+  const loadParts = async (files: { path: string; digest: string; ids: string[] }[]) => {
+    const rows: unknown[] = []
+    for (const file of files) {
+      const part = JSON.parse(await readFile('review/event-v2/' + file.path, 'utf8'))
+      assert.equal(digest(part), file.digest)
+      assert.deepEqual(
+        part.map((r: { id: string }) => r.id),
+        file.ids,
+      )
+      rows.push(...part)
+    }
+    return rows
+  }
+  const rows = await loadParts(packetManifest.files)
+  const records = await loadParts(reportManifest.files)
+  assert.deepEqual(rows, result.packet.rows)
+  assert.deepEqual(records, result.report.records)
+  assert.equal(packetManifest.revision, result.packet.revision)
+  assert.equal(reviewPacketSchema.safeParse({ ...result.packet, rows }).success, true)
+  assert.throws(() =>
+    auditEventQuality({ ...input, expansion: [...input.expansion, input.expansion[0]] }),
+  )
+  const existing = common.events.find(
+    (e: EventDefinition) => e.id === 'COM-0031',
+  ) as EventDefinition
+  const changed = structuredClone(input)
+  const index = changed.common.findIndex((e: EventDefinition) => e.id === existing.id)
+  const revised = {
+    ...existing,
+    choices: [
+      {
+        ...existing.choices[0],
+        effects: [{ type: 'value_delta' as const, key: 'speed' as const, amount: 900 }],
+      },
+    ],
+  }
+  changed.common[index] = revision(revised)
+  const candidate = auditEventQuality(changed).packet.rows.find((r) => r.id === existing.id)!
+  assert.ok(candidate.findings.some((f) => f.code === 'EXTREME_EFFECT'))
+  assert.equal(candidate.numericChanges[0].before, 900)
+  assert.equal(candidate.numericChanges[0].after, 20)
+  assert.equal(
+    existing.choices[0].effects.some((e) => e.type === 'value_delta' && e.amount === 900),
+    false,
+  )
+})
