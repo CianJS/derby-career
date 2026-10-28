@@ -594,3 +594,58 @@ input::placeholder { color: var(--muted-foreground); }
 }
 .race-playback-controls { position: sticky; bottom: .5rem; z-index: 10; box-shadow: var(--shadow-soft); }
 .race-playback-controls button { min-width: 2.75rem; font-size: .875rem; }
+
+/* Integrated training and record workspace: content may grow; the document always scrolls. */
+.training-dashboard { display: grid; gap: .75rem; min-width: 0; }
+.training-dashboard > *, .training-information > * { min-width: 0; }
+.training-information { display: flex; flex-direction: column; gap: .75rem; }
+.training-workspace .ui-section { margin-top: 0; padding: .75rem 1rem; }
+.training-workspace .ui-focus-grid { gap: .75rem 1.5rem; }
+.training-workspace .ui-focus-grid > dl:first-of-type dd { font-size: 1.5rem; line-height: 1.25; }
+.training-workspace .ui-focus-grid > dl:last-of-type > div { border: 1px solid var(--border); border-radius: .375rem; padding: .4rem .5rem; background: var(--secondary); }
+.training-workspace .ui-focus-grid > div > p { font-size: .8125rem; }
+.training-workspace .lab-meter { height: .375rem; }
+.training-workspace .lab-monthly { align-self: start; }
+.training-workspace .lab-action-tab { min-height: 5.5rem; padding: .75rem; }
+.training-expedition > summary, .training-recent > summary { min-height: 2rem; line-height: 1.6; }
+.training-expedition #career-expedition { padding: .5rem 0 0; }
+.training-expedition select { max-width: 100%; }
+.training-recent ul { line-height: 1.6; }
+.training-recent li p { white-space: normal; overflow-wrap: anywhere; }
+.jockey-detail .ui-section { margin: 0; padding: .75rem 1rem; }
+.jockey-detail .ui-section > div:first-child { margin-bottom: .5rem; }
+.jockey-detail .ui-section h2 { font-size: .9375rem; }
+.jockey-detail .ui-section .ui-label { font-size: .625rem; }
+.jockey-detail .jockey-profile > div:last-child > div { padding: .4rem .5rem; }
+.jockey-detail .jockey-profile > div:last-child { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.jockey-detail .jockey-abilities > div:last-child { gap: .5rem 1rem; }
+.jockey-record-scroll, .jockey-horse-scroll { max-height: 18rem; overflow: auto; overscroll-behavior: contain; }
+.jockey-record-scroll > div:first-child { position: sticky; top: 0; z-index: 1; background: var(--card); padding-top: .25rem; }
+.jockey-record-scroll [data-record-link] { min-height: 2.75rem; overflow-wrap: anywhere; }
+.jockey-record-scroll [data-riding-record] { padding-block: .125rem; align-items: center; }
+.jockey-horse-scroll p { margin: 0; padding-block: .5rem; }
+.stable-records .stable-active-summary > :is(button, dl, p) { margin-top: .5rem; }
+.stable-records [aria-label="마방 자금 현황"] { display: flex; align-items: baseline; flex-wrap: wrap; gap: .5rem 1rem; padding-block: .5rem; }
+.stable-records [aria-label="마방 자금 현황"] p { margin: 0; }
+@media (min-width: 1024px) {
+  .training-dashboard { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-areas: "horse horse" "decision information" "recent information"; align-items: start; }
+  .training-dashboard > :is(.ui-section,.lab-horse-focus) { grid-area: horse; }
+  .training-dashboard > .lab-monthly { grid-area: decision; }
+  .training-dashboard > .training-information { grid-area: information; }
+  .training-dashboard > .training-recent { grid-area: recent; }
+  .training-workspace .lab-monthly [aria-label="월간 행동 선택"] { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .jockey-detail.ui-page { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: .75rem; padding-top: .75rem; padding-bottom: .75rem; }
+  .jockey-detail > :is(div:first-child,button) { grid-column: 1 / -1; }
+  .jockey-detail > div:first-child h1 { font-size: 1.5rem; line-height: 1.3; margin-top: .25rem; }
+  .jockey-detail > div:first-child > p:last-child { margin-top: .25rem; }
+  .jockey-detail .jockey-abilities { grid-column: 1 / -1; }
+  .jockey-detail .jockey-profile > div:last-child { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .stable-records .stable-active-summary dl { grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
+@media (max-width: 520px) {
+  .training-workspace .ui-focus-grid > dl:first-of-type { gap: .4rem; }
+  .training-workspace .ui-focus-grid > dl:first-of-type dd { font-size: 1.125rem; }
+  .training-workspace .ui-focus-grid > dl:first-of-type dt { font-size: .75rem; }
+  .training-expedition summary span { display: block; margin-left: 0; }
+  .jockey-detail > *, .training-workspace button, .training-workspace select { max-width: 100%; min-width: 0; }
+}

@@ -101,6 +101,7 @@ for (const viewport of [
     await page.reload()
     expect(await saved(page)).toEqual(before)
     await page.getByRole('button', { name: /STABLE 마구간/ }).click()
+    await expect(page.locator('#career-expedition')).toHaveCount(0)
     const archive = page
       .locator('section')
       .filter({ has: page.getByRole('heading', { name: '은퇴 경주마', exact: true }) })
@@ -138,9 +139,71 @@ for (const viewport of [
     await page.getByRole('button', { name: /한도윤/ }).click()
     await expect(page.getByText('만료일 정보 없음', { exact: true })).toBeVisible()
     await expect(page.getByText('2029년 12월까지', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: '저장된 기승 기록', exact: true })).toBeVisible()
+    if (viewport.width === 1440) {
+      for (const width of [1440, 1600]) {
+        await page.setViewportSize({ width, height: 900 })
+        const height = await page.evaluate(() => ({
+          scroll: document.documentElement.scrollHeight,
+          client: document.documentElement.clientHeight,
+        }))
+        expect(height.scroll, `jockey ${width}: ${JSON.stringify(height)}`).toBeLessThanOrEqual(
+          height.client + 1,
+        )
+        await info.attach(`jockey-size-${width}`, {
+          body: JSON.stringify(height),
+          contentType: 'application/json',
+        })
+      }
+      await page.setViewportSize(viewport)
+    }
     await page.getByRole('button', { name: 'DERBY CAREER', exact: true }).first().click()
     await page.getByRole('button', { name: '육성 계속', exact: true }).click()
     await expect(page.getByRole('region', { name: '이벤트 확인', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '현재 육성마 상세', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '상세 기록', exact: true })).toHaveCount(1)
+    await expect(page.locator('.training-workspace details.training-expedition')).toHaveCount(1)
+    if (viewport.width === 1440) {
+      for (const size of [
+        { width: 1440, height: 900 },
+        { width: 1600, height: 900 },
+        { width: 1920, height: 1080 },
+      ]) {
+        await page.setViewportSize(size)
+        const height = await page.evaluate(() => ({
+          scroll: document.documentElement.scrollHeight,
+          client: document.documentElement.clientHeight,
+        }))
+        expect(
+          height.scroll,
+          `training ${size.width}: ${JSON.stringify(height)}`,
+        ).toBeLessThanOrEqual(height.client + 1)
+        await info.attach(`training-size-${size.width}`, {
+          body: JSON.stringify(height),
+          contentType: 'application/json',
+        })
+      }
+      // A 720px CSS viewport exercises the reflow of a 1440px display at 200% zoom.
+      await page.setViewportSize({ width: 720, height: 450 })
+      await noOverflow(page)
+      await expect(page.getByRole('group', { name: '월간 행동 선택' })).toBeVisible()
+      await page.setViewportSize(viewport)
+    } else {
+      await page.setViewportSize({ width: 320, height: 740 })
+      await noOverflow(page)
+      await expect(page.getByRole('group', { name: '월간 행동 선택' })).toBeVisible()
+      await page.setViewportSize(viewport)
+    }
+    await page.locator('details.training-expedition > summary').focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('region', { name: '해외 원정', exact: true })).toBeVisible()
+    await page.keyboard.press('Enter')
+    const timelineBefore = await saved(page)
+    await page.getByRole('button', { name: '상세 기록', exact: true }).click()
+    await expect(page.getByRole('heading', { name: '주요 사건', exact: true })).toHaveCount(0)
+    await expect(page.locator('[data-career-story]')).toHaveCount(0)
+    expect(await saved(page)).toEqual(timelineBefore)
+    await page.getByRole('button', { name: '← 이번 달 육성', exact: true }).click()
     await page
       .getByRole('group', { name: '월간 행동 선택' })
       .getByRole('button', { name: /^휴식/ })

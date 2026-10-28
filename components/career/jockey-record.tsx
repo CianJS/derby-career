@@ -171,6 +171,7 @@ export function Jockey({
       title={j.name}
       eyebrow="JOCKEY RECORD"
       description="저장된 계약과 경기 기록을 기준으로 표시합니다."
+      className="jockey-detail"
     >
       <button
         onClick={() => setView('jockeys')}
@@ -178,7 +179,7 @@ export function Jockey({
       >
         ← 기수 목록
       </button>
-      <Section eyebrow="PROFILE / CONTRACT" title="프로필 · 계약">
+      <Section className="jockey-profile" eyebrow="PROFILE / CONTRACT" title="프로필 · 계약">
         <div className="grid grid-cols-2 md:grid-cols-3">
           {[
             ['나이', jockeyProfiles[j.id] ? `${jockeyProfiles[j.id].age}세` : '—'],
@@ -204,7 +205,7 @@ export function Jockey({
           ))}
         </div>
       </Section>
-      <Section eyebrow="HORSE / JOCKEY" title="말과 기수의 신뢰도">
+      <Section className="jockey-trust" eyebrow="HORSE / JOCKEY" title="말과 기수의 신뢰도">
         <p className="text-sm">
           {career?.horse ? `${career.horse.name} ↔ ${j.name} · ` : `${j.name} · `}
           <JockeyTrustValue trust={jockeyTrust(snapshot, j.id)} />
@@ -213,7 +214,7 @@ export function Jockey({
           현재 육성마와 이 기수 사이의 관계이며, 기수의 공통 능력치와 다릅니다.
         </p>
       </Section>
-      <Section eyebrow="ABILITIES" title="기수 능력">
+      <Section className="jockey-abilities" eyebrow="ABILITIES" title="기수 능력">
         <div className="grid gap-4 md:grid-cols-5">
           {['스타트', '페이스 판단', '진로 판단', '승부 타이밍', '기승 안정'].map((a, i) => (
             <div
@@ -226,14 +227,19 @@ export function Jockey({
           ))}
         </div>
       </Section>
-      <Section eyebrow="RIDING RECORD" title="기승 기록">
+      <Section className="jockey-records" eyebrow="RIDING RECORD" title="기승 기록">
         <p className="mb-3 text-xs text-muted-foreground">
           {snapshot.mode === 'server'
             ? '현재 불러온 현역마·은퇴마 기록을 저장 날짜가 최신인 순서로 표시합니다. 아직 불러오지 않은 은퇴마의 기록은 포함되지 않습니다.'
             : '저장된 현역마·은퇴마 기록을 날짜가 최신인 순서로 표시합니다.'}{' '}
           날짜를 확인할 수 없으면 원래 값을 함께 표시하며 목록 뒤에 둡니다.
         </p>
-        <div className="overflow-x-auto">
+        <div
+          className="jockey-record-scroll overflow-auto"
+          role="region"
+          aria-label="저장된 기승 기록"
+          tabIndex={0}
+        >
           <div className="grid min-w-[620px] grid-cols-[100px_1.2fr_1.3fr_70px_70px] border-b border-border px-3 pb-2 text-[10px] text-muted-foreground">
             <span>날짜</span>
             <span>말</span>
@@ -289,8 +295,13 @@ export function Jockey({
           )}
         </div>
       </Section>
-      <Section eyebrow="HORSES" title="함께한 말">
-        <div className="flex flex-col gap-2">
+      <Section className="jockey-horses" eyebrow="HORSES" title="함께한 말">
+        <div
+          className="jockey-horse-scroll flex flex-col gap-2"
+          role="region"
+          aria-label="함께한 말 목록"
+          tabIndex={0}
+        >
           {riddenHorses.length === 0 ? (
             <p className="border-y border-border py-4 text-sm text-muted-foreground">
               함께한 말이 없습니다.

@@ -7,6 +7,10 @@ export function focusExpedition() {
   if (!section) {
     return
   }
+  const disclosure = section.closest('details')
+  if (disclosure) {
+    disclosure.open = true
+  }
   section.focus({ preventScroll: true })
   section.scrollIntoView({ block: 'start' })
 }

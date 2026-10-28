@@ -4,6 +4,16 @@ import { BROWSER_SAVE_KEY } from '../../lib/career/browser-save'
 import { fixtureLifecycle } from '../../lib/career/fixtures'
 import { restartSaveApi } from './catalog-control'
 
+async function showExpedition(page: Page) {
+  const disclosure = page.locator('details.training-expedition')
+  if (
+    (await disclosure.count()) &&
+    !(await disclosure.evaluate((node) => node.hasAttribute('open')))
+  ) {
+    await disclosure.locator('summary').first().click()
+  }
+}
+
 async function rest(page: Page) {
   await page
     .getByRole('group', { name: '월간 행동 선택' })
@@ -93,7 +103,9 @@ for (const [target, width] of [
     const other = await context.newPage()
     await other.goto('/')
     await other.getByRole('button', { name: '육성 계속', exact: true }).click()
+    await showExpedition(page)
     await page.getByLabel('원정 국가', { exact: true }).selectOption(target)
+    await showExpedition(other)
     await other
       .getByLabel('원정 국가', { exact: true })
       .selectOption(target === 'JPN' ? 'USA' : 'JPN')
@@ -109,7 +121,9 @@ for (const [target, width] of [
     // Either tab may win the lock. Return once and explicitly choose the target under test.
     let current = await read()
     if (current.lifecycle.travel.locationCountry !== target) {
+      await showExpedition(page)
       await page.getByRole('button', { name: '귀국', exact: true }).click()
+      await showExpedition(page)
       await page.getByLabel('원정 국가', { exact: true }).selectOption(target)
       await page.getByRole('button', { name: '원정 신청', exact: true }).click()
     }
@@ -134,6 +148,7 @@ for (const [target, width] of [
     current = await read()
     expect(current.lifecycle.fundsKRW).toBe(20_000_000 + prize)
     expect(current.career.careerTurnIndex).toBe(4)
+    await showExpedition(page)
     await page.getByRole('button', { name: '귀국', exact: true }).click()
     await expect(page.locator('[data-travel-location]')).toContainText('현재 체류 · 대한민국')
     await rest(page)
@@ -221,6 +236,7 @@ for (const [target, width] of [
         posts.push(r.postData()!)
       }
     })
+    await showExpedition(page)
     await page.getByLabel('원정 국가', { exact: true }).selectOption(target)
     await page.route(
       '**/api/server-save/v1/careers/*/expeditions',
@@ -269,6 +285,7 @@ for (const [target, width] of [
     // Continue from the stored foreign result after a bounded test API restart;
     // no production rate-limit setting or saved travel/race state is changed.
     await restartSaveApi()
+    await showExpedition(page)
     await page.getByRole('button', { name: '귀국', exact: true }).click()
     await expect(page.locator('[data-travel-location]')).toContainText('현재 체류 · 대한민국')
     await rest(page)
@@ -295,10 +312,11 @@ for (const [target, width] of [
     expect(current.career.travel.activeExpedition).toBeNull()
     expect(await page.evaluate((key) => localStorage.getItem(key), BROWSER_SAVE_KEY)).toBeNull()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await showExpedition(page)
     await page.getByLabel('원정 국가', { exact: true }).selectOption(target)
     await page.getByRole('button', { name: '원정 신청', exact: true }).click()
     await expect(page.getByRole('button', { name: '귀국', exact: true })).toBeEnabled()
-    await page.getByRole('button', { name: '현재 육성마 상세', exact: true }).click()
+    await page.getByRole('button', { name: '상세 기록', exact: true }).click()
     await page.getByRole('button', { name: '은퇴', exact: true }).click()
     await page.getByRole('button', { name: '은퇴 확정', exact: true }).click()
     await expect(

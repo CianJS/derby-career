@@ -174,7 +174,7 @@ test('real server trust/economy: Month 1–7, v4 replay/reload, lost completion 
   const final = await get()
   expect(final.career.state.careerTurnIndex).toBe(7)
   expect(final.career.state.raceRecords).toHaveLength(2)
-  await page.getByRole('button', { name: '현재 육성마 상세', exact: true }).click()
+  await page.getByRole('button', { name: '상세 기록', exact: true }).click()
   await page.getByRole('button', { name: '은퇴', exact: true }).click()
   await page.getByRole('button', { name: '은퇴 확정', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Career Archive 보기', exact: true })).toBeVisible()

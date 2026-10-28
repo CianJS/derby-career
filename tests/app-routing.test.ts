@@ -7,6 +7,7 @@ import { act, createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NoticeCenter, NoticeList, NoticeDetails } from '../components/notices/notice-center'
 import { expeditionControls } from '../components/career/expedition-panel'
+import { focusExpedition } from '../components/career/expedition-navigation'
 import {
   localEventChoiceAvailability,
   canTrain,
@@ -1018,6 +1019,8 @@ for (const mode of ['local', 'server'] as const) {
           h.container.textContent!.includes(savedCareer.horse.name) &&
           !h.container.querySelector('#stable-current-horse'),
       )
+      assert.equal(h.container.querySelector('[data-career-story]'), null)
+      assert.doesNotMatch(h.container.textContent!, /주요 사건/)
       await act(async () => h.container.querySelector<HTMLButtonElement>('header button')!.click())
       await openStable()
       await clickText('육성 계속')
@@ -1443,7 +1446,7 @@ test('actual App: developer Server creation submits the explicit starter and pre
 
 for (const mode of ['local', 'server'] as const) {
   for (const country of ['KOR', 'JPN', 'USA'] as const) {
-    test(`actual App ${mode} ${country}: common expedition status, readonly navigation and country-warning focus preserve saves`, async () => {
+    test(`actual App ${mode} ${country}: training expedition disclosure and country-warning focus preserve saves`, async () => {
       const fixture = managementFixture()
       fixture.career.month = 6
       fixture.career.careerTurnIndex = 6
@@ -1508,14 +1511,21 @@ for (const mode of ['local', 'server'] as const) {
         await act(async () =>
           h.container.querySelector<HTMLButtonElement>('[aria-label="설정"]')!.click(),
         )
+        assert.equal(panel(), null, 'settings is not an expedition manager')
+        await act(async () =>
+          h.container.querySelector<HTMLButtonElement>('header button')!.click(),
+        )
+        await click('육성 계속')
         await h.waitFor(() => !!panel())
+        assert.ok(panel().closest('.training-workspace'))
+        assert.equal(panel().closest('details')!.open, false)
         const status = panel().querySelector('[data-travel-location]')!.textContent
-        assert.equal(panel().querySelector('select'), null)
         assert.match(panel().textContent!, country === 'KOR' ? /소속국 체류 중/ : /원정 중/)
         if (country !== 'KOR') {
           assert.ok(panel().textContent!.includes(travel.activeExpedition!.targetRaceDefinitionId!))
         }
-        await click('원정 관리 · 육성 화면에서 원정·귀국')
+        await act(async () => focusExpedition())
+        assert.equal(panel().closest('details')!.open, true)
         assert.equal(h.dom.window.document.activeElement, panel())
         assert.equal(h.container.querySelectorAll('#career-expedition').length, 1)
         assert.ok(
@@ -1565,9 +1575,9 @@ for (const mode of ['local', 'server'] as const) {
             .click(),
         )
         await h.waitFor(() => !!h.container.querySelector('#stable-current-horse'))
-        assert.equal(panel().querySelector('[data-travel-location]')!.textContent, status)
-        assert.equal(panel().querySelector('select'), null)
-        await click('원정 관리 · 육성 화면에서 원정·귀국')
+        assert.equal(panel(), null, 'stable is an archive, without expedition controls')
+        await click('육성 계속')
+        await act(async () => focusExpedition())
         assert.equal(h.dom.window.document.activeElement, panel())
         await act(async () =>
           [
@@ -1598,7 +1608,7 @@ for (const mode of ['local', 'server'] as const) {
 }
 
 for (const mode of ['local', 'server'] as const) {
-  test(`actual App ${mode}: confirmed race allows readonly expedition navigation while commands stay locked`, async () => {
+  test(`actual App ${mode}: confirmed race allows opening training expedition details while commands stay locked`, async () => {
     const fixture = managementFixture()
     const workspace = activeServerWorkspace()
     fixture.career = structuredClone(workspace.career!.state)
@@ -1640,12 +1650,19 @@ for (const mode of ['local', 'server'] as const) {
             ),
           )
         }
+        assert.equal(panel(), null)
+        if (view === 'settings') {
+          await clickButton(h.container.querySelector<HTMLButtonElement>('header button'))
+        }
+        await clickButton(
+          [...h.container.querySelectorAll<HTMLButtonElement>('button')].find(
+            (b) => b.textContent?.trim() === '육성 계속',
+          ),
+        )
         await h.waitFor(() => !!panel())
         assert.match(panel().textContent!, /확정한 경주를 완료한 뒤/)
-        const manage = [...panel().querySelectorAll<HTMLButtonElement>('button')].find((b) =>
-          b.textContent?.includes('원정 관리'),
-        )
-        await clickButton(manage)
+        await act(async () => focusExpedition())
+        assert.equal(panel().closest('details')!.open, true)
         assert.equal(h.dom.window.document.activeElement, panel())
         assert.equal(h.container.querySelectorAll('#career-expedition').length, 1)
         const start = [...panel().querySelectorAll<HTMLButtonElement>('button')].find(

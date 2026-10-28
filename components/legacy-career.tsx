@@ -2,7 +2,6 @@
 
 import { HealthGuidance } from './career/health-guidance'
 import { healthGuidance } from '@/lib/career/health-presentation'
-import { focusExpedition } from './career/expedition-navigation'
 import { ExpeditionPanel } from './career/expedition-panel'
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CareerCheckpoint } from "@/components/career/checkpoint";
@@ -369,7 +368,7 @@ function Cockpit({
       action={
         <button
           onClick={() => setView("horse")}
-          className="text-xs text-primary"
+          className="min-h-11 px-2 text-sm font-semibold text-primary"
         >
           상세 기록 <ChevronRight className="inline" size={14} />
         </button>
@@ -394,7 +393,7 @@ function Cockpit({
               </span>
             </div>
           )}
-          {career && <HealthGuidance career={career} />}
+          {career && <HealthGuidance career={career} compact />}
         </div>
         <dl className="grid grid-cols-5 gap-3 lg:border-x lg:border-border lg:px-6">
           {stats.map(([n, v]) => (
@@ -410,8 +409,8 @@ function Cockpit({
         <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
           {[
             ["컨디션", state.activeHorse?.condition || "좋음", "text-sage"],
-            ["피로", String(state.activeHorse?.fatigue ?? 36), "text-rose"],
-            ["부하", String(state.activeHorse?.bodyLoad ?? 48), "text-primary"],
+            ["피로", String(career?.values.fatigue ?? state.activeHorse?.fatigue ?? "확인 중"), "text-rose"],
+            ["신체 부하", String(career?.values.bodyLoad ?? state.activeHorse?.bodyLoad ?? "확인 중"), "text-primary"],
             ["건강", health, injured ? "text-rose" : "text-sage"],
           ].map(([a, b, c]) => (
             <div key={a} className="flex items-center justify-between gap-2">
@@ -450,13 +449,6 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
   const [localState, setState] = useState<LifecycleState>(initialLifecycle);
   const [selectedJockeyId, setSelectedJockeyId] = useState(jockeys[0].id);
   const [view, updateView] = useState<View>("home");
-  const expeditionFocus = useRef(false)
-  useEffect(() => {
-    if (expeditionFocus.current) {
-      expeditionFocus.current = false
-      focusExpedition()
-    }
-  }, [view])
 
   const setView = useCallback((next: View) => {
     const url = new URL(window.location.href)
@@ -658,17 +650,8 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
               <button disabled={busy} onClick={() => void careerStore.refresh()} className="mt-2 text-xs underline">{pending ? '같은 요청으로 다시 확인' : '서버 기록 새로고침'}</button>
             </div>
           )}
-          {(['training', 'entry', 'stable', 'settings'].includes(view) || (view === 'candidates' && !!career)) && (
-            <ExpeditionPanel
-              mode={saveMode}
-              loading={!hydrated}
-              saveError={saveError}
-              readOnly={view === 'stable' || view === 'settings'}
-              onManage={() => {
-                expeditionFocus.current = true
-                setView('training')
-              }}
-            />
+          {view === 'entry' && (
+            <ExpeditionPanel mode={saveMode} loading={!hydrated} saveError={saveError} />
           )}
           {compatibleMode && (saveMode === 'local' || workspace) && <>
           {(saveError || (saveMode === 'local' && !snapshot.lifecycle && error)) && (
@@ -725,6 +708,7 @@ export default function App({ saveMode = 'local' }: { saveMode?: 'local' | 'serv
           )}{" "}
           {(view === "training" || view === "candidates") && (saveMode === "server" || !!state.stableName || !!career) && (
             <CareerCheckpoint
+                  expedition={<ExpeditionPanel compact mode={saveMode} loading={!hydrated} saveError={saveError} />}
                   selectionHistoryUnknown={!compatibleMode || (saveMode === 'local' && (!hydrated || !!saveError || (!localHistoryKnown && !snapshot.lifecycle?.archive?.length && !snapshot.lifecycle?.lastRetiredId)))}
                   onHome={() => setView("home")}
                   onHorse={() => setView("horse")}
