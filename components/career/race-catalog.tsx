@@ -540,7 +540,7 @@ export function RaceCatalogDetail({
           </summary>
           <Facts
             rows={[
-              ['경주 ID', race.id],
+              ['공식 경주 ID (Source ID)', race.id],
               ['검증 상태', race.verificationStatus],
               ['중복 후보 그룹', race.duplicateGroup || '없음'],
               ['메모', race.notes || '없음'],
@@ -587,7 +587,7 @@ function ReferencePlayability({ race }: { race: CatalogRace }) {
       </p>
       <Facts
         rows={[
-          ['Source ID', race.id],
+          ['자료 종류', '공식 참고 자료 · Source ID는 아래 내부 검토 정보에서 확인'],
           ['Game Definition ID', data?.raceDefinitionId ?? '미연결'],
           ['연결 상태 (status)', data?.status ?? '미조회'],
           ['육성 달력 반복 승인', data?.calendarPolicy ?? '미조회'],

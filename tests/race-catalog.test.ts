@@ -178,6 +178,8 @@ test('review identifiers remain in collapsed detail only, with duplicate rows an
     assert.doesNotMatch(review.split('>')[0], /\bopen\b/)
     assert.ok(review.includes(race.duplicateGroup!))
     assert.ok(review.includes(race.id))
+    assert.equal(detail.split(race.id).length - 1, 1)
+    assert.match(review, /Source ID/)
     assert.ok(review.includes(race.verificationStatus))
     assert.doesNotMatch(detail.replace(review, ''), new RegExp(race.duplicateGroup!))
     assert.match(detail.replace(review, ''), /원본 출처 보기/)
