@@ -75,7 +75,7 @@ for (const width of [390, 1440]) {
       await page.reload()
       expect((await read()).career).toEqual(completed)
       await page.getByRole('button', { name: '육성 계속', exact: true }).click()
-      await page.getByRole('button', { name: '현재 육성마 상세', exact: true }).click()
+      await page.getByRole('button', { name: '상세 기록', exact: true }).click()
       await expect(page.locator('[data-trust-change="confirmed"]')).toHaveCount(1)
       expect((await read()).career.raceRecords).toHaveLength(1)
       await page.getByRole('button', { name: '은퇴', exact: true }).click()

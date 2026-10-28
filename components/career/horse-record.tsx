@@ -156,7 +156,7 @@ export function Horse({
             })}
           </div>
         </Section>
-        <div className="grid gap-5 md:grid-cols-2">
+        <div>
           <Section eyebrow="KEY JOCKEYS" title="주요 기수">
             {summary.jockeyRelations.length === 0 ? (
               <p className="py-3 text-sm text-muted-foreground">함께한 기수가 없습니다.</p>
@@ -172,9 +172,6 @@ export function Horse({
                 </p>
               ))
             )}
-          </Section>
-          <Section eyebrow="CAREER TIMELINE" title="주요 사건">
-            <CareerTimeline horse={horse} selectedRaceRunId={selectedRaceRunId} />
           </Section>
         </div>
       </div>

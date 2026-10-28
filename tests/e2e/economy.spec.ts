@@ -140,7 +140,7 @@ for (const width of [390, 1440]) {
     await expect(funds()).toHaveText(text)
     expect((await read()).lifecycle.economyLedger).toEqual(completed.lifecycle.economyLedger)
     await page.getByRole('button', { name: '육성 계속', exact: true }).click()
-    await page.getByRole('button', { name: '현재 육성마 상세', exact: true }).click()
+    await page.getByRole('button', { name: '상세 기록', exact: true }).click()
     await page.getByRole('button', { name: '은퇴', exact: true }).click()
     await page.getByRole('button', { name: '은퇴 확정', exact: true }).click()
     await expect(

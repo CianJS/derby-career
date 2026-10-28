@@ -71,7 +71,7 @@ export function StableActiveHorse({
     <section
       aria-labelledby="stable-current-horse"
       aria-busy={active.status === 'loading' || active.status === 'pending'}
-      className="mb-4 rounded-lg border border-border bg-card p-4"
+      className="stable-active-summary rounded-lg border border-border bg-card p-3"
     >
       <h2 id="stable-current-horse" className="text-base font-bold">
         현재 육성마
@@ -182,7 +182,8 @@ export function Stable({
     <Management
       title="마구간"
       eyebrow="STABLE"
-      description="현재 육성마와 은퇴 경주마의 커리어 기록을 구분해 확인합니다."
+      description="육성을 완료한 경주마의 기록을 검색하고 비교합니다."
+      className="stable-records"
     >
       <StableActiveHorse active={active} setView={setView} onActiveSelect={onActiveSelect} />
       <section aria-label="마방 자금 현황" className="border-y border-border py-4 text-sm">

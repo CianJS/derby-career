@@ -5,7 +5,13 @@ import {
   type HealthSource,
 } from '@/lib/career/health-presentation'
 
-export function HealthGuidance({ career }: { career: HealthSource }) {
+export function HealthGuidance({
+  career,
+  compact = false,
+}: {
+  career: HealthSource
+  compact?: boolean
+}) {
   const health = healthGuidance(career)
   return (
     <aside
@@ -20,7 +26,14 @@ export function HealthGuidance({ career }: { career: HealthSource }) {
         {health.trainingText} · {health.raceText}
       </p>
       {health.caution && <p className="text-primary">{health.caution}</p>}
-      <p className="text-muted-foreground">{RACE_ELIGIBILITY_NOTICE}</p>
+      {compact ? (
+        <details className="text-muted-foreground">
+          <summary className="cursor-pointer">출전 자격 안내</summary>
+          <p>{RACE_ELIGIBILITY_NOTICE}</p>
+        </details>
+      ) : (
+        <p className="text-muted-foreground">{RACE_ELIGIBILITY_NOTICE}</p>
+      )}
     </aside>
   )
 }

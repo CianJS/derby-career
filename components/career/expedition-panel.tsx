@@ -62,12 +62,14 @@ export function expeditionControls(
 }
 
 export function ExpeditionPanel({
+  compact = false,
   readOnly = false,
   mode,
   loading = false,
   saveError = null,
   onManage,
 }: {
+  compact?: boolean
   readOnly?: boolean
   mode?: 'local' | 'server'
   loading?: boolean
@@ -96,13 +98,13 @@ export function ExpeditionPanel({
   const candidates = races.filter((r) => r.countryCode === destination)
   const selectedRace = candidates.some((r) => r.id === raceId) ? raceId : ''
   const targetRace = races.find((r) => r.id === active?.targetRaceDefinitionId)
-  return (
+  const content = (
     <section
       id="career-expedition"
       aria-label="해외 원정"
       tabIndex={-1}
       aria-busy={busy}
-      className="m-4 scroll-mt-20 rounded-lg border border-border bg-card p-4 text-sm"
+      className={`${compact ? 'mt-2' : 'm-4 rounded-lg border border-border bg-card p-4'} scroll-mt-20 text-sm`}
     >
       <h2 className="font-semibold">해외 원정</h2>
       {travel && (
@@ -237,5 +239,21 @@ export function ExpeditionPanel({
         </details>
       )}
     </section>
+  )
+  return compact ? (
+    <details className="training-expedition lab-recent p-3">
+      <summary className="cursor-pointer text-sm font-semibold">
+        해외 원정 관리
+        <span className="ml-2 font-normal" data-travel-summary>
+          {travel
+            ? `현재 체류 · ${countryName(travel.locationCountry)} · ${active ? '원정 중' : '소속국 체류 중'}`
+            : '상태 확인 필요'}
+          {(pending || error) && ' · 저장·연결 확인 필요'}
+        </span>
+      </summary>
+      {content}
+    </details>
+  ) : (
+    content
   )
 }

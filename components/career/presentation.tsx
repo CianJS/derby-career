@@ -37,14 +37,16 @@ export function Section({
   title,
   children,
   action,
+  className = '',
 }: {
   eyebrow: string
   title: string
   children: ReactNode
   action?: ReactNode
+  className?: string
 }) {
   return (
-    <section className="ui-section border border-border bg-card">
+    <section className={`ui-section border border-border bg-card ${className}`}>
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
           <p className="ui-label">{eyebrow}</p>
