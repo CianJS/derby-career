@@ -393,3 +393,421 @@ test('reference playability audits all 851 rows without inferring rules or chang
   const stored = JSON.parse(await readFile('reports/race-playability.json', 'utf8'))
   assert.deepEqual(stored, { sourceDigest: digest(await source()), ...report })
 })
+
+test('mapping candidates are reproducible, inactive, hash-pinned and cannot turn fixtures into official races', async () => {
+  const { buildRaceMappingReport, inspectRaceMapping } =
+    await import('../src/modules/racing/mapping')
+  const { raceMappingRegistry } = await import('../../../packages/shared/src/race-mapping')
+  const catalog = normalizeRacingCatalog(await source())
+  const before = digest(catalog)
+  const report = buildRaceMappingReport(catalog.races, catalog.courses)
+  assert.deepEqual(
+    report,
+    JSON.parse(await readFile('reports/race-mapping-candidates.json', 'utf8')),
+  )
+  assert.equal(report.referenceRows, 851)
+  assert.equal(report.publicDistinctRows, 848)
+  assert.equal(report.verifiedSources, 669)
+  assert.equal(report.missingSourceFacts, 851)
+  assert.equal(report.playable, 0)
+  assert.equal(report.approvedMappings, 0)
+  assert.equal(report.existingGameDefinitions.length, 19)
+  assert.equal(report.candidates.length, 851)
+  assert.equal(new Set(report.candidates.map((c) => c.mapping.referenceId)).size, 851)
+  for (const candidate of report.candidates) {
+    const ref = catalog.races.find((r) => r.id === candidate.mapping.referenceId)!
+    assert.equal(candidate.mapping.state, 'candidate')
+    assert.equal(candidate.mapping.gameDefinitionId, null)
+    assert.equal(candidate.mapping.sourceDigest, digest(ref))
+    assert.equal(candidate.decisionsRequired.length, 13)
+    assert.ok(candidate.validationReasons.includes('mapping_not_approved'))
+    assert.deepEqual(candidate.matchingGameDefinitions, [])
+    assert.ok(
+      inspectRaceMapping({ ...candidate.mapping, state: 'approved' }, ref, null, null).reasons
+        .length > 0,
+    )
+  }
+  assert.equal(raceMappingRegistry.activation, 'disabled')
+  assert.equal(raceMappingRegistry.mappings.length, 0)
+  assert.ok(Object.isFrozen(raceMappingRegistry) && Object.isFrozen(raceMappingRegistry.mappings))
+  assert.equal(digest(catalog), before)
+})
+
+test('approved mapping verifier rejects stale provenance, partial decisions and cross-mode rule divergence', async () => {
+  const {
+    mappingSourceFacts,
+    validateRaceMapping,
+    validateMappingRegistry,
+    previewMappedEntry,
+    mappingDecisionFields,
+  } = await import('../../../packages/shared/src/race-mapping')
+  const { inspectRaceMapping } = await import('../src/modules/racing/mapping')
+  const { startCareer, raceDefinitions, commitAction } =
+    await import('../../../packages/shared/src/domain')
+  const catalog = normalizeRacingCatalog(await source())
+  // Entirely synthetic approval proof. Never registered in the compiled registry or database.
+  const ref = {
+    ...catalog.races[0],
+    id: 'RACE_TEST_2026',
+    name: '매핑 검증 전용',
+    year: 2026,
+    raceDate: '2026-03-01',
+    scheduleStatus: 'dated' as const,
+    country: 'KOR' as const,
+    racecourseId: 'RC_TEST',
+    // Match the actual normalized catalog: approval must not rewrite source nulls.
+    courseId: null,
+    grade: 'Listed' as const,
+    surface: 'turf' as const,
+    distanceMeters: 1400,
+    distanceBasis: 'source_meters' as const,
+    ageCondition: '2세 이상',
+    sexCondition: null,
+    originalEligibility: '2세 이상',
+    maxRunners: 10,
+    entryFee: null,
+    gamePrizeMoney: null,
+    duplicateGroup: null,
+    verificationStatus: 'verified' as const,
+    sourceUrl: 'https://example.invalid/official-test',
+  }
+  const course = {
+    ...catalog.courses[0],
+    id: 'COURSE_TEST',
+    racecourseId: 'RC_TEST',
+    surface: 'turf' as const,
+    verificationStatus: 'verified' as const,
+    configuration: '표준',
+    direction: 'left',
+    straightLength: 300,
+    sourceUrl: 'https://example.invalid/course-test',
+  }
+  const game = {
+    ...raceDefinitions[0],
+    id: 'GAME_TEST_1400',
+    name: ref.name,
+    countryCode: 'KOR',
+    month: 3,
+    raceClass: 'Listed' as const,
+    minWins: 0,
+    maxWins: undefined,
+    prize: 8000000,
+    entryFee: 500000,
+  }
+  const body = {
+    version: 1 as const,
+    referenceId: ref.id,
+    gameDefinitionId: game.id,
+    state: 'approved' as const,
+    sourceDigest: digest(ref),
+    source: mappingSourceFacts(ref),
+    definitionDigest: digest(game),
+    definition: game,
+    courseId: course.id,
+    courseDigest: digest(course),
+    courseSnapshot: course,
+    eligibility: { minAge: 2, maxAge: null, sex: 'any' as const, minWins: 0, maxWins: null },
+    calendar: {
+      referenceYear: 2026,
+      firstGameYear: 2028 as const,
+      seasonMonth: 3,
+      policy: 'repeat_season_month' as const,
+    },
+    economy: {
+      entryFee: 500000,
+      firstPrize: 8000000,
+      currency: 'KRW' as const,
+      basis: 'game_balance' as const,
+    },
+    opponents: { profile: 'shared-development-v1' as const, runners: 10 },
+    decisions: Object.fromEntries(
+      mappingDecisionFields.map((k) => [
+        k,
+        {
+          status: 'approved' as const,
+          reference: 'https://example.invalid/test-decision',
+          reviewer: 'fixture-only',
+        },
+      ]),
+    ),
+  }
+  const mapping = { ...body, revision: digest(body) },
+    context = { reference: ref, course, definition: game }
+  assert.deepEqual(inspectRaceMapping(mapping, ref, course, game).reasons, [])
+  assert.deepEqual(validateRaceMapping(mapping, context), [])
+  const sourceBefore = digest(ref)
+  // Re-pin all source proofs so conflicts fail on their own rule, not stale provenance.
+  const inspectSource = (reference: (typeof catalog.races)[number]) => {
+    const updated = {
+      ...body,
+      source: mappingSourceFacts(reference),
+      sourceDigest: digest(reference),
+    }
+    return inspectRaceMapping({ ...updated, revision: digest(updated) }, reference, course, game)
+  }
+  assert.deepEqual(inspectSource({ ...ref, courseId: course.id }).reasons, [])
+  assert.ok(
+    inspectSource({ ...ref, courseId: 'COURSE_OTHER' }).reasons.includes(
+      'course_unassigned_or_unverified',
+    ),
+  )
+  assert.ok(
+    inspectSource({ ...ref, racecourseId: 'RC_OTHER' }).reasons.includes(
+      'course_unassigned_or_unverified',
+    ),
+  )
+  const unverifiedCourse = { ...course, verificationStatus: 'unverified' as const }
+  const unverifiedBody = {
+    ...body,
+    courseSnapshot: unverifiedCourse,
+    courseDigest: digest(unverifiedCourse),
+  }
+  assert.ok(
+    inspectRaceMapping(
+      { ...unverifiedBody, revision: digest(unverifiedBody) },
+      ref,
+      unverifiedCourse,
+      game,
+    ).reasons.includes('course_unassigned_or_unverified'),
+  )
+  for (const entryFee of [null, game.entryFee]) {
+    for (const gamePrizeMoney of [null, game.prize]) {
+      assert.deepEqual(inspectSource({ ...ref, entryFee, gamePrizeMoney }).reasons, [])
+    }
+  }
+  for (const reference of [
+    { ...ref, entryFee: game.entryFee + 1 },
+    { ...ref, gamePrizeMoney: game.prize + 1 },
+  ]) {
+    assert.ok(inspectSource(reference).reasons.includes('game_economy_source_unconfirmed'))
+  }
+  for (const economy of [
+    null,
+    { ...body.economy, entryFee: game.entryFee + 1 },
+    { ...body.economy, firstPrize: game.prize + 1 },
+    { ...body.economy, firstPrize: ref.prizeMoney ?? 1600000000 },
+  ]) {
+    const updated = { ...body, economy }
+    assert.ok(
+      inspectRaceMapping(
+        { ...updated, revision: digest(updated) },
+        ref,
+        course,
+        game,
+      ).reasons.includes('game_economy_unapproved'),
+    )
+  }
+  const purseBody = { ...body, economy: { ...body.economy, basis: 'official_total' } }
+  assert.ok(
+    inspectRaceMapping(
+      { ...purseBody, revision: digest(purseBody) },
+      ref,
+      course,
+      game,
+    ).reasons.includes('mapping_schema_invalid'),
+  )
+  for (const reference of [
+    { ...ref, courseId: course.id },
+    { ...ref, entryFee: game.entryFee },
+    { ...ref, gamePrizeMoney: game.prize },
+  ]) {
+    const reasons = inspectRaceMapping(mapping, reference, course, game).reasons
+    assert.ok(reasons.includes('reference_changed'))
+    assert.ok(reasons.includes('source_digest_changed'))
+  }
+  assert.equal(digest(ref), sourceBefore)
+  for (const field of mappingDecisionFields) {
+    const altered = structuredClone(mapping)
+    delete altered.decisions[field]
+    assert.ok(validateRaceMapping(altered, context).includes('approval_required:' + field))
+  }
+  const wrongGame = { ...game, prize: ref.prizeMoney ?? 1600000000 }
+  assert.ok(
+    validateRaceMapping(mapping, { ...context, definition: wrongGame }).includes(
+      'game_definition_changed',
+    ),
+  )
+  assert.ok(
+    validateRaceMapping(mapping, { ...context, reference: { ...ref, year: 2027 } }).includes(
+      'reference_changed',
+    ),
+  )
+  assert.ok(
+    validateRaceMapping(mapping, { ...context, course: null }).includes(
+      'course_unassigned_or_unverified',
+    ),
+  )
+  assert.ok(
+    inspectRaceMapping(
+      { ...mapping, sourceDigest: '0'.repeat(64) },
+      ref,
+      course,
+      game,
+    ).reasons.includes('source_digest_changed'),
+  )
+  assert.ok(
+    inspectRaceMapping({ ...mapping, definition: { id: 12 } }, ref, course, game).reasons.includes(
+      'definition_schema_invalid',
+    ),
+  )
+  assert.ok(
+    inspectRaceMapping({ ...mapping, unexpected: true }, ref, course, game).reasons.includes(
+      'mapping_schema_invalid',
+    ),
+  )
+  assert.ok(
+    inspectRaceMapping(
+      { ...mapping, revision: '0'.repeat(64) },
+      ref,
+      course,
+      game,
+    ).reasons.includes('mapping_revision_changed'),
+  )
+  assert.ok(
+    validateMappingRegistry([mapping, mapping], [context])[0].reasons.includes(
+      'duplicate_reference_mapping',
+    ),
+  )
+  assert.ok(
+    validateMappingRegistry([mapping], [context, context])[0].reasons.includes(
+      'ambiguous_reference_context',
+    ),
+  )
+  assert.ok(
+    inspectRaceMapping(mapping, ref, { ...course, straightLength: 301 }, game).reasons.includes(
+      'course_definition_changed',
+    ),
+  )
+  const career = startCareer('DEV_HORSE_RED_COMET', { starterJockeyId: 'HAN_DOYUN' })
+  const travel = {
+    homeCountry: 'KOR' as const,
+    locationCountry: 'KOR' as const,
+    revision: 0,
+    activeExpedition: null,
+  }
+  for (const turn of [3, 15, 63]) {
+    const state = { ...career, month: turn, careerTurnIndex: turn }
+    const local = await previewMappedEntry(mapping, context, state, 500000, travel, 'HAN_DOYUN')
+    // Server rows use the same shared snapshot and rules after ownership/pending checks.
+    const server = await previewMappedEntry(
+      structuredClone(mapping),
+      structuredClone(context),
+      structuredClone(state),
+      500000,
+      structuredClone(travel),
+      'HAN_DOYUN',
+    )
+    assert.deepEqual(local, server)
+    assert.equal(local.reason, null)
+    assert.equal(local.race!.month, turn)
+    assert.equal(
+      (await previewMappedEntry(mapping, context, state, 499999, travel, 'HAN_DOYUN')).reason,
+      '마방 자금이 부족하여 등록비를 낼 수 없습니다.',
+    )
+    assert.equal(
+      (await previewMappedEntry(mapping, context, state, 500000, travel, 'MISSING')).reason,
+      'jockey_not_contracted',
+    )
+    assert.equal(
+      (
+        await previewMappedEntry(
+          mapping,
+          context,
+          { ...state, health: '중상' },
+          500000,
+          travel,
+          'HAN_DOYUN',
+        )
+      ).reason,
+      'health_restricted',
+    )
+    assert.equal(
+      (
+        await previewMappedEntry(
+          mapping,
+          context,
+          commitAction(state, 'rest'),
+          500000,
+          travel,
+          'HAN_DOYUN',
+        )
+      ).reason,
+      'monthly_action_locked',
+    )
+    assert.notEqual(
+      (
+        await previewMappedEntry(
+          mapping,
+          context,
+          state,
+          500000,
+          { ...travel, locationCountry: 'USA' },
+          'HAN_DOYUN',
+        )
+      ).reason,
+      null,
+    )
+  }
+  assert.equal(
+    (
+      await previewMappedEntry(
+        mapping,
+        context,
+        { ...career, month: 4, careerTurnIndex: 4 },
+        500000,
+        travel,
+        'HAN_DOYUN',
+      )
+    ).reason,
+    'not_current_season_month',
+  )
+  const ageRef = { ...ref, ageCondition: '3세', originalEligibility: '3세' }
+  const ageBody = {
+    ...mapping,
+    sourceDigest: digest(ageRef),
+    source: mappingSourceFacts(ageRef),
+    eligibility: { ...mapping.eligibility, minAge: 3, maxAge: 3 },
+  }
+  const { revision: _oldAgeRevision, ...ageRevisionBody } = ageBody
+  const ageRestricted = { ...ageRevisionBody, revision: digest(ageRevisionBody) }
+  assert.equal(
+    (
+      await previewMappedEntry(
+        ageRestricted,
+        { ...context, reference: { ...ref, ageCondition: '3세', originalEligibility: '3세' } },
+        { ...career, month: 63, careerTurnIndex: 63 },
+        500000,
+        travel,
+        'HAN_DOYUN',
+      )
+    ).reason,
+    'age_restricted',
+  )
+  assert.equal(
+    (
+      await previewMappedEntry(
+        { ...mapping, revision: '0'.repeat(64) },
+        context,
+        { ...career, month: 3, careerTurnIndex: 3 },
+        500000,
+        travel,
+        'HAN_DOYUN',
+      )
+    ).reason,
+    'mapping_provenance_changed',
+  )
+  assert.equal(
+    (
+      await previewMappedEntry(
+        mapping,
+        context,
+        { ...career, calendarDate: { year: 2027, month: 3 }, month: 3, careerTurnIndex: 3 },
+        500000,
+        travel,
+        'HAN_DOYUN',
+      )
+    ).reason,
+    'game_calendar_year_restricted',
+  )
+  assert.equal(raceDefinitions.length, 17)
+})

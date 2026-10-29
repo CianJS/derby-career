@@ -1070,6 +1070,13 @@ export function registerExpeditionTests(label: string, database?: () => Database
           raceDefinitionId: ref.id,
         })
         assert.equal(rejected.statusCode, 422)
+        const forged = await f.call('POST', path(id) + '/race-entries', {
+          ...entry('KOR'),
+          raceRunId: randomUUID(),
+          raceDefinitionId: ref.id,
+          mapping: { state: 'approved', gameDefinitionId: 'DEV_M3_MILE_1600' },
+        })
+        assert.equal(forged.statusCode, 400)
       }
       assert.equal(
         (await f.call('GET', path(id) + '/race-entries?referenceRaceId=RACE_MISSING')).statusCode,
