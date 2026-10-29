@@ -78,7 +78,12 @@ for (const [target, width] of [
     await page.setViewportSize({ width, height: 900 })
     await page.goto('/')
     await page.getByRole('button', { name: '육성 계속', exact: true }).click()
-    await openEntry(page)
+    await page.getByRole('button', { name: 'DERBY CAREER', exact: true }).first().click()
+    await page.getByRole('button', { name: /RACE DATABASE 경주 정보/ }).click()
+    await expect(page.locator('[data-game-race]')).toHaveCount(19)
+    await page.locator('[data-game-race="DEV_M3_MIDDLE_2000"] button').click()
+    await page.getByRole('button', { name: '현재 말로 출전 준비', exact: true }).click()
+    await expect(page.locator('input[name="entry-race"]:checked')).toHaveValue('DEV_M3_MIDDLE_2000')
     const raceId = `DEV_${target}_M3_MILE_1600`
     await expect(page.locator(`input[value="${raceId}"]`)).toBeDisabled()
     await page.evaluate((key) => {
@@ -142,7 +147,7 @@ for (const [target, width] of [
       contentType: 'image/png',
     })
     await page.reload()
-    await page.getByRole('button', { name: '육성 계속', exact: true }).click()
+    await page.getByRole('button', { name: '육성으로 돌아가기', exact: true }).click()
     await page.getByRole('button', { name: '출전 정보 확인', exact: true }).click()
     await finish(page)
     current = await read()

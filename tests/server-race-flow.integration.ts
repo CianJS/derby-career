@@ -16,6 +16,7 @@ import {
 import { handleServerSave } from '../lib/server-save/bridge'
 import { createRaceDataAdapter } from '../lib/career/race-data-adapter'
 import { recommendRaceEntry } from '../lib/career/race-entry-recommendation'
+import { gameRaceSchedule } from '../components/career/game-race-schedule'
 import { validateSaveCommand } from '../lib/server-save/commands'
 
 // Run from services/api so the existing fixture's seed and migration paths remain unchanged.
@@ -151,6 +152,20 @@ test('Frontend bridge/journal/adapter progresses Month 1–7 with server races i
         continue
       }
       const options = state!.raceOptions!
+      const schedule = gameRaceSchedule({
+        ...state!,
+        mode: 'server',
+        career: state!.workspace!.career!.state,
+        lifecycle: null,
+        localCareerId: null,
+      })
+      assert.equal(schedule.currentCount, options.races.length)
+      assert.equal(schedule.readyCount, options.races.filter((row) => row.eligible).length)
+      for (const entry of options.races) {
+        const displayed = schedule.rows.find((row) => row.definition.id === entry.definition.id)!
+        assert.deepEqual(displayed.definition, entry.definition)
+        assert.equal(displayed.canPrepare, entry.eligible && !options.restrictionReason)
+      }
       const draft = recommendRaceEntry(state!.workspace!.career!.state, undefined, options)
       assert.ok(draft.raceId && draft.jockeyId && draft.tactic)
       const command = {

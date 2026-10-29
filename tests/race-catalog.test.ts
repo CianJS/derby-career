@@ -22,6 +22,8 @@ import {
   type Race,
   type Venue,
 } from '../lib/race-catalog/model'
+import { withReferencePlayability } from '../packages/shared/src/race-playability'
+import { readRaceBrowser } from '../components/career/game-race-browser'
 import { handleCatalog } from '../lib/race-catalog/proxy'
 const seed: { races: Race[]; racecourses: Venue[] } = JSON.parse(
   readFileSync(new URL('../services/api/seeds/racing.catalog.json', import.meta.url), 'utf8'),
@@ -83,6 +85,29 @@ test('851 source rows preserve null dates, 3 duplicate pairs, national grade and
     assert.equal(selectedCourse({ ...row, courseId: null }, []), null)
   }
   assert.equal(prizeText({ ...seed.races[0], prizeMoney: null }), '미확인')
+  const before = JSON.stringify(seed.races)
+  for (const country of ['KOR', 'JPN', 'USA']) {
+    const source = seed.races.find((race) => race.country === country)!
+    const race = withReferencePlayability(source)
+    const detail = renderToStaticMarkup(
+      createElement(RaceCatalogDetail, { race, venue: null, course: null }),
+    )
+    assert.match(detail, /연결 보류 · 실제 출전 대상이 아닙니다/)
+    assert.match(detail, /Game Definition ID/)
+    assert.match(detail, /미연결/)
+    assert.ok(detail.includes(source.id))
+    assert.match(detail, /게임 등록비·상금 미승인/)
+    assert.doesNotMatch(detail, /<button/)
+    const unknown = renderToStaticMarkup(
+      createElement(RaceCatalogDetail, { race: source, venue: null, course: null }),
+    )
+    assert.match(unknown, /연결 정보를 확인하지 못했습니다/)
+  }
+  assert.equal(JSON.stringify(seed.races), before)
+  assert.equal(readRaceBrowser('?view=races').reference, false)
+  assert.equal(readRaceBrowser('?view=races&rc_page=9').reference, true)
+  assert.equal(readRaceBrowser('?view=race&raceId=RACE_KOR_2026_KOREA_CUP').reference, true)
+  assert.equal(readRaceBrowser('?view=races&raceCatalog=game&rc_page=9').reference, false)
 })
 test('catalog grades consistently distinguish actual classification, original notation and optional international fields', () => {
   const before = JSON.stringify(seed.races)
@@ -153,6 +178,8 @@ test('review identifiers remain in collapsed detail only, with duplicate rows an
     assert.doesNotMatch(review.split('>')[0], /\bopen\b/)
     assert.ok(review.includes(race.duplicateGroup!))
     assert.ok(review.includes(race.id))
+    assert.equal(detail.split(race.id).length - 1, 1)
+    assert.match(review, /Source ID/)
     assert.ok(review.includes(race.verificationStatus))
     assert.doesNotMatch(detail.replace(review, ''), new RegExp(race.duplicateGroup!))
     assert.match(detail.replace(review, ''), /원본 출처 보기/)
