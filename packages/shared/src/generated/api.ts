@@ -850,7 +850,7 @@ export interface components {
             surface: "Turf";
             distance: number;
             /** @enum {string} */
-            raceClass: "미승리" | "1승" | "Listed";
+            raceClass: "미승리" | "1승" | "Listed" | "G3";
             runners: number;
             courseProfile: string;
             prize: number;

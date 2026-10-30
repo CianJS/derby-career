@@ -535,6 +535,24 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
     context = { reference: ref, course, definition: game }
   assert.deepEqual(inspectRaceMapping(mapping, ref, course, game).reasons, [])
   assert.deepEqual(validateRaceMapping(mapping, context), [])
+  const g3Ref = { ...ref, grade: 'G3' as const, maxRunners: null }
+  const g3Game = { ...game, raceClass: 'G3' as const }
+  const g3Body = {
+    ...body,
+    source: mappingSourceFacts(g3Ref),
+    sourceDigest: digest(g3Ref),
+    definition: g3Game,
+    definitionDigest: digest(g3Game),
+  }
+  const g3Mapping = { ...g3Body, revision: digest(g3Body) }
+  assert.deepEqual(inspectRaceMapping(g3Mapping, g3Ref, course, g3Game).reasons, [])
+  assert.ok(
+    validateRaceMapping(g3Mapping, {
+      reference: { ...g3Ref, grade: 'G1' },
+      course,
+      definition: g3Game,
+    }).includes('grade_unsupported'),
+  )
   const sourceBefore = digest(ref)
   // Re-pin all source proofs so conflicts fail on their own rule, not stale provenance.
   const inspectSource = (reference: (typeof catalog.races)[number]) => {
@@ -548,9 +566,7 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
   assert.deepEqual(inspectSource({ ...ref, courseId: course.id }).reasons, [])
   assert.deepEqual(inspectSource({ ...ref, maxRunners: null }).reasons, [])
   assert.ok(
-    inspectSource({ ...ref, maxRunners: game.runners + 1 }).reasons.includes(
-      'runners_unconfirmed',
-    ),
+    inspectSource({ ...ref, maxRunners: game.runners + 1 }).reasons.includes('runners_unconfirmed'),
   )
   const noOpponentDecision = structuredClone(mapping)
   delete noOpponentDecision.decisions.opponents

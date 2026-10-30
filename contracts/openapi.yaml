@@ -2268,6 +2268,7 @@ components:
           - 미승리
           - 1승
           - Listed
+          - G3
         runners: *id009
         courseProfile: *id004
         prize: *id005

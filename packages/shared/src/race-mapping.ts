@@ -195,7 +195,10 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
     ) {
       fail('distance_unconfirmed')
     }
-    if (game.raceClass !== 'Listed' || ref.grade !== 'Listed') {
+    if (!(
+      (game.raceClass === 'Listed' && ref.grade === 'Listed') ||
+      (game.raceClass === 'G3' && ref.grade === 'G3')
+    )) {
       fail('grade_unsupported')
     }
     if (
