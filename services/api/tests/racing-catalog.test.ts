@@ -13,6 +13,7 @@ import type { Query } from '../src/db'
 import { normalizeRacingCatalog, digest } from '../src/modules/racing/catalog'
 import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
 import { createApiClient } from '../../../packages/shared/src/client'
+import { sapporoPilot } from '../../../packages/shared/src/sapporo-pilot'
 import {
   validateRacecourseList,
   validateRacecourseDetail,
@@ -34,6 +35,15 @@ test('Notion snapshot preserves every source ID, parent and reviewed exception',
   assert.equal(catalog.racecourses.length, 90)
   assert.equal(catalog.courses.length, 101)
   assert.equal(catalog.races.length, 851)
+  const sapporo = catalog.races.find((r) => r.id === sapporoPilot.source.id)!
+  const course = catalog.courses.find((c) => c.id === sapporoPilot.courseModel.id)!
+  assert.equal(digest(sapporo), sapporoPilot.source.digest)
+  assert.equal(digest(course), sapporoPilot.courseModel.digest)
+  assert.equal(sapporo.courseId, null)
+  assert.equal(sapporo.maxRunners, null)
+  assert.equal(sapporo.prizeMoney, sapporoPilot.source.firstPrizeJPY)
+  assert.equal(sapporoPilot.state, 'candidate')
+  assert.equal(sapporoPilot.courseModel.actual2026Rail, 'unconfirmed')
   assert.deepEqual(
     ['KOR', 'JPN', 'USA'].map((c) => catalog.races.filter((r) => r.country === c).length),
     [51, 176, 624],

@@ -12,6 +12,7 @@ import type { Career, Horse, Values } from './model'
 import { summarizeRecords } from './records'
 import { canRace, careerHealth } from './health'
 import { simulateRace, summarizeRaceLog, type RaceSimulationLog, type RaceSimulationSummary } from './race-simulation'
+import { sapporoPilot } from '../../packages/shared/src/sapporo-pilot'
 
 export const tactics = ['도주', '선행', '선입', '추입'] as const
 export type RunningTactic = typeof tactics[number]
@@ -146,12 +147,16 @@ const opponentNames = ['새벽빛', '은빛 바람', '푸른 물결', '해오름
 // Opponent count follows the race definition; names beyond the list are numbered so every runner id stays unique.
 // Strength spans the same stat range as the starter horses. Even-numbered runners lean on speed and odd-numbered ones
 // on stamina, so distance changes who is strong instead of only how strong everyone is.
-export function buildOpponents(race: RaceDefinitionSnapshot): RaceRunnerInput[] {
+export function buildOpponents(race: RaceDefinitionSnapshot, raceSeed = ''): RaceRunnerInput[] {
   const count = race.runners - 1
+  const sapporoG3 = race.id === sapporoPilot.definition.id && race.raceClass === 'G3'
+  let seedHash = 2166136261
+  for (const char of raceSeed) seedHash = Math.imul(seedHash ^ char.charCodeAt(0), 16777619) >>> 0
   return Array.from({ length: count }, (_, i): RaceRunnerInput => {
     const t = count > 1 ? i / (count - 1) : 0.5
     const staying = i % 2 === 1
-    const values = { speed: Math.round(460 + 110 * (staying ? 1 - t : t)), stamina: Math.round(450 + 110 * (staying ? t : 1 - t)), power: Math.round(470 + 90 * t), guts: 450 + (i % 3) * 35, intelligence: 470 + (i % 5) * 12, fatigue: 5, bodyLoad: 5 }
+    const g3Bonus = sapporoG3 ? 60 + ((seedHash + i * 7) % 21) : 0
+    const values = { speed: Math.round(460 + 110 * (staying ? 1 - t : t)) + g3Bonus, stamina: Math.round(450 + 110 * (staying ? t : 1 - t)) + g3Bonus, power: Math.round(470 + 90 * t) + g3Bonus, guts: 450 + (i % 3) * 35 + g3Bonus, intelligence: 470 + (i % 5) * 12 + g3Bonus, fatigue: 5, bodyLoad: 5 }
     return {
       horseSnapshot: { id: `${race.id}_RUNNER_${i + 1}`, name: opponentNames[i] ?? `출전마 ${i + 1}`, age: 2, values, aptitude: [['잔디', 'A'], ['단거리', 'B'], ['마일', 'B'], ['중거리', 'B'], ['장거리', 'C'], ...tactics.map(t => [t, 'B'] as [string, string])], health: 'HEALTHY', condition: '보통', record: '0전 0승' },
       jockeySnapshot: { id: `FIELD_JOCKEY_${i + 1}`, name: `참가 기수 ${i + 1}`, start: 75, pace: 75, path: 75, timing: 75, stability: 75, chemistry: 0, style: '균형' }, tactic: tactics[i % tactics.length],
@@ -163,7 +168,9 @@ export function createRaceRun(career: Career, race: RaceDefinitionSnapshot, jock
   const { health, recovery } = careerHealth(career)
   const horseSnapshot: HorseSnapshot = { id: career.horse.id, name: career.horse.name, age: careerProgress(career.careerTurnIndex).age, values: { ...career.values }, aptitude: career.horse.aptitude, health, healthRecovery: recovery, condition: career.condition, record: career.record }
   const player: RaceRunnerInput = { horseSnapshot, jockeySnapshot: jockey, tactic }
-  return structuredClone({ raceRunId: identity(), month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(race)], raceSeed: identity(), engineVersion: 'entry-contract-v1' })
+  const raceRunId = identity()
+  const raceSeed = identity()
+  return structuredClone({ raceRunId, month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(race, raceSeed)], raceSeed, engineVersion: 'entry-contract-v1' })
 }
 export function lockRaceEntry(career: Career, draft: RaceEntryDraft, identity: () => string = () => crypto.randomUUID()): Career {
   return lockRaceEntryWithLog(career, draft, identity).career
