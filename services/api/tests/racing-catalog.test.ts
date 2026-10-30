@@ -546,6 +546,25 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
     return inspectRaceMapping({ ...updated, revision: digest(updated) }, reference, course, game)
   }
   assert.deepEqual(inspectSource({ ...ref, courseId: course.id }).reasons, [])
+  assert.deepEqual(inspectSource({ ...ref, maxRunners: null }).reasons, [])
+  assert.ok(
+    inspectSource({ ...ref, maxRunners: game.runners + 1 }).reasons.includes(
+      'runners_unconfirmed',
+    ),
+  )
+  const noOpponentDecision = structuredClone(mapping)
+  delete noOpponentDecision.decisions.opponents
+  const nullRunnersRef = { ...ref, maxRunners: null }
+  const nullRunnersBody = {
+    ...noOpponentDecision,
+    source: mappingSourceFacts(nullRunnersRef),
+    sourceDigest: digest(nullRunnersRef),
+  }
+  assert.ok(
+    validateRaceMapping(nullRunnersBody, { ...context, reference: nullRunnersRef }).includes(
+      'approval_required:opponents',
+    ),
+  )
   assert.ok(
     inspectSource({ ...ref, courseId: 'COURSE_OTHER' }).reasons.includes(
       'course_unassigned_or_unverified',

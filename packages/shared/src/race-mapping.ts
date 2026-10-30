@@ -202,8 +202,7 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
       !Number.isInteger(game.runners) ||
       game.runners < 2 ||
       game.runners > 18 ||
-      ref.maxRunners === null ||
-      ref.maxRunners !== game.runners
+      (ref.maxRunners !== null && ref.maxRunners !== game.runners)
     ) {
       fail('runners_unconfirmed')
     }
