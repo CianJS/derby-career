@@ -19,6 +19,7 @@ import {
   lockRaceEntryWithLog,
   ridingFit,
   buildOpponents,
+  createRaceRun,
   type RaceEntryDraft,
 } from '../lib/career/race-entry'
 import { readCareer, writeCareer } from '../lib/career/repository'
@@ -45,6 +46,17 @@ test('draft Sapporo G3 field is deterministic and does not change development op
   const ordinary = buildOpponents(dev)
   const bonus = field[0].horseSnapshot.values.speed - ordinary[0].horseSnapshot.values.speed
   assert.ok(bonus >= 60 && bonus <= 80)
+  const identity = ['test-run', 'fixed-seed'][Symbol.iterator]()
+  const run = createRaceRun(
+    month3(),
+    sapporoPilot.definition,
+    contractedJockeys[0],
+    '선입',
+    () => identity.next().value!,
+  )
+  assert.equal(run.opponentProfile, 'sapporo-g3-2yo-v1')
+  assert.deepEqual(run.runners.slice(1), field)
+  assert.equal(JSON.parse(JSON.stringify(run)).opponentProfile, 'sapporo-g3-2yo-v1')
   assert.ok(!racesForTurn(9).some((race) => race.id === sapporoPilot.definition.id))
 })
 test('only healthy maiden horses in month three may enter, irrespective of aptitude', () => {

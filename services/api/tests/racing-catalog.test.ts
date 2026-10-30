@@ -546,16 +546,24 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
   assert.deepEqual(inspectRaceMapping(mapping, ref, course, game).reasons, [])
   assert.deepEqual(validateRaceMapping(mapping, context), [])
   const g3Ref = { ...ref, grade: 'G3' as const, maxRunners: null }
-  const g3Game = { ...game, raceClass: 'G3' as const, minAge: 2 }
+  const g3Game = { ...game, id: sapporoPilot.definition.id, raceClass: 'G3' as const, minAge: 2 }
   const g3Body = {
     ...body,
     source: mappingSourceFacts(g3Ref),
     sourceDigest: digest(g3Ref),
     definition: g3Game,
+    gameDefinitionId: g3Game.id,
     definitionDigest: digest(g3Game),
+    opponents: { profile: 'sapporo-g3-2yo-v1' as const, runners: g3Game.runners },
   }
   const g3Mapping = { ...g3Body, revision: digest(g3Body) }
   assert.deepEqual(inspectRaceMapping(g3Mapping, g3Ref, course, g3Game).reasons, [])
+  assert.ok(
+    validateRaceMapping(
+      { ...g3Mapping, opponents: { ...g3Mapping.opponents, profile: 'shared-development-v1' } },
+      { reference: g3Ref, course, definition: g3Game },
+    ).includes('opponents_not_approved'),
+  )
   assert.ok(
     validateRaceMapping(
       { ...g3Mapping, definition: { ...g3Game, minAge: 3 } },

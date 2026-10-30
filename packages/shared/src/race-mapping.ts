@@ -1,6 +1,11 @@
 import type { components } from './generated/api'
 import type { RaceDefinitionSnapshot } from '../../../lib/career/race-entry'
-import { raceOccurrenceForTurn, raceEligibility, isRaceTurn } from '../../../lib/career/race-entry'
+import {
+  raceOccurrenceForTurn,
+  raceEligibility,
+  isRaceTurn,
+  opponentProfileForRace,
+} from '../../../lib/career/race-entry'
 import { careerProgress } from '../../../lib/career/career-time'
 import { canRace } from '../../../lib/career/health'
 import type { Career } from '../../../lib/career/model'
@@ -74,7 +79,7 @@ export type RaceMapping = {
     policy: 'repeat_season_month'
   } | null
   economy: { entryFee: number; firstPrize: number; currency: 'KRW'; basis: 'game_balance' } | null
-  opponents: { profile: 'shared-development-v1'; runners: number } | null
+  opponents: { profile: 'shared-development-v1' | 'sapporo-g3-2yo-v1'; runners: number } | null
   decisions: Partial<
     Record<
       MappingDecisionField,
@@ -211,7 +216,8 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
     }
     if (
       !mapping.opponents ||
-      mapping.opponents.profile !== 'shared-development-v1' ||
+      mapping.opponents.profile !== opponentProfileForRace(game) ||
+      (game.raceClass === 'G3' && mapping.opponents.profile !== 'sapporo-g3-2yo-v1') ||
       mapping.opponents.runners !== game.runners
     ) {
       fail('opponents_not_approved')

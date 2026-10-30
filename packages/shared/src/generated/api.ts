@@ -910,6 +910,8 @@ export interface components {
             result: components["schemas"]["RaceSimulationResult"];
         };
         RaceRun: {
+            /** @enum {string} */
+            opponentProfile?: "shared-development-v1" | "sapporo-g3-2yo-v1";
             trustContext?: components["schemas"]["TrustContext"];
             raceRunId: string;
             month: number;

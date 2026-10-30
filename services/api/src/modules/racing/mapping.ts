@@ -73,7 +73,7 @@ export const raceMappingSchema = z
       .nullable(),
     opponents: z
       .object({
-        profile: z.literal('shared-development-v1'),
+        profile: z.enum(['shared-development-v1', 'sapporo-g3-2yo-v1']),
         runners: z.number().int().min(2).max(18),
       })
       .strict()

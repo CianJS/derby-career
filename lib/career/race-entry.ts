@@ -22,7 +22,8 @@ export type RaceDefinitionSnapshot = { countryCode?: string; id: string; name: s
 export type JockeySnapshot = { id: string; name: string; start: number; pace: number; path: number; timing: number; stability: number; chemistry: number; style: string }
 export type HorseSnapshot = { id: string; name: string; age: number; values: Values; aptitude: Horse['aptitude']; health: string; healthRecovery?: number; condition: string; record: string }
 export type RaceRunnerInput = { horseSnapshot: HorseSnapshot; jockeySnapshot: JockeySnapshot; tactic: RunningTactic }
-export type RaceRunInput = { raceRunId: string; month: number; raceDefinitionSnapshot: RaceDefinitionSnapshot; playerHorseId: string; runners: RaceRunnerInput[]; player: RaceRunnerInput; raceSeed: string; engineVersion: string; simulation?: RaceSimulationSummary; trustContext?: TrustContext }
+export type OpponentProfile = 'shared-development-v1' | 'sapporo-g3-2yo-v1'
+export type RaceRunInput = { raceRunId: string; month: number; raceDefinitionSnapshot: RaceDefinitionSnapshot; playerHorseId: string; runners: RaceRunnerInput[]; player: RaceRunnerInput; raceSeed: string; engineVersion: string; opponentProfile?: OpponentProfile; simulation?: RaceSimulationSummary; trustContext?: TrustContext }
 export type RaceEntryDraft = { raceId: string | null; jockeyId: string | null; tactic: RunningTactic | null }
 export const raceDefinitions: RaceDefinitionSnapshot[] = [
   { id: 'DEV_M3_SPRINT_1400', name: '스프린트 트라이얼', month: 3, surface: 'Turf', distance: 1400, raceClass: '미승리', runners: 10, courseProfile: '짧은 직선 / 완만한 코너', prize: 8000000, entryFee: 0, maxWins: 0 },
@@ -147,9 +148,14 @@ const opponentNames = ['새벽빛', '은빛 바람', '푸른 물결', '해오름
 // Opponent count follows the race definition; names beyond the list are numbered so every runner id stays unique.
 // Strength spans the same stat range as the starter horses. Even-numbered runners lean on speed and odd-numbered ones
 // on stamina, so distance changes who is strong instead of only how strong everyone is.
+export function opponentProfileForRace(race: RaceDefinitionSnapshot): OpponentProfile {
+  return race.id === sapporoPilot.definition.id && race.raceClass === 'G3'
+    ? 'sapporo-g3-2yo-v1'
+    : 'shared-development-v1'
+}
 export function buildOpponents(race: RaceDefinitionSnapshot, raceSeed = ''): RaceRunnerInput[] {
   const count = race.runners - 1
-  const sapporoG3 = race.id === sapporoPilot.definition.id && race.raceClass === 'G3'
+  const sapporoG3 = opponentProfileForRace(race) === 'sapporo-g3-2yo-v1'
   let seedHash = 2166136261
   for (const char of raceSeed) seedHash = Math.imul(seedHash ^ char.charCodeAt(0), 16777619) >>> 0
   return Array.from({ length: count }, (_, i): RaceRunnerInput => {
@@ -170,7 +176,8 @@ export function createRaceRun(career: Career, race: RaceDefinitionSnapshot, jock
   const player: RaceRunnerInput = { horseSnapshot, jockeySnapshot: jockey, tactic }
   const raceRunId = identity()
   const raceSeed = identity()
-  return structuredClone({ raceRunId, month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(race, raceSeed)], raceSeed, engineVersion: 'entry-contract-v1' })
+  const opponentProfile = opponentProfileForRace(race)
+  return structuredClone({ raceRunId, month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(race, raceSeed)], raceSeed, engineVersion: 'entry-contract-v1', ...(opponentProfile === 'sapporo-g3-2yo-v1' ? { opponentProfile } : {}) })
 }
 export function lockRaceEntry(career: Career, draft: RaceEntryDraft, identity: () => string = () => crypto.randomUUID()): Career {
   return lockRaceEntryWithLog(career, draft, identity).career
@@ -201,6 +208,7 @@ export function assertRaceRun(run: RaceRunInput, career: Career) {
   const definition = [...raceDefinitions, ...localOverseasRaces, ...stressRaceDefinitions].find(r => r.id === run?.raceDefinitionSnapshot?.id)
   const known = definition && raceOccurrenceForTurn(definition, run.month)
   if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || !known || run.month !== known.month || career.careerTurnIndex !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || run.raceDefinitionSnapshot.month !== known.month || run.raceDefinitionSnapshot.runners !== known.runners || !Array.isArray(run.runners) || run.runners.length !== known.runners) fail()
+  if (known && (run.opponentProfile !== undefined || opponentProfileForRace(known) === 'sapporo-g3-2yo-v1') && run.opponentProfile !== opponentProfileForRace(known)) fail()
   if (
     run.trustContext !== undefined && (
       run.trustContext.version !== 'jockey-trust-v1' ||
