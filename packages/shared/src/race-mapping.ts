@@ -281,7 +281,9 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
     rule.maxAge !== (age[2] ? null : Number(age[1])) ||
     !Number.isInteger(rule.minAge) ||
     rule.minAge < 2 ||
-    (rule.maxAge !== null && rule.maxAge < rule.minAge)
+    (rule.maxAge !== null && rule.maxAge < rule.minAge) ||
+    (game?.raceClass === 'G3' &&
+      (game.minAge !== rule.minAge || (game.maxAge ?? null) !== rule.maxAge))
   ) {
     fail('age_unconfirmed')
   }

@@ -857,6 +857,8 @@ export interface components {
             entryFee: number;
             minWins?: number;
             maxWins?: number;
+            minAge?: number;
+            maxAge?: number;
         };
         JockeyDefinition: {
             id: string;

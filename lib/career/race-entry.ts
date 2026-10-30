@@ -17,7 +17,7 @@ export const tactics = ['도주', '선행', '선입', '추입'] as const
 export type RunningTactic = typeof tactics[number]
 export type RaceClass = '미승리' | '1승' | 'Listed' | 'G3'
 // minWins / maxWins are optional so snapshots saved before month-six races existed stay valid.
-export type RaceDefinitionSnapshot = { countryCode?: string; id: string; name: string; month: number; surface: 'Turf'; distance: number; raceClass: RaceClass; runners: number; courseProfile: string; prize: number; entryFee: number; minWins?: number; maxWins?: number }
+export type RaceDefinitionSnapshot = { countryCode?: string; id: string; name: string; month: number; surface: 'Turf'; distance: number; raceClass: RaceClass; runners: number; courseProfile: string; prize: number; entryFee: number; minWins?: number; maxWins?: number; minAge?: number; maxAge?: number }
 export type JockeySnapshot = { id: string; name: string; start: number; pace: number; path: number; timing: number; stability: number; chemistry: number; style: string }
 export type HorseSnapshot = { id: string; name: string; age: number; values: Values; aptitude: Horse['aptitude']; health: string; healthRecovery?: number; condition: string; record: string }
 export type RaceRunnerInput = { horseSnapshot: HorseSnapshot; jockeySnapshot: JockeySnapshot; tactic: RunningTactic }
@@ -105,6 +105,11 @@ export function raceEligibility(career: Career, race: RaceDefinitionSnapshot, av
     if (reason) return reason
   }
   if (race.month !== career.careerTurnIndex) return '현재 월에 개최되는 경주가 아닙니다.'
+  if ((race.minAge !== undefined && (!Number.isSafeInteger(race.minAge) || race.minAge < 2)) ||
+      (race.maxAge !== undefined && (!Number.isSafeInteger(race.maxAge) || race.maxAge < 2)) ||
+      (race.minAge !== undefined && race.maxAge !== undefined && race.maxAge < race.minAge)) return '경주 연령 조건을 확인할 수 없습니다.'
+  const age = careerProgress(career.careerTurnIndex).age
+  if ((race.minAge !== undefined && age < race.minAge) || (race.maxAge !== undefined && age > race.maxAge)) return '출전 가능한 연령이 아닙니다.'
   const wins = winCount(career)
   if (race.maxWins !== undefined && wins > race.maxWins) return '미승리 경주마만 출전할 수 있습니다.'
   if (race.minWins !== undefined && wins < race.minWins) return `${race.minWins}승 이상 경주마만 출전할 수 있습니다.`

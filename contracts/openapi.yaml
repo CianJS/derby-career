@@ -2275,6 +2275,12 @@ components:
         entryFee: *id005
         minWins: *id009
         maxWins: *id009
+        minAge:
+          type: integer
+          minimum: 2
+        maxAge:
+          type: integer
+          minimum: 2
       required:
       - id
       - name
