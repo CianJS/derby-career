@@ -207,7 +207,7 @@ test('009 preserves all pre-existing rows and checksums; unselected expiry needs
   let f: Awaited<ReturnType<typeof fixture>> | undefined
   try {
     for (const name of (await readdir('migrations')).filter(
-      (name) => name.endsWith('.sql') && !name.startsWith('009_'),
+      (name) => name.endsWith('.sql') && name < '009_',
     )) {
       await copyFile(join('migrations', name), join(directory, name))
     }
@@ -222,7 +222,10 @@ test('009 preserves all pre-existing rows and checksums; unselected expiry needs
       await f.db.query('SELECT name,checksum FROM schema_migrations ORDER BY name')
     ).rows
     assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 503)
-    assert.deepEqual(await migrate(f.db), ['009_unselected_event_expiry.sql'])
+    assert.deepEqual(await migrate(f.db), [
+      '009_unselected_event_expiry.sql',
+      '010_official_mapping_revision.sql',
+    ])
     assert.deepEqual(await migrate(f.db), [])
     assert.deepEqual(
       (await f.db.query('SELECT name,checksum FROM schema_migrations ORDER BY name')).rows.slice(
