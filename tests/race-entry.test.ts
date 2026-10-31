@@ -20,6 +20,7 @@ import {
   ridingFit,
   buildOpponents,
   createRaceRun,
+  localRacesForTurn,
   type RaceEntryDraft,
 } from '../lib/career/race-entry'
 import { readCareer, writeCareer } from '../lib/career/repository'
@@ -58,6 +59,7 @@ test('draft Sapporo G3 field is deterministic and does not change development op
   assert.deepEqual(run.runners.slice(1), field)
   assert.equal(JSON.parse(JSON.stringify(run)).opponentProfile, 'sapporo-g3-2yo-v1')
   assert.ok(!racesForTurn(9).some((race) => race.id === sapporoPilot.definition.id))
+  assert.ok(!localRacesForTurn(9).some((race) => race.id === sapporoPilot.definition.id))
 })
 test('only healthy maiden horses in month three may enter, irrespective of aptitude', () => {
   assert.match(entryRestriction({ ...month3(), month: 2, careerTurnIndex: 2 })!, /3개월/)
