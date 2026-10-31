@@ -207,13 +207,10 @@ test('isolated Sapporo fixture uses authoritative server entry and settlement', 
     )
     const entered = entryReplies[0]
     assert.equal(entered.statusCode, 200, entered.body)
-    assert.ok(
-      entryReplies.every(
-        (reply) =>
-          reply.statusCode === 200 &&
-          JSON.stringify(reply.json()) === JSON.stringify(entered.json()),
-      ),
-    )
+    for (const reply of entryReplies) {
+      assert.equal(reply.statusCode, 200, reply.body)
+      assert.deepStrictEqual(reply.json(), entered.json())
+    }
     assert.equal(entered.json().career.funds, 19250000)
     assert.equal(entered.json().career.state.raceRun.mappingRevision, manifest.revision)
     assert.deepEqual((await f.call('POST', path, body)).json(), entered.json())
@@ -262,13 +259,10 @@ test('isolated Sapporo fixture uses authoritative server entry and settlement', 
     )
     const finished = finishReplies[0]
     assert.equal(finished.statusCode, 200, finished.body)
-    assert.ok(
-      finishReplies.every(
-        (reply) =>
-          reply.statusCode === 200 &&
-          JSON.stringify(reply.json()) === JSON.stringify(finished.json()),
-      ),
-    )
+    for (const reply of finishReplies) {
+      assert.equal(reply.statusCode, 200, reply.body)
+      assert.deepStrictEqual(reply.json(), finished.json())
+    }
     assert.equal(finished.json().career.funds, 19250000 + log.result.prizeMoney)
     assert.deepEqual((await f.call('POST', finishPath, completion)).json(), finished.json())
     const rows = (
