@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { browserStorage } from './helpers/browser-storage'
@@ -255,4 +256,18 @@ test('identical lifecycle projections do not create a storage-event feedback loo
     writeLifecycleSave(structuredClone(before.lifecycle!))
   }
   assert.deepEqual(readBrowserSave(), before)
+})
+
+test('Sapporo isolated approved fixture completes Local settlement', () => {
+  const output = execFileSync(
+    process.execPath,
+    ['--import', 'tsx', '--test', 'tests/helpers/sapporo-fixture-check.ts'],
+    {
+      cwd: 'services/api',
+      encoding: 'utf8',
+      timeout: 60000,
+      env: { ...process.env, NODE_TEST_CONTEXT: undefined },
+    },
+  )
+  assert.match(output, /pass 1/)
 })

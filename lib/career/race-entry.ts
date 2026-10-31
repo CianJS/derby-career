@@ -13,6 +13,7 @@ import { summarizeRecords } from './records'
 import { canRace, careerHealth } from './health'
 import { simulateRace, summarizeRaceLog, type RaceSimulationLog, type RaceSimulationSummary } from './race-simulation'
 import { sapporoPilot } from '../../packages/shared/src/sapporo-pilot'
+import { approvedPlayableDefinitions, approvedPlayableById } from '../../packages/shared/src/approved-playable'
 
 export const tactics = ['도주', '선행', '선입', '추입'] as const
 export type RunningTactic = typeof tactics[number]
@@ -23,7 +24,7 @@ export type JockeySnapshot = { id: string; name: string; start: number; pace: nu
 export type HorseSnapshot = { id: string; name: string; age: number; values: Values; aptitude: Horse['aptitude']; health: string; healthRecovery?: number; condition: string; record: string }
 export type RaceRunnerInput = { horseSnapshot: HorseSnapshot; jockeySnapshot: JockeySnapshot; tactic: RunningTactic }
 export type OpponentProfile = 'shared-development-v1' | 'sapporo-g3-2yo-v1'
-export type RaceRunInput = { raceRunId: string; month: number; raceDefinitionSnapshot: RaceDefinitionSnapshot; playerHorseId: string; runners: RaceRunnerInput[]; player: RaceRunnerInput; raceSeed: string; engineVersion: string; opponentProfile?: OpponentProfile; simulation?: RaceSimulationSummary; trustContext?: TrustContext }
+export type RaceRunInput = { raceRunId: string; month: number; raceDefinitionSnapshot: RaceDefinitionSnapshot; playerHorseId: string; runners: RaceRunnerInput[]; player: RaceRunnerInput; raceSeed: string; engineVersion: string; opponentProfile?: OpponentProfile; mappingRevision?: string; simulation?: RaceSimulationSummary; trustContext?: TrustContext }
 export type RaceEntryDraft = { raceId: string | null; jockeyId: string | null; tactic: RunningTactic | null }
 export const raceDefinitions: RaceDefinitionSnapshot[] = [
   { id: 'DEV_M3_SPRINT_1400', name: '스프린트 트라이얼', month: 3, surface: 'Turf', distance: 1400, raceClass: '미승리', runners: 10, courseProfile: '짧은 직선 / 완만한 코너', prize: 8000000, entryFee: 0, maxWins: 0 },
@@ -74,6 +75,7 @@ const occurrences = (definitions: readonly RaceDefinitionSnapshot[], turn: numbe
 export const localRacesForTurn = (turn: number) => occurrences([
   ...raceDefinitions.map(r => ({ ...r, countryCode: r.countryCode ?? 'KOR' })),
   ...localOverseasRaces,
+  ...approvedPlayableDefinitions.map(entry => entry.definition),
 ], turn)
 export const raceMonths = [...new Set(raceDefinitions.map(r => r.month))].sort((a, b) => a - b)
 export const isRaceTurn = (turn: number) =>
@@ -102,6 +104,7 @@ export const contractedRoster = (career: Career) =>
 export const winCount = (career: Career) => summarizeRecords(career.raceRecords).wins
 export const maiden = (career: Career) => winCount(career) === 0
 export function raceEligibility(career: Career, race: RaceDefinitionSnapshot, availableFunds?: number, travel?: StableTravel): string | null {
+  if (approvedPlayableById(race.id) && (!travel || !travel.activeExpedition || travel.locationCountry !== 'JPN')) return '일본 원정 중에만 출전할 수 있습니다.'
   if (travel) {
     const reason = travelRestriction(travel, race.countryCode ?? (raceDefinitions.some(r => r.id === race.id) ? 'KOR' : undefined))
     if (reason) return reason
@@ -177,7 +180,8 @@ export function createRaceRun(career: Career, race: RaceDefinitionSnapshot, jock
   const raceRunId = identity()
   const raceSeed = identity()
   const opponentProfile = opponentProfileForRace(race)
-  return structuredClone({ raceRunId, month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(race, raceSeed)], raceSeed, engineVersion: 'entry-contract-v1', ...(opponentProfile === 'sapporo-g3-2yo-v1' ? { opponentProfile } : {}) })
+  const approved = approvedPlayableById(race.id)
+  return structuredClone({ raceRunId, month: career.careerTurnIndex, raceDefinitionSnapshot: race, playerHorseId: career.horse.id, player, runners: [player, ...buildOpponents(race, raceSeed)], raceSeed, engineVersion: 'entry-contract-v1', ...(opponentProfile === 'sapporo-g3-2yo-v1' ? { opponentProfile } : {}), ...(approved ? { mappingRevision: approved.revision } : {}) })
 }
 export function lockRaceEntry(career: Career, draft: RaceEntryDraft, identity: () => string = () => crypto.randomUUID()): Career {
   return lockRaceEntryWithLog(career, draft, identity).career
@@ -205,10 +209,12 @@ export function lockRaceEntryWithLog(career: Career, draft: RaceEntryDraft, iden
 }
 export function assertRaceRun(run: RaceRunInput, career: Career) {
   const fail = () => { throw new Error('저장된 출전 정보를 읽을 수 없습니다. 기존 저장은 유지됩니다.') }
-  const definition = [...raceDefinitions, ...localOverseasRaces, ...stressRaceDefinitions].find(r => r.id === run?.raceDefinitionSnapshot?.id)
+  const approved = approvedPlayableById(run?.raceDefinitionSnapshot?.id)
+  const definition = [...raceDefinitions, ...localOverseasRaces, ...stressRaceDefinitions, ...approvedPlayableDefinitions.map(entry => entry.definition)].find(r => r.id === run?.raceDefinitionSnapshot?.id)
   const known = definition && raceOccurrenceForTurn(definition, run.month)
   if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || !known || run.month !== known.month || career.careerTurnIndex !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || run.raceDefinitionSnapshot.month !== known.month || run.raceDefinitionSnapshot.runners !== known.runners || !Array.isArray(run.runners) || run.runners.length !== known.runners) fail()
   if (known && (run.opponentProfile !== undefined || opponentProfileForRace(known) === 'sapporo-g3-2yo-v1') && run.opponentProfile !== opponentProfileForRace(known)) fail()
+  if (approved && (!known || run.mappingRevision !== approved.revision || run.opponentProfile !== approved.opponentProfile || JSON.stringify(Object.entries(run.raceDefinitionSnapshot).sort()) !== JSON.stringify(Object.entries(known).sort()))) fail()
   if (
     run.trustContext !== undefined && (
       run.trustContext.version !== 'jockey-trust-v1' ||

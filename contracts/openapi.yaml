@@ -2413,6 +2413,9 @@ components:
     RaceRun:
       type: object
       properties:
+        mappingRevision:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
         opponentProfile:
           type: string
           enum: [shared-development-v1, sapporo-g3-2yo-v1]
