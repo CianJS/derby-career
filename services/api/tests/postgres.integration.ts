@@ -19,16 +19,24 @@ test('real PostgreSQL Sapporo approved fixture entry and settlement', () => {
   if (!url || !new URL(url).pathname.endsWith('_test')) {
     throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
   }
-  const output = execFileSync(
-    process.execPath,
-    ['--import', 'tsx', '--test', 'tests/helpers/sapporo-fixture-check.ts'],
-    {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-      timeout: 120000,
-      env: { ...process.env, NODE_TEST_CONTEXT: undefined, SAPPORO_TEST_POSTGRES: url },
-    },
-  )
+  let output: string
+  try {
+    output = execFileSync(
+      process.execPath,
+      ['--import', 'tsx', '--test', 'tests/helpers/sapporo-fixture-check.ts'],
+      {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        timeout: 120000,
+        env: { ...process.env, NODE_TEST_CONTEXT: undefined, SAPPORO_TEST_POSTGRES: url },
+      },
+    )
+  } catch (error) {
+    const details = error as { stdout?: string; stderr?: string }
+    assert.fail(
+      `${details.stdout ?? ''}\n${details.stderr ?? ''}`.split(url).join('[redacted database URL]'),
+    )
+  }
   assert.match(output, /pass 1/)
 })
 
