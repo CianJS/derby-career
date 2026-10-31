@@ -188,6 +188,46 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
       assert.fail(secret ? output.split(secret).join('[redacted database URL]') : output)
     }
     assert.match(server, /pass 1/)
+    if (process.env.SAPPORO_TEST_POSTGRES) {
+      const restartFile = join(tmp, 'sapporo-restart-state.json')
+      const runPhase = (phase: 'prepare' | 'restart') => {
+        try {
+          const output = execFileSync(
+            process.execPath,
+            ['--import', 'tsx', '--test', 'tests/helpers/sapporo-server-restart-fixture.ts'],
+            {
+              cwd: join(tmp, 'services/api'),
+              encoding: 'utf8',
+              timeout: 60000,
+              env: {
+                ...process.env,
+                NODE_TEST_CONTEXT: undefined,
+                SAPPORO_RESTART_STATE: restartFile,
+                SAPPORO_RESTART_PHASE: phase,
+              },
+            },
+          )
+          assert.match(output, /pass 1/)
+        } catch (error) {
+          const details = error as { stdout?: string; stderr?: string }
+          const output = `${details.stdout ?? ''}\n${details.stderr ?? ''}`
+          assert.fail(
+            output.split(process.env.SAPPORO_TEST_POSTGRES!).join('[redacted database URL]'),
+          )
+        }
+      }
+      runPhase('prepare')
+      await writeFile(
+        join(tmp, 'packages/shared/src/approved-playable.json'),
+        JSON.stringify(revisedEntries, null, 2) + '\n',
+      )
+      await writeFile(
+        join(tmp, 'services/api/config/approved-race-mappings.json'),
+        JSON.stringify([revised]),
+      )
+      runPhase('restart')
+      console.log('SAPPORO_NATIVE_RESTART_PASSED')
+    }
   } finally {
     await rm(tmp, { recursive: true, force: true })
   }

@@ -38,6 +38,8 @@ test('real PostgreSQL Sapporo approved fixture entry and settlement', () => {
     )
   }
   assert.match(output, /pass 1/)
+  assert.match(output, /SAPPORO_NATIVE_RESTART_PASSED/)
+  console.log('Sapporo R1→R2 separate-process PostgreSQL restart: passed')
 })
 
 test('real PostgreSQL owner locking commits one starter contract under competing first-career requests', async () => {
