@@ -3592,6 +3592,58 @@ components:
           items:
             type: string
             enum: [mapping_not_approved, opponents_not_approved, recurrence_not_approved, win_conditions_not_approved, source_not_verified, duplicate_review, not_run, date_unconfirmed, course_unassigned, age_unconfirmed, sex_rule_unsupported, eligibility_unconfirmed, surface_unsupported, grade_unsupported, distance_unconfirmed, runners_unconfirmed, game_economy_unapproved]
+    RaceSourceCorrection:
+      type: object
+      additionalProperties: false
+      required: [sourceId, field, oldValue, newValue, oldValueOrigin, evidenceUrl, evidencePage, applicableYear, verificationStatus, evidenceScope]
+      properties:
+        sourceId: {type: string}
+        field: {type: string}
+        oldValue:
+          nullable: true
+          oneOf:
+          - type: string
+          - type: number
+          - type: boolean
+        newValue:
+          oneOf:
+          - type: string
+          - type: number
+          - type: boolean
+        oldValueOrigin: {type: string}
+        evidenceUrl: {type: string, format: uri}
+        evidencePage: {type: string}
+        applicableYear: {type: integer}
+        verificationStatus: {type: string, enum: [verified]}
+        evidenceScope: {type: string}
+    RaceSourceCorrectionRevision:
+      type: object
+      additionalProperties: false
+      description: Read-only correction facts; neither an entry approval nor game policy.
+      required: [version, sourceId, applicableYear, verifiedOn, baseSourceDigest, verificationStatus, activation, corrections, unresolved]
+      properties:
+        version: {type: string}
+        sourceId: {type: string}
+        applicableYear: {type: integer}
+        verifiedOn: {type: string, format: date}
+        baseSourceDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+        verificationStatus: {type: string, enum: [verified]}
+        activation: {type: string, enum: [disabled]}
+        corrections:
+          type: array
+          items: {$ref: '#/components/schemas/RaceSourceCorrection'}
+        unresolved:
+          type: object
+          additionalProperties: false
+          required: [actualCourseAndChanges, gameRoster, jraEligibility, narEligibility, foreignEligibility, selection, gameEconomy]
+          properties:
+            actualCourseAndChanges: {type: string}
+            gameRoster: {type: string}
+            jraEligibility: {type: string}
+            narEligibility: {type: string}
+            foreignEligibility: {type: string}
+            selection: {type: string}
+            gameEconomy: {type: string}
     RaceSchedule:
       type: object
       additionalProperties: false
@@ -3631,6 +3683,10 @@ components:
       - notes
       - reviewIssues
       properties:
+        sourceCorrection:
+          description: Verified source facts independent from the raw source and game approval.
+          readOnly: true
+          $ref: '#/components/schemas/RaceSourceCorrectionRevision'
         playability:
           $ref: '#/components/schemas/ReferenceRacePlayability'
         id:

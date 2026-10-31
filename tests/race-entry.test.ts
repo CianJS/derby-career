@@ -30,6 +30,7 @@ import { browserStorage } from './helpers/browser-storage'
 import { nextRaceOutlook } from '../lib/career/outlook'
 import { validateRaceLog } from '../lib/career/race-simulation'
 import { sapporoPilot } from '../packages/shared/src/sapporo-pilot'
+import { sapporoLegacyDefinition } from './helpers/sapporo-legacy-definition'
 
 const draft: RaceEntryDraft = {
   raceId: raceDefinitions[1].id,
@@ -38,19 +39,19 @@ const draft: RaceEntryDraft = {
 }
 const month3 = () => ({ ...startCareer(horses[1].id), month: 3, careerTurnIndex: 3 })
 test('draft Sapporo G3 field is deterministic and does not change development opponents', () => {
-  const field = buildOpponents(sapporoPilot.definition, 'fixed-seed')
-  assert.deepEqual(field, buildOpponents(sapporoPilot.definition, 'fixed-seed'))
-  assert.notDeepEqual(field, buildOpponents(sapporoPilot.definition, 'another-seed'))
+  const field = buildOpponents(sapporoLegacyDefinition, 'fixed-seed')
+  assert.deepEqual(field, buildOpponents(sapporoLegacyDefinition, 'fixed-seed'))
+  assert.notDeepEqual(field, buildOpponents(sapporoLegacyDefinition, 'another-seed'))
   assert.equal(field.length, 13)
   assert.ok(field.every((runner) => runner.horseSnapshot.age === 2))
-  const dev = { ...sapporoPilot.definition, id: 'DEV_TEST', raceClass: 'Listed' as const }
+  const dev = { ...sapporoLegacyDefinition, id: 'DEV_TEST', raceClass: 'Listed' as const }
   const ordinary = buildOpponents(dev)
   const bonus = field[0].horseSnapshot.values.speed - ordinary[0].horseSnapshot.values.speed
   assert.ok(bonus >= 60 && bonus <= 80)
   const identity = ['test-run', 'fixed-seed'][Symbol.iterator]()
   const run = createRaceRun(
     month3(),
-    sapporoPilot.definition,
+    sapporoLegacyDefinition,
     contractedJockeys[0],
     '선입',
     () => identity.next().value!,

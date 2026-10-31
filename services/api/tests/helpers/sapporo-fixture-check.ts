@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { normalizeRacingCatalog, digest } from '../../src/modules/racing/catalog'
 import { readRacingSource } from '../../src/modules/racing/import'
 import { sapporoPilot } from '../../../../packages/shared/src/sapporo-pilot'
+import { sapporoLegacyDefinition } from '../../../../tests/helpers/sapporo-legacy-definition'
 test('Sapporo release verification isolates a test-only Local entry manifest', async () => {
   const { deriveApprovedPlayable, deriveApprovedHistory, assertHistoryAppendOnly } =
     await import('../../src/modules/racing/mapping-release')
@@ -17,7 +18,7 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
   )
   const reference = catalog.races.find((r) => r.id === sapporoPilot.source.id)!
   const course = catalog.courses.find((c) => c.id === sapporoPilot.courseModel.id)!
-  const definition = sapporoPilot.definition
+  const definition = sapporoLegacyDefinition
   const body = {
     version: 1,
     referenceId: reference.id,
@@ -54,6 +55,26 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
   assert.throws(
     () => deriveApprovedPlayable([mapping], catalog.races, catalog.courses),
     /Release approval/,
+  )
+  // Synthetic reviewer is test data only; satisfying the old decision format
+  // must not activate the withdrawn economy/entry policy in a release build.
+  const evidenceOnlyBody = {
+    ...body,
+    decisions: Object.fromEntries(
+      mappingDecisionFields.map((key) => [
+        key,
+        {
+          status: 'approved',
+          reference: 'https://github.com/CianJS/derby-career/issues/100#issuecomment-6538884133',
+          reviewer: 'synthetic',
+        },
+      ]),
+    ),
+  }
+  const evidenceOnlyMapping = { ...evidenceOnlyBody, revision: digest(evidenceOnlyBody) }
+  assert.throws(
+    () => deriveApprovedPlayable([evidenceOnlyMapping], catalog.races, catalog.courses),
+    /activation blocked/,
   )
   assert.throws(
     () =>

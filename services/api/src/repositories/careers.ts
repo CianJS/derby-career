@@ -1,4 +1,5 @@
 import { referenceRacePlayability } from '../../../../packages/shared/src/race-playability'
+import { correctedReferenceFacts } from '../modules/racing/reference-corrections'
 import {
   resolveOfficialEntry,
   officialReferencePlayability,
@@ -548,7 +549,7 @@ export class CareerRepository {
       const referenceRace = reference
         ? official
           ? officialReferencePlayability(official)
-          : referenceRacePlayability(reference)
+          : referenceRacePlayability(correctedReferenceFacts(reference))
         : undefined
       const history = await readCareerHistory(tx, row)
       const loadedDefinitions = (

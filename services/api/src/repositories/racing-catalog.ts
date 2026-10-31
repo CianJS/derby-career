@@ -6,6 +6,7 @@ import {
 } from '../modules/racing/official-entry'
 import type { operations } from '../../../../packages/shared/src/generated/api'
 import type { Racecourse, Course, RaceSchedule } from '../modules/racing/catalog'
+import { correctedReferenceFacts } from '../modules/racing/reference-corrections'
 import { ApiError } from '../errors'
 export type RacecourseQuery = NonNullable<operations['listRacecourses']['parameters']['query']> & {
   page: number
@@ -18,9 +19,10 @@ export class RacingCatalogRepository {
   constructor(private db: Database) {}
   private async referenceWithPlayability(tx: Query, race: RaceSchedule): Promise<RaceSchedule> {
     const official = await resolveOfficialEntry(tx, race.id)
+    const corrected = correctedReferenceFacts(race)
     return official
-      ? { ...race, playability: officialReferencePlayability(official) }
-      : withReferencePlayability(race)
+      ? { ...corrected, playability: officialReferencePlayability(official) }
+      : withReferencePlayability(corrected)
   }
   private async list<T>(
     table: 'racecourses' | 'race_schedules',

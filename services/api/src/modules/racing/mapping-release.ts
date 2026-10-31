@@ -6,6 +6,7 @@ import {
 } from '../../../../../packages/shared/src/race-mapping'
 import { sapporoPilot } from '../../../../../packages/shared/src/sapporo-pilot'
 import type { ApprovedPlayable } from '../../../../../packages/shared/src/approved-playable'
+import type { RaceDefinitionSnapshot } from '../../../../../lib/career/race-entry'
 
 export function assertHistoryAppendOnly(previous: unknown, current: unknown): void {
   if (!Array.isArray(previous) || !Array.isArray(current)) {
@@ -41,7 +42,7 @@ export function deriveApprovedPlayable(
       input,
       reference,
       course,
-      definition as typeof sapporoPilot.definition | null,
+      definition as RaceDefinitionSnapshot | null,
     )
     if (!result.mapping || result.reasons.length) {
       throw new Error(`Mapping rejected: ${result.reasons.join(', ')}`)
@@ -71,6 +72,14 @@ export function deriveApprovedPlayable(
       )
     ) {
       throw new Error('Release approval must reference real project evidence and reviewer')
+    }
+    // A conversion helper alone does not approve a policy, select entrants by
+    // affiliation, or provide the occurrence field. Fail closed until those
+    // decisions and runtime paths are complete; historical replays still work.
+    if (!historical && !allowTestEvidence) {
+      throw new Error(
+        'Sapporo activation blocked: currency policy, affiliation and occurrence field unresolved',
+      )
     }
     outputs.push({
       sourceId: reference.id,

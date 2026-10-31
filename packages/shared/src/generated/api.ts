@@ -1369,7 +1369,46 @@ export interface components {
             calendarPolicy: "not_approved" | "repeat_season_month";
             reasons: ("mapping_not_approved" | "opponents_not_approved" | "recurrence_not_approved" | "win_conditions_not_approved" | "source_not_verified" | "duplicate_review" | "not_run" | "date_unconfirmed" | "course_unassigned" | "age_unconfirmed" | "sex_rule_unsupported" | "eligibility_unconfirmed" | "surface_unsupported" | "grade_unsupported" | "distance_unconfirmed" | "runners_unconfirmed" | "game_economy_unapproved")[];
         };
+        RaceSourceCorrection: {
+            sourceId: string;
+            field: string;
+            oldValue: (string | number | boolean) | null;
+            newValue: string | number | boolean;
+            oldValueOrigin: string;
+            /** Format: uri */
+            evidenceUrl: string;
+            evidencePage: string;
+            applicableYear: number;
+            /** @enum {string} */
+            verificationStatus: "verified";
+            evidenceScope: string;
+        };
+        /** @description Read-only correction facts; neither an entry approval nor game policy. */
+        RaceSourceCorrectionRevision: {
+            version: string;
+            sourceId: string;
+            applicableYear: number;
+            /** Format: date */
+            verifiedOn: string;
+            baseSourceDigest: string;
+            /** @enum {string} */
+            verificationStatus: "verified";
+            /** @enum {string} */
+            activation: "disabled";
+            corrections: components["schemas"]["RaceSourceCorrection"][];
+            unresolved: {
+                actualCourseAndChanges: string;
+                gameRoster: string;
+                jraEligibility: string;
+                narEligibility: string;
+                foreignEligibility: string;
+                selection: string;
+                gameEconomy: string;
+            };
+        };
         RaceSchedule: {
+            /** @description Verified source facts independent from the raw source and game approval. */
+            readonly sourceCorrection?: components["schemas"]["RaceSourceCorrectionRevision"];
             playability?: components["schemas"]["ReferenceRacePlayability"];
             id: string;
             name: string;
