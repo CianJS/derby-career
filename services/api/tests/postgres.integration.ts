@@ -12,6 +12,25 @@ import { importRacingCatalog, readRacingSource } from '../src/modules/racing/imp
 import { fixture, catalogSource } from './helpers'
 import { createApp } from '../src/app'
 import { oidcConfig, testIssuer } from './oidc-helpers'
+import { execFileSync } from 'node:child_process'
+
+test('real PostgreSQL Sapporo approved fixture entry and settlement', () => {
+  const url = process.env.TEST_DATABASE_URL
+  if (!url || !new URL(url).pathname.endsWith('_test')) {
+    throw new Error('TEST_DATABASE_URL must point to a dedicated *_test database')
+  }
+  const output = execFileSync(
+    process.execPath,
+    ['--import', 'tsx', '--test', 'tests/helpers/sapporo-fixture-check.ts'],
+    {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      timeout: 120000,
+      env: { ...process.env, NODE_TEST_CONTEXT: undefined, SAPPORO_TEST_POSTGRES: url },
+    },
+  )
+  assert.match(output, /pass 1/)
+})
 
 test('real PostgreSQL owner locking commits one starter contract under competing first-career requests', async () => {
   const url = process.env.TEST_DATABASE_URL

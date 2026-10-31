@@ -7,9 +7,40 @@ import { importRacingCatalog, readRacingSource } from '../../src/modules/racing/
 import { sapporoPilot } from '../../../../packages/shared/src/sapporo-pilot'
 import { approvedPlayableDefinitions } from '../../../../packages/shared/src/approved-playable'
 import { paidCareer } from '../../../../tests/helpers/economy-fixture'
+import { postgresDatabase } from '../../src/db'
+import type { Database } from '../../src/db'
 
 test('isolated Sapporo fixture uses authoritative server entry and settlement', async () => {
-  const f = await fixture({ probability: 0 })
+  const url = process.env.SAPPORO_TEST_POSTGRES
+  if (url) {
+    const parsed = new URL(url)
+    if (
+      !['localhost', '127.0.0.1', '::1'].includes(parsed.hostname) ||
+      !parsed.pathname.endsWith('_test')
+    ) {
+      throw new Error('Sapporo PostgreSQL fixture requires a local dedicated *_test database')
+    }
+  }
+  let failLedgerInsert = false
+  const native = url ? postgresDatabase(url) : null
+  const faultDb: Database | undefined = native
+    ? {
+        ...native,
+        transaction: (fn) =>
+          native.transaction((tx) =>
+            fn({
+              query: (sql, values) => {
+                if (failLedgerInsert && sql.startsWith('INSERT INTO stable_ledger')) {
+                  failLedgerInsert = false
+                  throw new Error('test-only settlement failure')
+                }
+                return tx.query(sql, values)
+              },
+            }),
+          ),
+      }
+    : undefined
+  const f = await fixture({ probability: 0, ...(faultDb ? { db: faultDb } : {}) })
   try {
     await importRacingCatalog(f.db, await readRacingSource(['seeds/racing.notion.source.json']))
     const manifest = approvedPlayableDefinitions[0]
@@ -145,8 +176,44 @@ test('isolated Sapporo fixture uses authoritative server entry and settlement', 
       manifest.sourceId,
       JSON.stringify(source),
     ])
-    const entered = await f.call('POST', path, body)
+    if (url) {
+      failLedgerInsert = true
+      const failed = await f.call('POST', path, body)
+      assert.equal(failed.statusCode, 500)
+      assert.equal(
+        Number(
+          (await f.db.query('SELECT funds FROM stables WHERE id=$1', [response.career.stableId]))
+            .rows[0].funds,
+        ),
+        20000000,
+      )
+      assert.equal(
+        (await f.db.query('SELECT id FROM race_runs WHERE id=$1', [body.raceRunId])).rows.length,
+        0,
+      )
+      assert.equal(
+        (await f.db.query('SELECT id FROM stable_ledger WHERE race_run_id=$1', [body.raceRunId]))
+          .rows.length,
+        0,
+      )
+      assert.equal(
+        (await f.db.query('SELECT request_id FROM commands WHERE request_id=$1', [body.raceRunId]))
+          .rows.length,
+        0,
+      )
+    }
+    const entryReplies = await Promise.all(
+      Array.from({ length: url ? 4 : 1 }, () => f.call('POST', path, body)),
+    )
+    const entered = entryReplies[0]
     assert.equal(entered.statusCode, 200, entered.body)
+    assert.ok(
+      entryReplies.every(
+        (reply) =>
+          reply.statusCode === 200 &&
+          JSON.stringify(reply.json()) === JSON.stringify(entered.json()),
+      ),
+    )
     assert.equal(entered.json().career.funds, 19250000)
     assert.equal(entered.json().career.state.raceRun.mappingRevision, manifest.revision)
     assert.deepEqual((await f.call('POST', path, body)).json(), entered.json())
@@ -155,8 +222,53 @@ test('isolated Sapporo fixture uses authoritative server entry and settlement', 
       .log
     const finishPath = `/v1/careers/${id}/race-runs/${body.raceRunId}/complete`
     const completion = { commandId: randomUUID() }
-    const finished = await f.call('POST', finishPath, completion)
+    if (url) {
+      failLedgerInsert = true
+      assert.equal((await f.call('POST', finishPath, completion)).statusCode, 500)
+      assert.equal(
+        Number(
+          (await f.db.query('SELECT funds FROM stables WHERE id=$1', [response.career.stableId]))
+            .rows[0].funds,
+        ),
+        19250000,
+      )
+      assert.equal(
+        (
+          await f.db.query('SELECT race_run_id FROM race_results WHERE race_run_id=$1', [
+            body.raceRunId,
+          ])
+        ).rows.length,
+        0,
+      )
+      assert.equal(
+        (
+          await f.db.query("SELECT id FROM stable_ledger WHERE race_run_id=$1 AND kind='prize'", [
+            body.raceRunId,
+          ])
+        ).rows.length,
+        0,
+      )
+      assert.equal(
+        (
+          await f.db.query('SELECT request_id FROM commands WHERE request_id=$1', [
+            completion.commandId,
+          ])
+        ).rows.length,
+        0,
+      )
+    }
+    const finishReplies = await Promise.all(
+      Array.from({ length: url ? 4 : 1 }, () => f.call('POST', finishPath, completion)),
+    )
+    const finished = finishReplies[0]
     assert.equal(finished.statusCode, 200, finished.body)
+    assert.ok(
+      finishReplies.every(
+        (reply) =>
+          reply.statusCode === 200 &&
+          JSON.stringify(reply.json()) === JSON.stringify(finished.json()),
+      ),
+    )
     assert.equal(finished.json().career.funds, 19250000 + log.result.prizeMoney)
     assert.deepEqual((await f.call('POST', finishPath, completion)).json(), finished.json())
     const rows = (
