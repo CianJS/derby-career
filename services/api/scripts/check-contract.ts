@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { checkApprovedPlayable } from './check-approved-playable'
 import { API_TYPES_PATH, generateApiTypes } from './api-types'
 import SwaggerParser from '@apidevtools/swagger-parser'
 import {
@@ -36,3 +37,4 @@ if (
   throw new Error('Generated save validators are stale. Run npm run contract:generate.')
 }
 console.log('OpenAPI is valid and generated types/response validators match')
+await checkApprovedPlayable()

@@ -19,6 +19,22 @@ test('shared eligibility keeps the Local Save fee gate and checks authoritative 
   }
   assert.equal(raceEligibility(career, { ...race, entryFee: 0 }, 0), null)
   assert.match(raceEligibility(career, { ...race, minWins: 1 }, 20000000)!, /1승 이상/)
+  const twoYearOldRace = { ...race, month: 9, minAge: 2, maxAge: 2 }
+  assert.equal(
+    raceEligibility({ ...career, month: 9, careerTurnIndex: 9 }, twoYearOldRace, 500000),
+    null,
+  )
+  for (const turn of [21, 33, 45, 57, 69]) {
+    assert.match(
+      raceEligibility(
+        { ...career, month: turn, careerTurnIndex: turn },
+        { ...twoYearOldRace, month: turn },
+        500000,
+      )!,
+      /연령/,
+    )
+  }
+  assert.match(raceEligibility(career, { ...race, minAge: 3, maxAge: 2 }, 500000)!, /연령 조건/)
 })
 
 registerEconomyTests('PostgreSQL economy')

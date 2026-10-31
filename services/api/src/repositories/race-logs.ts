@@ -1,6 +1,7 @@
 import type { Query } from '../db'
 import { ApiError, notFound } from '../errors'
 import { readCareerRow } from './career-rows'
+import { assertHistoricalOfficialRun } from '../modules/racing/official-entry'
 import {
   raceLogDigest,
   type RaceSimulationLog,
@@ -74,6 +75,7 @@ export async function readRaceData(
   if (!run) {
     throw notFound()
   }
+  await assertHistoricalOfficialRun(db, run.input)
   return log
     ? { log: JSON.parse(run.log_json) }
     : {

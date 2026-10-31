@@ -18,6 +18,9 @@ import {
   racesForTurn,
   lockRaceEntryWithLog,
   ridingFit,
+  buildOpponents,
+  createRaceRun,
+  localRacesForTurn,
   type RaceEntryDraft,
 } from '../lib/career/race-entry'
 import { readCareer, writeCareer } from '../lib/career/repository'
@@ -26,6 +29,8 @@ import { summarizeRecords } from '../lib/career/records'
 import { browserStorage } from './helpers/browser-storage'
 import { nextRaceOutlook } from '../lib/career/outlook'
 import { validateRaceLog } from '../lib/career/race-simulation'
+import { sapporoPilot } from '../packages/shared/src/sapporo-pilot'
+import { sapporoLegacyDefinition } from './helpers/sapporo-legacy-definition'
 
 const draft: RaceEntryDraft = {
   raceId: raceDefinitions[1].id,
@@ -33,6 +38,30 @@ const draft: RaceEntryDraft = {
   tactic: '선입',
 }
 const month3 = () => ({ ...startCareer(horses[1].id), month: 3, careerTurnIndex: 3 })
+test('draft Sapporo G3 field is deterministic and does not change development opponents', () => {
+  const field = buildOpponents(sapporoLegacyDefinition, 'fixed-seed')
+  assert.deepEqual(field, buildOpponents(sapporoLegacyDefinition, 'fixed-seed'))
+  assert.notDeepEqual(field, buildOpponents(sapporoLegacyDefinition, 'another-seed'))
+  assert.equal(field.length, 13)
+  assert.ok(field.every((runner) => runner.horseSnapshot.age === 2))
+  const dev = { ...sapporoLegacyDefinition, id: 'DEV_TEST', raceClass: 'Listed' as const }
+  const ordinary = buildOpponents(dev)
+  const bonus = field[0].horseSnapshot.values.speed - ordinary[0].horseSnapshot.values.speed
+  assert.ok(bonus >= 60 && bonus <= 80)
+  const identity = ['test-run', 'fixed-seed'][Symbol.iterator]()
+  const run = createRaceRun(
+    month3(),
+    sapporoLegacyDefinition,
+    contractedJockeys[0],
+    '선입',
+    () => identity.next().value!,
+  )
+  assert.equal(run.opponentProfile, 'sapporo-g3-2yo-v1')
+  assert.deepEqual(run.runners.slice(1), field)
+  assert.equal(JSON.parse(JSON.stringify(run)).opponentProfile, 'sapporo-g3-2yo-v1')
+  assert.ok(!racesForTurn(9).some((race) => race.id === sapporoPilot.definition.id))
+  assert.ok(!localRacesForTurn(9).some((race) => race.id === sapporoPilot.definition.id))
+})
 test('only healthy maiden horses in month three may enter, irrespective of aptitude', () => {
   assert.match(entryRestriction({ ...month3(), month: 2, careerTurnIndex: 2 })!, /3개월/)
   assert.match(entryRestriction({ ...month3(), health: '중상' })!, /중상/)

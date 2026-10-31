@@ -1,4 +1,11 @@
 import { referenceRacePlayability } from '../../../../packages/shared/src/race-playability'
+import { correctedReferenceFacts } from '../modules/racing/reference-corrections'
+import {
+  resolveOfficialEntry,
+  officialReferencePlayability,
+  assertHistoricalOfficialRun,
+} from '../modules/racing/official-entry'
+import { sapporoPilot } from '../../../../packages/shared/src/sapporo-pilot'
 import {
   readTravel,
   expeditionDto,
@@ -538,18 +545,39 @@ export class CareerRepository {
       if (referenceRaceId && !reference) {
         throw notFound()
       }
-      const referenceRace = reference ? referenceRacePlayability(reference) : undefined
+      const official = reference ? await resolveOfficialEntry(tx, reference.id) : null
+      const referenceRace = reference
+        ? official
+          ? officialReferencePlayability(official)
+          : referenceRacePlayability(correctedReferenceFacts(reference))
+        : undefined
       const history = await readCareerHistory(tx, row)
-      const definitions = (
+      const loadedDefinitions = (
         await tx.query<{
+          id: string
           payload: RaceDefinitionSnapshot
           country_code: string | null
           source_kind: components['schemas']['RaceCatalog']['data'][number]['sourceKind']
         }>(
-          "SELECT payload,source_kind,country_code FROM race_definitions WHERE (payload->>'month')::integer=$1 ORDER BY id",
+          "SELECT id,payload,source_kind,country_code FROM race_definitions WHERE (payload->>'month')::integer=$1 ORDER BY id",
           [careerProgress(row.turn).seasonTurn],
         )
       ).rows
+      // Even an inserted catalog row cannot make the pilot usable without its verified manifest.
+      const officialInList = loadedDefinitions.some(
+        (d) => d.id === sapporoPilot.definition.id || d.payload.id === sapporoPilot.definition.id,
+      )
+        ? (official ?? (await resolveOfficialEntry(tx, sapporoPilot.source.id)))
+        : null
+      const definitions = loadedDefinitions
+        .filter((d) =>
+          d.id === sapporoPilot.definition.id
+            ? officialInList !== null && d.payload.id === d.id
+            : d.payload.id !== sapporoPilot.definition.id,
+        )
+        .filter(
+          (d) => !referenceRaceId || (official && d.payload.id === official.manifest.definitionId),
+        )
       const jockeys = (
         await tx.query<{ payload: JockeySnapshot; chemistry: number }>(
           'SELECT j.payload,COALESCE(c.chemistry,0) AS chemistry FROM jockey_definitions j LEFT JOIN jockey_chemistry c ON c.jockey_id=j.id AND c.horse_id=$1 WHERE j.id=ANY($2::text[]) ORDER BY j.id',
@@ -569,15 +597,16 @@ export class CareerRepository {
         ...(referenceRace ? { referenceRace } : {}),
         career: await this.dto(tx, row),
         defaultEngineVersion: API_RACE_ENGINE_VERSION,
-        restrictionReason: referenceRace
-          ? '참고 경주의 게임 출전 매핑이 아직 승인되지 않았습니다.'
-          : restrictionReason,
-        races: (referenceRace ? [] : definitions).map(({ payload, source_kind, country_code }) => {
+        restrictionReason:
+          referenceRace && !official
+            ? '참고 경주의 게임 출전 매핑이 아직 승인되지 않았습니다.'
+            : restrictionReason,
+        races: definitions.map(({ payload, source_kind, country_code }) => {
           const race = raceOccurrenceForTurn(withRaceCountry(payload, country_code), row.turn)!
           const reason =
             restrictionReason ??
             countryRestriction(travel, country_code, row.id) ??
-            raceEligibility(row.state, race, funds)
+            raceEligibility(row.state, race, funds, travel)
           return {
             definition: race,
             sourceKind: source_kind,
@@ -610,12 +639,26 @@ export class CareerRepository {
         if (!row.state.contractedJockeyIds.includes(body.jockeyId)) {
           throw new ApiError(422, 'RACE_RESTRICTED', '계약 기수 중에서 선택해 주세요.')
         }
+        const officialEntry =
+          body.raceDefinitionId === sapporoPilot.definition.id
+            ? await resolveOfficialEntry(tx, sapporoPilot.source.id, true)
+            : null
+        if (body.raceDefinitionId === sapporoPilot.definition.id && !officialEntry) {
+          throw new ApiError(
+            422,
+            'RACE_RESTRICTED',
+            '공식 경주 매핑 또는 출처 검증이 완료되지 않았습니다.',
+          )
+        }
         const definition = (
           await tx.query<{ payload: RaceDefinitionSnapshot; country_code: string | null }>(
             'SELECT payload,country_code FROM race_definitions WHERE id=$1',
             [body.raceDefinitionId],
           )
         ).rows[0]
+        if (definition && definition.payload.id !== body.raceDefinitionId) {
+          throw new ApiError(422, 'RACE_RESTRICTED', '경주 정의 식별자가 일치하지 않습니다.')
+        }
         const race = definition
           ? raceOccurrenceForTurn(
               withRaceCountry(definition.payload, definition.country_code),
@@ -633,7 +676,7 @@ export class CareerRepository {
         assertMoney(race.entryFee)
         assertMoney(race.prize)
         const funds = await stableFunds(tx, row.stable_id, true)
-        const reason = raceEligibility(row.state, race, funds)
+        const reason = raceEligibility(row.state, race, funds, travel)
         if (reason) {
           throw new ApiError(422, 'RACE_RESTRICTED', reason)
         }
@@ -725,6 +768,8 @@ export class CareerRepository {
         if (row.state.raceRun?.raceRunId !== runId || row.turn !== run.turn) {
           throw conflict('현재 확정 경주와 일치하지 않습니다.')
         }
+        await assertHistoricalOfficialRun(tx, run.input)
+        await assertHistoricalOfficialRun(tx, row.state.raceRun)
         const exactLog = await readSimulationLog(tx, runId, run.engine_version)
         const result = exactLog.result
         assertMoney(result.prizeMoney)

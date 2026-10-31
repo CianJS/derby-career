@@ -1,5 +1,21 @@
 # 공식 참고 경주 → 출전 연결 1단계 (#100)
 
+> #108 파일럿 작업 중: 아래 1·2단계 설명은 해당 단계의 원래 범위를 기록한다. 릴리스 승인 registry가 빈 현재는 공식 playable 0건이다. 테스트 전용 승인 fixture는 격리된 복사본에서만 사용한다.
+
+> 2026-10-31 정정: 아래 과거 기획의 공통 1승, 항상 14두, 75만/6,500만 원은 철회되었고 R1/R2 과거 저장 호환 시험 자료에만 남는다. [삿포로 공식 사실 정정](sapporo-official-facts.md)의 계획 C코스·최대 14두·2026 실제 9두와 원통화 금액을 우선한다. 미확정 환산율·축소계수·소속별 자격·선발·회차 명단의 신규 출전 경로는 아직 구현/승인되지 않았다. `deriveApprovedPlayable`은 그 사이 실제 파일럿 활성화를 차단하며 과거 승인 revision 재생은 보존한다.
+
+## 삿포로 파일럿 개발 경계 및 이행 계획
+
+실제 reference `RACE_JPN_2026_JRA_075`와 게임 정의 `JPN_SAPPORO_NISAI_G3`는 서로 다른 ID다. 공식 시행계획은 C코스이고 당일 변경 여부는 확인되지 않았다. 14두는 공식 상한이고 일률적 1승 및 6500만/75만 원은 철회됐으며, 상대마 난도는 잠정안이다.
+
+릴리스 `services/api/config/approved-race-mappings.json`과 `packages/shared/src/approved-playable.json`은 현재 빈 배열이다. 기존 `contract:check`는 공식 원본과 코스·게임 정의·13개 승인 결정·각 digest 및 매핑 revision을 확인하고 두 파일을 비교한다. Node 전용 검증과 동기식 브라우저 registry는 분리하며, 테스트 전용 승인 자료는 임시 복사본에만 주입한다. Local은 같은 registry로 후보·잠금·재로드를 검증하고 원장과 상태를 동일 저장 문서에 반영한다.
+
+API 디렉터리의 `node --import tsx scripts/generate-approved-playable.ts`는 승인 누락·위변조·테스트 증거를 거부하고 DB에 접근하지 않는다. 현재는 소속별 자격, 회차 명단, 통화환산 정책이 확정·구현되지 않아 실제 승인 형태의 파일럿을 넣어도 릴리스 활성화가 차단된다. 기존 `npm run contract:check`로 생성물 일치를 확인한다.
+
+Server 개발 DB 이행은 승인 자료와 빌드 검증이 완료된 뒤에만 수행한다. `010_official_mapping_revision.sql`은 관계 테이블만 추가하며 경주 데이터를 넣거나 활성화하지 않는다. 별도 승인된 이행 작업은 단일 트랜잭션에서 공식 source와 코스가 기존 데이터와 일치하는지 먼저 확인하고, registry의 정확한 정의를 `race_definitions`에 `source_kind='catalog'`, `country_code='JPN'`으로 추가하며, source ID·정의 ID·revision을 `official_race_mapping_revisions`에 추가한다. 각 INSERT는 `ON CONFLICT DO NOTHING`을 사용하고, 충돌 시 기존 정의·국가·source·revision을 정확히 비교하여 하나라도 다르면 전체 이행을 실패시킨다. 기존 정의를 덮어쓰지 않는다. 운영·Preview DB에서는 이 작업을 실행하지 않았다.
+
+Server 공개 일정의 `playability.status='playable'`과 `eligible=true`는 해당 reference의 매핑 검증 상태다. 특정 육성마의 출전 자격은 소유권이 필요한 `getRaceEntryOptions(careerId, {referenceRaceId})`의 `races[].eligible`과 `restrictionReason`을 확인한다. 출전 POST에는 reference ID가 아니라 반환된 `definition.id`를 사용한다. 목록/상세, 옵션 및 POST는 DB 원본·코스·게임 정의·revision을 다시 대조하며 미일치 시 blocked 또는 422로 처리한다. FE #101은 이 계약과 두 ID를 구분하여 연동한다.
+
 기준 develop e06bad2. **실제 추가 playable: 0 / 원본 851행 (공개 목록 848개)**. 기존 게임 경주 19개는 그대로다. 이번 PR은 미검증 경주를 활성화하지 않고 FE가 상세/출전 동선을 정확하게 구분할 읽기 계약을 제공한다. 실제 공식 경주 출전 활성화는 아직 미완료다.
 
 ## 원인과 계약
@@ -83,3 +99,11 @@ const options = await client.getRaceEntryOptions(careerId, { referenceRaceId: de
 ```
 
 미조회·실패를 0개로 바꾸지 않고, 후속 실제 활성화 계약이 병합된 후에만 source→game 출전 버튼을 연결한다. 이번 후보 JSON/검증 helper를 브라우저가 승인 데이터로 올리는 API는 존재하지 않으며 POST에 mapping을 보내면 기존 strict 요청 schema가 400으로 거부한다.
+
+## 승인 revision 이력 (Draft #108)
+
+위 후보 단계 설명과 달리 Draft #108은 승인된 정의를 연결하는 코드를 포함하되 실제 승인 목록은 비어 있다. 신규 출전은 `approved-playable.json`의 현재 revision만 사용한다. 이미 잠긴 Run은 별도 `approved-playable-history.json`에서 정의 ID와 revision을 함께 찾아 당시 정의·프로필과 대조한다. 이력 입력 `config/approved-race-history.json`은 mapping과 당시 reference/course snapshot을 함께 보존하며 생성 검사에서 해시와 승인 결정을 검증한다. 기존 이력은 교체하거나 삭제하지 않는다.
+
+서버의 `011_official_mapping_history.sql`은 수정·삭제를 금지하는 빈 이력 테이블만 만든다. 승인 이후 별도 승인된 데이터 이행에서는 이력 행을 먼저 추가하고, 동일한 `(definition ID, revision)`에 기존 값이 있으면 정확히 같은지 확인한 뒤 현재 정의와 활성 관계를 전환해야 한다. 기존 행을 덮어쓰면 안 된다. 활성 관계를 삭제해 신규 출전을 중지해도 기존 Run은 이력과 기존 로그를 사용한다. 이 migration과 데이터 이행을 운영/Preview 환경에 실행하지 않았다.
+
+FE는 새 출전 가능 목록의 현재 revision만 표시하면 된다. 기존 locked Run을 현재 목록에 없다는 이유로 삭제하거나 최신 정의로 바꾸면 안 된다. 실제 승인 및 활성화는 별도 결정이다.

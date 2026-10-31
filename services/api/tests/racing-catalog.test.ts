@@ -13,6 +13,8 @@ import type { Query } from '../src/db'
 import { normalizeRacingCatalog, digest } from '../src/modules/racing/catalog'
 import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
 import { createApiClient } from '../../../packages/shared/src/client'
+import { sapporoPilot } from '../../../packages/shared/src/sapporo-pilot'
+import { sapporoOfficialFacts } from '../../../packages/shared/src/sapporo-official-facts'
 import {
   validateRacecourseList,
   validateRacecourseDetail,
@@ -34,6 +36,15 @@ test('Notion snapshot preserves every source ID, parent and reviewed exception',
   assert.equal(catalog.racecourses.length, 90)
   assert.equal(catalog.courses.length, 101)
   assert.equal(catalog.races.length, 851)
+  const sapporo = catalog.races.find((r) => r.id === sapporoPilot.source.id)!
+  const course = catalog.courses.find((c) => c.id === sapporoPilot.courseModel.id)!
+  assert.equal(digest(sapporo), sapporoPilot.source.digest)
+  assert.equal(digest(course), sapporoPilot.courseModel.digest)
+  assert.equal(sapporo.courseId, null)
+  assert.equal(sapporo.maxRunners, null)
+  assert.equal(sapporo.prizeMoney, sapporoPilot.source.firstPrizeJPY)
+  assert.equal(sapporoPilot.state, 'candidate')
+  assert.equal(sapporoPilot.courseModel.actual2026Rail, 'unconfirmed')
   assert.deepEqual(
     ['KOR', 'JPN', 'USA'].map((c) => catalog.races.filter((r) => r.country === c).length),
     [51, 176, 624],
@@ -226,6 +237,75 @@ test('catalog SQL import, public reads and protected game state', async (t) => {
         assert.ok(list.data.every((r) => r.playability?.eligible === false))
       },
     )
+    await t.test('verified Sapporo maximum is a read-only source-specific correction', async () => {
+      const id = 'RACE_JPN_2026_JRA_075'
+      const before = (await f.db.query('SELECT payload FROM race_schedules WHERE id=$1', [id]))
+        .rows[0].payload
+      assert.equal(digest(before), sapporoPilot.source.digest)
+      assert.equal(before.maxRunners, null)
+      const detail = await f.call('GET', `/v1/race-schedule/${id}`)
+      assert.equal(detail.statusCode, 200, detail.body)
+      assert.deepEqual(detail.json(), {
+        ...before,
+        maxRunners: 14,
+        sourceCorrection: sapporoOfficialFacts,
+        playability: referenceRacePlayability({ ...before, maxRunners: 14 }),
+      })
+      assert.ok(validateRaceSchedule(detail.json()))
+      assert.equal(detail.json().sourceCorrection.version, 'sapporo-2026-source-correction-v1')
+      assert.equal(
+        detail
+          .json()
+          .sourceCorrection.corrections.find(
+            (item: { field: string }) => item.field === 'actualStarters',
+          ).newValue,
+        9,
+      )
+      assert.equal(detail.json().courseId, null)
+      assert.equal(detail.json().playability.status, 'blocked')
+      assert.equal(detail.json().playability.eligible, false)
+      assert.ok(!detail.json().playability.reasons.includes('runners_unconfirmed'))
+      const query = '/v1/race-schedule?country=JPN&year=2026&grade=G3&search=SAPPORO%20NISAI'
+      const list = await f.call('GET', query)
+      assert.equal(list.statusCode, 200, list.body)
+      assert.equal(list.json().pagination.total, 1)
+      assert.deepEqual(list.json().data[0], detail.json())
+      const options = await f.call(
+        'GET',
+        `/v1/careers/${career.id}/race-entries?referenceRaceId=${id}`,
+      )
+      assert.equal(options.statusCode, 200, options.body)
+      assert.deepEqual(options.json().referenceRace, detail.json().playability)
+      assert.deepEqual(options.json().races, [])
+      assert.deepEqual(
+        (await f.db.query('SELECT payload FROM race_schedules WHERE id=$1', [id])).rows[0].payload,
+        before,
+      )
+      try {
+        await f.db.query('UPDATE race_schedules SET payload=$2 WHERE id=$1', [
+          id,
+          JSON.stringify({ ...before, notes: `${before.notes} changed` }),
+        ])
+        const changed = await f.call('GET', `/v1/race-schedule/${id}`)
+        assert.equal(changed.statusCode, 200, changed.body)
+        assert.equal(changed.json().maxRunners, null)
+        assert.equal(changed.json().sourceCorrection, undefined)
+        assert.equal(changed.json().playability.status, 'blocked')
+        assert.ok(changed.json().playability.reasons.includes('runners_unconfirmed'))
+        const changedOptions = await f.call(
+          'GET',
+          `/v1/careers/${career.id}/race-entries?referenceRaceId=${id}`,
+        )
+        assert.equal(changedOptions.statusCode, 200, changedOptions.body)
+        assert.deepEqual(changedOptions.json().referenceRace, changed.json().playability)
+      } finally {
+        await f.db.query('UPDATE race_schedules SET payload=$2 WHERE id=$1', [
+          id,
+          JSON.stringify(before),
+        ])
+      }
+      assert.deepEqual((await f.call('GET', `/v1/race-schedule/${id}`)).json(), detail.json())
+    })
     await t.test('combined filters and literal search are applied before counting', async () => {
       const response = await f.call(
         'GET',
@@ -535,6 +615,58 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
     context = { reference: ref, course, definition: game }
   assert.deepEqual(inspectRaceMapping(mapping, ref, course, game).reasons, [])
   assert.deepEqual(validateRaceMapping(mapping, context), [])
+  const { minWins: _existingMinimum, ...noMinimumGame } = game
+  const noMinimumBody = {
+    ...body,
+    definition: noMinimumGame,
+    definitionDigest: digest(noMinimumGame),
+    eligibility: { ...body.eligibility, minWins: null },
+  }
+  assert.deepEqual(
+    inspectRaceMapping(
+      { ...noMinimumBody, revision: digest(noMinimumBody) },
+      ref,
+      course,
+      noMinimumGame,
+    ).reasons,
+    [],
+  )
+  const g3Ref = { ...ref, grade: 'G3' as const, maxRunners: null }
+  const g3Game = { ...game, id: sapporoPilot.definition.id, raceClass: 'G3' as const, minAge: 2 }
+  const g3Body = {
+    ...body,
+    source: mappingSourceFacts(g3Ref),
+    sourceDigest: digest(g3Ref),
+    definition: g3Game,
+    gameDefinitionId: g3Game.id,
+    definitionDigest: digest(g3Game),
+    opponents: { profile: 'sapporo-g3-2yo-v1' as const, runners: g3Game.runners },
+  }
+  const g3Mapping = { ...g3Body, revision: digest(g3Body) }
+  assert.deepEqual(inspectRaceMapping(g3Mapping, g3Ref, course, g3Game).reasons, [])
+  assert.ok(
+    validateRaceMapping(
+      { ...g3Mapping, opponents: { ...g3Mapping.opponents, profile: 'shared-development-v1' } },
+      { reference: g3Ref, course, definition: g3Game },
+    ).includes('opponents_not_approved'),
+  )
+  assert.ok(
+    validateRaceMapping(
+      { ...g3Mapping, definition: { ...g3Game, minAge: 3 } },
+      {
+        reference: g3Ref,
+        course,
+        definition: { ...g3Game, minAge: 3 },
+      },
+    ).includes('age_unconfirmed'),
+  )
+  assert.ok(
+    validateRaceMapping(g3Mapping, {
+      reference: { ...g3Ref, grade: 'G1' },
+      course,
+      definition: g3Game,
+    }).includes('grade_unsupported'),
+  )
   const sourceBefore = digest(ref)
   // Re-pin all source proofs so conflicts fail on their own rule, not stale provenance.
   const inspectSource = (reference: (typeof catalog.races)[number]) => {
@@ -546,6 +678,48 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
     return inspectRaceMapping({ ...updated, revision: digest(updated) }, reference, course, game)
   }
   assert.deepEqual(inspectSource({ ...ref, courseId: course.id }).reasons, [])
+  assert.deepEqual(inspectSource({ ...ref, maxRunners: null }).reasons, [])
+  // The official maximum is capacity, while game.runners is the locked actual field size.
+  assert.deepEqual(inspectSource({ ...ref, maxRunners: game.runners + 1 }).reasons, [])
+  assert.ok(
+    inspectSource({ ...ref, maxRunners: game.runners - 1 }).reasons.includes('runners_unconfirmed'),
+  )
+  const officialMaximum = { ...g3Ref, maxRunners: 14 }
+  const inspectActualField = (runners: number, opponentRunners = runners) => {
+    const definition = { ...g3Game, runners }
+    const candidate = {
+      ...g3Body,
+      source: mappingSourceFacts(officialMaximum),
+      sourceDigest: digest(officialMaximum),
+      definition,
+      definitionDigest: digest(definition),
+      opponents: { ...g3Body.opponents, runners: opponentRunners },
+    }
+    return inspectRaceMapping(
+      { ...candidate, revision: digest(candidate) },
+      officialMaximum,
+      course,
+      definition,
+    )
+  }
+  assert.deepEqual(inspectActualField(12).reasons, [])
+  assert.deepEqual(inspectActualField(14).reasons, [])
+  assert.ok(inspectActualField(15).reasons.includes('runners_unconfirmed'))
+  assert.ok(inspectActualField(12, 14).reasons.includes('opponents_not_approved'))
+  assert.ok(inspectSource({ ...ref, maxRunners: 0 }).reasons.includes('runners_unconfirmed'))
+  const noOpponentDecision = structuredClone(mapping)
+  delete noOpponentDecision.decisions.opponents
+  const nullRunnersRef = { ...ref, maxRunners: null }
+  const nullRunnersBody = {
+    ...noOpponentDecision,
+    source: mappingSourceFacts(nullRunnersRef),
+    sourceDigest: digest(nullRunnersRef),
+  }
+  assert.ok(
+    validateRaceMapping(nullRunnersBody, { ...context, reference: nullRunnersRef }).includes(
+      'approval_required:opponents',
+    ),
+  )
   assert.ok(
     inspectSource({ ...ref, courseId: 'COURSE_OTHER' }).reasons.includes(
       'course_unassigned_or_unverified',
@@ -810,4 +984,174 @@ test('approved mapping verifier rejects stale provenance, partial decisions and 
     'game_calendar_year_restricted',
   )
   assert.equal(raceDefinitions.length, 17)
+})
+
+test('source conversion locks verified JPY facts and all explicit policy factors into the mapping revision', async () => {
+  const { inspectRaceMapping } = await import('../src/modules/racing/mapping')
+  const { mappingSourceFacts, mappingDecisionFields } =
+    await import('../../../packages/shared/src/race-mapping')
+  const { sapporoOfficialFacts } =
+    await import('../../../packages/shared/src/sapporo-official-facts')
+  const { sapporoLegacyDefinition } =
+    await import('../../../tests/helpers/sapporo-legacy-definition')
+  const catalog = normalizeRacingCatalog(await source())
+  const reference = catalog.races.find((race) => race.id === sapporoOfficialFacts.sourceId)!
+  const course = catalog.courses.find((item) => item.id === sapporoPilot.courseModel.id)!
+  // Only arithmetic fixture values: the actual exchange/scale policy is unresolved.
+  const definition = { ...sapporoLegacyDefinition, entryFee: 250000, prize: 170000000 }
+  const policy = {
+    version: 'test-policy-v1',
+    sourceCurrency: 'JPY',
+    destinationCurrency: 'KRW',
+    krwPerJpy: { numerator: 10, denominator: 1 },
+    scale: { numerator: 1, denominator: 2 },
+    rounding: 'floor',
+  } as const
+  const economy = {
+    basis: 'source_conversion_v1',
+    currency: 'KRW',
+    entryFee: 250000,
+    firstPrize: 170000000,
+    sourceRevision: sapporoOfficialFacts.version,
+    feeBasis: 'jra_central_special_registration',
+    entryFeeJPY: 50000,
+    firstPrizeJPY: 34000000,
+    policy,
+  } as const
+  const body = {
+    version: 1,
+    referenceId: reference.id,
+    gameDefinitionId: definition.id,
+    state: 'approved',
+    sourceDigest: digest(reference),
+    source: mappingSourceFacts(reference),
+    definitionDigest: digest(definition),
+    definition,
+    courseId: course.id,
+    courseDigest: digest(course),
+    courseSnapshot: course,
+    eligibility: { minAge: 2, maxAge: 2, sex: 'any', minWins: 1, maxWins: null },
+    calendar: {
+      referenceYear: 2026,
+      firstGameYear: 2028,
+      seasonMonth: 9,
+      policy: 'repeat_season_month',
+    },
+    economy,
+    opponents: { profile: 'sapporo-g3-2yo-v1', runners: 14 },
+    decisions: Object.fromEntries(
+      mappingDecisionFields.map((key) => [
+        key,
+        {
+          status: 'approved',
+          reference: 'https://example.invalid/test-only',
+          reviewer: 'fixture-only',
+        },
+      ]),
+    ),
+  }
+  const mapping = { ...body, revision: digest(body) }
+  assert.deepEqual(inspectRaceMapping(mapping, reference, course, definition).reasons, [])
+  for (const count of [9, 14, 15]) {
+    const candidateDefinition = { ...definition, runners: count }
+    const candidate = {
+      ...body,
+      definition: candidateDefinition,
+      definitionDigest: digest(candidateDefinition),
+      opponents: { ...body.opponents, runners: count },
+    }
+    const reasons = inspectRaceMapping(
+      { ...candidate, revision: digest(candidate) },
+      reference,
+      course,
+      candidateDefinition,
+    ).reasons
+    assert.equal(reasons.includes('runners_unconfirmed'), count > 14)
+  }
+  const { minWins: _historicalMinimum, ...noMinimumDefinition } = definition
+  const noMinimumBody = {
+    ...body,
+    definition: noMinimumDefinition,
+    definitionDigest: digest(noMinimumDefinition),
+    eligibility: { ...body.eligibility, minWins: null },
+  }
+  const noMinimumReasons = inspectRaceMapping(
+    { ...noMinimumBody, revision: digest(noMinimumBody) },
+    reference,
+    course,
+    noMinimumDefinition,
+  ).reasons
+  assert.ok(noMinimumReasons.includes('affiliation_eligibility_unsupported'))
+  assert.ok(!noMinimumReasons.includes('win_conditions_not_approved'))
+  const changedPolicy = {
+    ...body,
+    economy: { ...economy, policy: { ...policy, rounding: 'ceil' } },
+  }
+  assert.notEqual(digest(changedPolicy), mapping.revision)
+  assert.ok(
+    inspectRaceMapping(
+      { ...changedPolicy, revision: mapping.revision },
+      reference,
+      course,
+      definition,
+    ).reasons.includes('mapping_revision_changed'),
+  )
+  for (const changedEconomy of [
+    { ...economy, sourceRevision: 'unverified' },
+    { ...economy, entryFeeJPY: 1 },
+    { ...economy, firstPrizeJPY: 74180000 },
+  ]) {
+    const changed = { ...body, economy: changedEconomy }
+    assert.ok(
+      inspectRaceMapping(
+        { ...changed, revision: digest(changed) },
+        reference,
+        course,
+        definition,
+      ).reasons.includes('game_economy_source_unconfirmed'),
+    )
+  }
+  const invalidConversion = {
+    ...body,
+    economy: { ...economy, policy: { ...policy, krwPerJpy: { numerator: 9, denominator: 1 } } },
+  }
+  assert.ok(
+    inspectRaceMapping(
+      { ...invalidConversion, revision: digest(invalidConversion) },
+      reference,
+      course,
+      definition,
+    ).reasons.includes('game_economy_conversion_invalid'),
+  )
+  const unrelated = { ...reference, id: 'RACE_OTHER_2026' }
+  const unrelatedBody = {
+    ...body,
+    referenceId: unrelated.id,
+    sourceDigest: digest(unrelated),
+    source: mappingSourceFacts(unrelated),
+  }
+  assert.ok(
+    inspectRaceMapping(
+      { ...unrelatedBody, revision: digest(unrelatedBody) },
+      unrelated,
+      course,
+      definition,
+    ).reasons.includes('game_economy_source_unconfirmed'),
+  )
+  for (const invalid of [
+    { ...economy, policy: undefined },
+    { ...economy, policy: { ...policy, rounding: 'unspecified' } },
+    { ...economy, feeBasis: 'all_affiliations' },
+    { ...economy, extra: 1 },
+  ]) {
+    const changed = { ...body, economy: invalid }
+    assert.ok(
+      inspectRaceMapping(
+        { ...changed, revision: digest(changed) },
+        reference,
+        course,
+        definition,
+      ).reasons.includes('mapping_schema_invalid'),
+    )
+  }
 })

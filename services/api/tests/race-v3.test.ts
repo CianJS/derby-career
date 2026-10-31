@@ -602,6 +602,8 @@ test('004 upgrades the v1/v2 database in place, preserves logs and receipts, and
       '007_jockey_trust.sql',
       '008_overseas_expeditions.sql',
       '009_unselected_event_expiry.sql',
+      '010_official_mapping_revision.sql',
+      '011_official_mapping_history.sql',
     ])
     assert.deepEqual(await migrate(f.db), [])
     assert.deepEqual(

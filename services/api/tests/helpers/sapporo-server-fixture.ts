@@ -1,0 +1,290 @@
+// Executed only inside the disposable checkout with the test-only approval manifest.
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
+import { fixture } from '../helpers'
+import { importRacingCatalog, readRacingSource } from '../../src/modules/racing/import'
+import { sapporoPilot } from '../../../../packages/shared/src/sapporo-pilot'
+import { approvedPlayableDefinitions } from '../../../../packages/shared/src/approved-playable'
+import { paidCareer } from '../../../../tests/helpers/economy-fixture'
+import { postgresDatabase } from '../../src/db'
+import type { Database } from '../../src/db'
+
+test('isolated Sapporo fixture uses authoritative server entry and settlement', async () => {
+  const url = process.env.SAPPORO_TEST_POSTGRES
+  if (url) {
+    const parsed = new URL(url)
+    if (
+      !['localhost', '127.0.0.1', '::1'].includes(parsed.hostname) ||
+      !parsed.pathname.endsWith('_test')
+    ) {
+      throw new Error('Sapporo PostgreSQL fixture requires a local dedicated *_test database')
+    }
+  }
+  let failLedgerInsert = false
+  const native = url ? postgresDatabase(url) : null
+  const faultDb: Database | undefined = native
+    ? {
+        ...native,
+        transaction: (fn) =>
+          native.transaction((tx) =>
+            fn({
+              query: (sql, values) => {
+                if (failLedgerInsert && sql.startsWith('INSERT INTO stable_ledger')) {
+                  failLedgerInsert = false
+                  throw new Error('test-only settlement failure')
+                }
+                return tx.query(sql, values)
+              },
+            }),
+          ),
+      }
+    : undefined
+  const f = await fixture({ probability: 0, ...(faultDb ? { db: faultDb } : {}) })
+  try {
+    await importRacingCatalog(f.db, await readRacingSource(['seeds/racing.notion.source.json']))
+    const manifest = approvedPlayableDefinitions[0]
+    assert.equal(manifest?.sourceId, sapporoPilot.source.id)
+    await f.db.query(
+      'INSERT INTO race_definitions(id,payload,source_kind,country_code) VALUES($1,$2,$3,$4)',
+      [manifest.definitionId, JSON.stringify(manifest.definition), 'catalog', 'JPN'],
+    )
+    await f.db.query(
+      'INSERT INTO official_race_mapping_revisions(race_definition_id,source_race_id,revision) VALUES($1,$2,$3)',
+      [manifest.definitionId, manifest.sourceId, manifest.revision],
+    )
+    await f.db.query(
+      'INSERT INTO official_race_mapping_history(race_definition_id,source_race_id,revision,snapshot) VALUES($1,$2,$3,$4)',
+      [manifest.definitionId, manifest.sourceId, manifest.revision, JSON.stringify(manifest)],
+    )
+    const { id, response } = await f.create()
+    const state = {
+      ...response.career.state,
+      month: 9,
+      careerTurnIndex: 9,
+      calendarDate: { year: 2028, month: 9 },
+      raceRecords: paidCareer().raceRecords,
+    }
+    await f.db.query('UPDATE careers SET turn=9,state=$2 WHERE id=$1', [id, JSON.stringify(state)])
+    const path = `/v1/careers/${id}/race-entries`
+    const options = await f.call('GET', `${path}?referenceRaceId=${manifest.sourceId}`)
+    assert.equal(options.statusCode, 200, options.body)
+    const detail = await f.call('GET', `/v1/race-schedule/${manifest.sourceId}`)
+    assert.equal(detail.statusCode, 200, detail.body)
+    assert.equal(detail.json().playability.status, 'playable')
+    assert.equal(options.json().referenceRace.raceDefinitionId, manifest.definitionId)
+    assert.equal(options.json().referenceRace.status, 'playable')
+    assert.equal(options.json().races.length, 1)
+    assert.equal(options.json().races[0].eligible, false)
+    assert.equal(
+      (
+        await f.call(
+          'GET',
+          `${path}?referenceRaceId=${manifest.sourceId}`,
+          undefined,
+          f.other.token,
+        )
+      ).statusCode,
+      404,
+    )
+    const body = {
+      raceRunId: randomUUID(),
+      raceDefinitionId: manifest.definitionId,
+      jockeyId: 'SEO_JIAN',
+      tactic: '선입',
+      expectedTurn: 9,
+    }
+    await f.db.query(
+      'INSERT INTO race_definitions(id,payload,source_kind,country_code) VALUES($1,$2,$3,$4)',
+      ['ALIAS_SAPPORO_TEST', JSON.stringify(manifest.definition), 'catalog', 'JPN'],
+    )
+    assert.equal(
+      (await f.call('POST', path, { ...body, raceDefinitionId: 'ALIAS_SAPPORO_TEST' })).statusCode,
+      422,
+    )
+    assert.equal((await f.call('POST', path, body, f.other.token)).statusCode, 404)
+    assert.equal(
+      (await f.call('POST', path, { ...body, raceDefinitionId: manifest.sourceId })).statusCode,
+      422,
+    )
+    assert.equal((await f.call('POST', path, body)).statusCode, 422)
+    const travel = await f.call('POST', `/v1/careers/${id}/expeditions`, {
+      commandId: randomUUID(),
+      targetCountry: 'JPN',
+      expectedTravelRevision: 0,
+    })
+    assert.equal(travel.statusCode, 200, travel.body)
+    assert.equal(
+      (await f.call('GET', `${path}?referenceRaceId=${manifest.sourceId}`)).json().races[0]
+        .eligible,
+      true,
+    )
+    await f.db.query('UPDATE careers SET state=$2 WHERE id=$1', [
+      id,
+      JSON.stringify({ ...state, raceRecords: [] }),
+    ])
+    assert.equal((await f.call('POST', path, body)).statusCode, 422)
+    await f.db.query('UPDATE careers SET turn=21,state=$2 WHERE id=$1', [
+      id,
+      JSON.stringify({ ...state, month: 21, careerTurnIndex: 21 }),
+    ])
+    assert.equal((await f.call('POST', path, { ...body, expectedTurn: 21 })).statusCode, 422)
+    await f.db.query('UPDATE careers SET turn=9,state=$2 WHERE id=$1', [id, JSON.stringify(state)])
+    assert.equal((await f.call('POST', path, { ...body, jockeyId: 'PARK_SEOYUN' })).statusCode, 422)
+    await f.db.query('UPDATE stables SET funds=749999 WHERE id=$1', [response.career.stableId])
+    assert.equal((await f.call('POST', path, body)).statusCode, 422)
+    await f.db.query('UPDATE stables SET funds=20000000 WHERE id=$1', [response.career.stableId])
+    await f.db.query(
+      'UPDATE official_race_mapping_revisions SET revision=$2 WHERE race_definition_id=$1',
+      [manifest.definitionId, '0'.repeat(64)],
+    )
+    assert.equal(
+      (await f.call('GET', `${path}?referenceRaceId=${manifest.sourceId}`)).json().referenceRace
+        .status,
+      'blocked',
+    )
+    assert.equal((await f.call('POST', path, body)).statusCode, 422)
+    await f.db.query(
+      'UPDATE official_race_mapping_revisions SET revision=$2 WHERE race_definition_id=$1',
+      [manifest.definitionId, manifest.revision],
+    )
+    await f.db.query(
+      "UPDATE racecourse_courses SET payload=jsonb_set(payload,'{notes}','\"tampered\"') WHERE id=$1",
+      [manifest.courseId],
+    )
+    assert.equal((await f.call('POST', path, body)).statusCode, 422)
+    const catalog = (await import('../../src/modules/racing/catalog')).normalizeRacingCatalog(
+      await readRacingSource(['seeds/racing.notion.source.json']),
+    )
+    const originalCourse = catalog.courses.find((c) => c.id === manifest.courseId)!
+    await f.db.query('UPDATE racecourse_courses SET payload=$2 WHERE id=$1', [
+      manifest.courseId,
+      JSON.stringify(originalCourse),
+    ])
+    await f.db.query(
+      "UPDATE race_definitions SET payload=jsonb_set(payload,'{entryFee}','1') WHERE id=$1",
+      [manifest.definitionId],
+    )
+    assert.equal((await f.call('POST', path, body)).statusCode, 422)
+    await f.db.query('UPDATE race_definitions SET payload=$2 WHERE id=$1', [
+      manifest.definitionId,
+      JSON.stringify(manifest.definition),
+    ])
+    await f.db.query(
+      "UPDATE race_schedules SET payload=jsonb_set(payload,'{notes}','\"tampered\"') WHERE id=$1",
+      [manifest.sourceId],
+    )
+    assert.equal((await f.call('POST', path, body)).statusCode, 422)
+    const source = catalog.races.find((r) => r.id === manifest.sourceId)!
+    await f.db.query('UPDATE race_schedules SET payload=$2 WHERE id=$1', [
+      manifest.sourceId,
+      JSON.stringify(source),
+    ])
+    if (url) {
+      failLedgerInsert = true
+      const failed = await f.call('POST', path, body)
+      assert.equal(failed.statusCode, 500)
+      assert.equal(
+        Number(
+          (await f.db.query('SELECT funds FROM stables WHERE id=$1', [response.career.stableId]))
+            .rows[0].funds,
+        ),
+        20000000,
+      )
+      assert.equal(
+        (await f.db.query('SELECT id FROM race_runs WHERE id=$1', [body.raceRunId])).rows.length,
+        0,
+      )
+      assert.equal(
+        (await f.db.query('SELECT id FROM stable_ledger WHERE race_run_id=$1', [body.raceRunId]))
+          .rows.length,
+        0,
+      )
+      assert.equal(
+        (await f.db.query('SELECT request_id FROM commands WHERE request_id=$1', [body.raceRunId]))
+          .rows.length,
+        0,
+      )
+    }
+    const entryReplies = await Promise.all(
+      Array.from({ length: url ? 4 : 1 }, () => f.call('POST', path, body)),
+    )
+    const entered = entryReplies[0]
+    assert.equal(entered.statusCode, 200, entered.body)
+    for (const reply of entryReplies) {
+      assert.equal(reply.statusCode, 200, reply.body)
+      assert.deepStrictEqual(reply.json(), entered.json())
+    }
+    assert.equal(entered.json().career.funds, 19250000)
+    assert.equal(entered.json().career.state.raceRun.mappingRevision, manifest.revision)
+    assert.deepEqual((await f.call('POST', path, body)).json(), entered.json())
+    assert.equal((await f.call('POST', path, { ...body, raceRunId: randomUUID() })).statusCode, 409)
+    const log = (await f.call('GET', `/v1/careers/${id}/race-runs/${body.raceRunId}/log`)).json()
+      .log
+    await f.db.query('DELETE FROM official_race_mapping_revisions WHERE race_definition_id=$1', [
+      manifest.definitionId,
+    ])
+    assert.equal(
+      (await f.call('GET', `${path}?referenceRaceId=${manifest.sourceId}`)).json().referenceRace
+        .status,
+      'blocked',
+    )
+    const finishPath = `/v1/careers/${id}/race-runs/${body.raceRunId}/complete`
+    const completion = { commandId: randomUUID() }
+    if (url) {
+      failLedgerInsert = true
+      assert.equal((await f.call('POST', finishPath, completion)).statusCode, 500)
+      assert.equal(
+        Number(
+          (await f.db.query('SELECT funds FROM stables WHERE id=$1', [response.career.stableId]))
+            .rows[0].funds,
+        ),
+        19250000,
+      )
+      assert.equal(
+        (
+          await f.db.query('SELECT race_run_id FROM race_results WHERE race_run_id=$1', [
+            body.raceRunId,
+          ])
+        ).rows.length,
+        0,
+      )
+      assert.equal(
+        (
+          await f.db.query("SELECT id FROM stable_ledger WHERE race_run_id=$1 AND kind='prize'", [
+            body.raceRunId,
+          ])
+        ).rows.length,
+        0,
+      )
+      assert.equal(
+        (
+          await f.db.query('SELECT request_id FROM commands WHERE request_id=$1', [
+            completion.commandId,
+          ])
+        ).rows.length,
+        0,
+      )
+    }
+    const finishReplies = await Promise.all(
+      Array.from({ length: url ? 4 : 1 }, () => f.call('POST', finishPath, completion)),
+    )
+    const finished = finishReplies[0]
+    assert.equal(finished.statusCode, 200, finished.body)
+    for (const reply of finishReplies) {
+      assert.equal(reply.statusCode, 200, reply.body)
+      assert.deepStrictEqual(reply.json(), finished.json())
+    }
+    assert.equal(finished.json().career.funds, 19250000 + log.result.prizeMoney)
+    assert.deepEqual((await f.call('POST', finishPath, completion)).json(), finished.json())
+    const rows = (
+      await f.db.query('SELECT kind,amount FROM stable_ledger WHERE stable_id=$1', [
+        response.career.stableId,
+      ])
+    ).rows
+    assert.equal(rows.filter((r) => r.kind === 'entry_fee').length, 1)
+    assert.equal(rows.filter((r) => r.kind === 'prize').length, 1)
+  } finally {
+    await f.close()
+  }
+})

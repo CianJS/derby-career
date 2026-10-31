@@ -850,13 +850,15 @@ export interface components {
             surface: "Turf";
             distance: number;
             /** @enum {string} */
-            raceClass: "미승리" | "1승" | "Listed";
+            raceClass: "미승리" | "1승" | "Listed" | "G3";
             runners: number;
             courseProfile: string;
             prize: number;
             entryFee: number;
             minWins?: number;
             maxWins?: number;
+            minAge?: number;
+            maxAge?: number;
         };
         JockeyDefinition: {
             id: string;
@@ -908,6 +910,9 @@ export interface components {
             result: components["schemas"]["RaceSimulationResult"];
         };
         RaceRun: {
+            mappingRevision?: string;
+            /** @enum {string} */
+            opponentProfile?: "shared-development-v1" | "sapporo-g3-2yo-v1";
             trustContext?: components["schemas"]["TrustContext"];
             raceRunId: string;
             month: number;
@@ -1356,17 +1361,54 @@ export interface components {
             sourceRaceId: string;
             sourceYear: number;
             sourceMonth: number | null;
-            /** @enum {string|null} */
-            raceDefinitionId: null;
+            raceDefinitionId: string | null;
             /** @enum {string} */
-            status: "blocked";
-            /** @enum {boolean} */
-            eligible: false;
+            status: "blocked" | "playable";
+            eligible: boolean;
             /** @enum {string} */
-            calendarPolicy: "not_approved";
+            calendarPolicy: "not_approved" | "repeat_season_month";
             reasons: ("mapping_not_approved" | "opponents_not_approved" | "recurrence_not_approved" | "win_conditions_not_approved" | "source_not_verified" | "duplicate_review" | "not_run" | "date_unconfirmed" | "course_unassigned" | "age_unconfirmed" | "sex_rule_unsupported" | "eligibility_unconfirmed" | "surface_unsupported" | "grade_unsupported" | "distance_unconfirmed" | "runners_unconfirmed" | "game_economy_unapproved")[];
         };
+        RaceSourceCorrection: {
+            sourceId: string;
+            field: string;
+            oldValue: (string | number | boolean) | null;
+            newValue: string | number | boolean;
+            oldValueOrigin: string;
+            /** Format: uri */
+            evidenceUrl: string;
+            evidencePage: string;
+            applicableYear: number;
+            /** @enum {string} */
+            verificationStatus: "verified";
+            evidenceScope: string;
+        };
+        /** @description Read-only correction facts; neither an entry approval nor game policy. */
+        RaceSourceCorrectionRevision: {
+            version: string;
+            sourceId: string;
+            applicableYear: number;
+            /** Format: date */
+            verifiedOn: string;
+            baseSourceDigest: string;
+            /** @enum {string} */
+            verificationStatus: "verified";
+            /** @enum {string} */
+            activation: "disabled";
+            corrections: components["schemas"]["RaceSourceCorrection"][];
+            unresolved: {
+                actualCourseAndChanges: string;
+                gameRoster: string;
+                jraEligibility: string;
+                narEligibility: string;
+                foreignEligibility: string;
+                selection: string;
+                gameEconomy: string;
+            };
+        };
         RaceSchedule: {
+            /** @description Verified source facts independent from the raw source and game approval. */
+            readonly sourceCorrection?: components["schemas"]["RaceSourceCorrectionRevision"];
             playability?: components["schemas"]["ReferenceRacePlayability"];
             id: string;
             name: string;

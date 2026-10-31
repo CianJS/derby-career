@@ -2268,12 +2268,19 @@ components:
           - 미승리
           - 1승
           - Listed
+          - G3
         runners: *id009
         courseProfile: *id004
         prize: *id005
         entryFee: *id005
         minWins: *id009
         maxWins: *id009
+        minAge:
+          type: integer
+          minimum: 2
+        maxAge:
+          type: integer
+          minimum: 2
       required:
       - id
       - name
@@ -2406,6 +2413,12 @@ components:
     RaceRun:
       type: object
       properties:
+        mappingRevision:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        opponentProfile:
+          type: string
+          enum: [shared-development-v1, sapporo-g3-2yo-v1]
         trustContext:
           $ref: '#/components/schemas/TrustContext'
         raceRunId: *id004
@@ -3568,17 +3581,69 @@ components:
         sourceRaceId: {type: string}
         sourceYear: {type: integer}
         sourceMonth: {type: integer, minimum: 1, maximum: 12, nullable: true}
-        raceDefinitionId: {type: string, nullable: true, enum: [null]}
-        status: {type: string, enum: [blocked]}
-        eligible: {type: boolean, enum: [false]}
-        calendarPolicy: {type: string, enum: [not_approved]}
+        raceDefinitionId: {type: string, nullable: true}
+        status: {type: string, enum: [blocked, playable]}
+        eligible: {type: boolean}
+        calendarPolicy: {type: string, enum: [not_approved, repeat_season_month]}
         reasons:
           type: array
-          minItems: 1
+          minItems: 0
           uniqueItems: true
           items:
             type: string
             enum: [mapping_not_approved, opponents_not_approved, recurrence_not_approved, win_conditions_not_approved, source_not_verified, duplicate_review, not_run, date_unconfirmed, course_unassigned, age_unconfirmed, sex_rule_unsupported, eligibility_unconfirmed, surface_unsupported, grade_unsupported, distance_unconfirmed, runners_unconfirmed, game_economy_unapproved]
+    RaceSourceCorrection:
+      type: object
+      additionalProperties: false
+      required: [sourceId, field, oldValue, newValue, oldValueOrigin, evidenceUrl, evidencePage, applicableYear, verificationStatus, evidenceScope]
+      properties:
+        sourceId: {type: string}
+        field: {type: string}
+        oldValue:
+          nullable: true
+          oneOf:
+          - type: string
+          - type: number
+          - type: boolean
+        newValue:
+          oneOf:
+          - type: string
+          - type: number
+          - type: boolean
+        oldValueOrigin: {type: string}
+        evidenceUrl: {type: string, format: uri}
+        evidencePage: {type: string}
+        applicableYear: {type: integer}
+        verificationStatus: {type: string, enum: [verified]}
+        evidenceScope: {type: string}
+    RaceSourceCorrectionRevision:
+      type: object
+      additionalProperties: false
+      description: Read-only correction facts; neither an entry approval nor game policy.
+      required: [version, sourceId, applicableYear, verifiedOn, baseSourceDigest, verificationStatus, activation, corrections, unresolved]
+      properties:
+        version: {type: string}
+        sourceId: {type: string}
+        applicableYear: {type: integer}
+        verifiedOn: {type: string, format: date}
+        baseSourceDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+        verificationStatus: {type: string, enum: [verified]}
+        activation: {type: string, enum: [disabled]}
+        corrections:
+          type: array
+          items: {$ref: '#/components/schemas/RaceSourceCorrection'}
+        unresolved:
+          type: object
+          additionalProperties: false
+          required: [actualCourseAndChanges, gameRoster, jraEligibility, narEligibility, foreignEligibility, selection, gameEconomy]
+          properties:
+            actualCourseAndChanges: {type: string}
+            gameRoster: {type: string}
+            jraEligibility: {type: string}
+            narEligibility: {type: string}
+            foreignEligibility: {type: string}
+            selection: {type: string}
+            gameEconomy: {type: string}
     RaceSchedule:
       type: object
       additionalProperties: false
@@ -3618,6 +3683,10 @@ components:
       - notes
       - reviewIssues
       properties:
+        sourceCorrection:
+          description: Verified source facts independent from the raw source and game approval.
+          readOnly: true
+          $ref: '#/components/schemas/RaceSourceCorrectionRevision'
         playability:
           $ref: '#/components/schemas/ReferenceRacePlayability'
         id:
