@@ -1,5 +1,9 @@
 import { withReferencePlayability } from '../../../../packages/shared/src/race-playability'
-import type { Database } from '../db'
+import type { Database, Query } from '../db'
+import {
+  resolveOfficialEntry,
+  officialReferencePlayability,
+} from '../modules/racing/official-entry'
 import type { operations } from '../../../../packages/shared/src/generated/api'
 import type { Racecourse, Course, RaceSchedule } from '../modules/racing/catalog'
 import { ApiError } from '../errors'
@@ -12,6 +16,12 @@ export type RaceScheduleQuery = NonNullable<
 > & { page: number; pageSize: number }
 export class RacingCatalogRepository {
   constructor(private db: Database) {}
+  private async referenceWithPlayability(tx: Query, race: RaceSchedule): Promise<RaceSchedule> {
+    const official = await resolveOfficialEntry(tx, race.id)
+    return official
+      ? { ...race, playability: officialReferencePlayability(official) }
+      : withReferencePlayability(race)
+  }
   private async list<T>(
     table: 'racecourses' | 'race_schedules',
     query: RacecourseQuery | RaceScheduleQuery,
@@ -87,16 +97,19 @@ export class RacingCatalogRepository {
         table === 'race_schedules'
           ? 'race_date ASC NULLS LAST,id COLLATE "C" ASC'
           : 'id COLLATE "C" ASC'
-      const data = (
+      const rows = (
         await tx.query(
           `SELECT payload FROM ${source} ORDER BY ${order} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
           [...values, query.pageSize, (query.page - 1) * query.pageSize],
         )
-      ).rows.map(
-        (r) =>
-          (table === 'race_schedules'
-            ? withReferencePlayability(r.payload as RaceSchedule)
-            : r.payload) as T,
+      ).rows
+      const data = await Promise.all(
+        rows.map(
+          async (r) =>
+            (table === 'race_schedules'
+              ? await this.referenceWithPlayability(tx, r.payload as RaceSchedule)
+              : r.payload) as T,
+        ),
       )
       return {
         data,
@@ -133,8 +146,11 @@ export class RacingCatalogRepository {
     })
   }
   async getSchedule(id: string) {
-    const race = (await this.db.query('SELECT payload FROM race_schedules WHERE id=$1', [id]))
-      .rows[0]?.payload as RaceSchedule | undefined
-    return race ? withReferencePlayability(race) : undefined
+    return this.db.transaction(async (tx) => {
+      await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+      const race = (await tx.query('SELECT payload FROM race_schedules WHERE id=$1', [id])).rows[0]
+        ?.payload as RaceSchedule | undefined
+      return race ? this.referenceWithPlayability(tx, race) : undefined
+    })
   }
 }

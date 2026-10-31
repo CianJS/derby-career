@@ -118,6 +118,23 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
       },
     )
     assert.match(output, /pass 1/)
+    // Synthetic approval is injected only into this temporary source copy. Release code
+    // keeps the stricter evidence checks and the real manifest remains empty.
+    await writeFile(
+      join(tmp, 'services/api/config/approved-race-mappings.json'),
+      JSON.stringify([mapping]),
+    )
+    const server = execFileSync(
+      process.execPath,
+      ['--import', 'tsx', '--test', 'tests/helpers/sapporo-server-fixture.ts'],
+      {
+        cwd: join(tmp, 'services/api'),
+        encoding: 'utf8',
+        timeout: 60000,
+        env: { ...process.env, NODE_TEST_CONTEXT: undefined },
+      },
+    )
+    assert.match(server, /pass 1/)
   } finally {
     await rm(tmp, { recursive: true, force: true })
   }

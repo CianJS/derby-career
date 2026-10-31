@@ -13,7 +13,7 @@ import { sapporoPilot } from '../../packages/shared/src/sapporo-pilot'
 
 test('test-only Sapporo manifest exercises Local entry, payment, completion and reload', async () => {
   const storage = browserStorage()
-  let tail = Promise.resolve<unknown>()
+  let tail = Promise.resolve<unknown>(undefined)
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
     value: {

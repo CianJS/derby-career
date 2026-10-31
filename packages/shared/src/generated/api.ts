@@ -1361,14 +1361,12 @@ export interface components {
             sourceRaceId: string;
             sourceYear: number;
             sourceMonth: number | null;
-            /** @enum {string|null} */
-            raceDefinitionId: null;
+            raceDefinitionId: string | null;
             /** @enum {string} */
-            status: "blocked";
-            /** @enum {boolean} */
-            eligible: false;
+            status: "blocked" | "playable";
+            eligible: boolean;
             /** @enum {string} */
-            calendarPolicy: "not_approved";
+            calendarPolicy: "not_approved" | "repeat_season_month";
             reasons: ("mapping_not_approved" | "opponents_not_approved" | "recurrence_not_approved" | "win_conditions_not_approved" | "source_not_verified" | "duplicate_review" | "not_run" | "date_unconfirmed" | "course_unassigned" | "age_unconfirmed" | "sex_rule_unsupported" | "eligibility_unconfirmed" | "surface_unsupported" | "grade_unsupported" | "distance_unconfirmed" | "runners_unconfirmed" | "game_economy_unapproved")[];
         };
         RaceSchedule: {
