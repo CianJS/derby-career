@@ -8,7 +8,7 @@ import { normalizeRacingCatalog, digest } from '../../src/modules/racing/catalog
 import { readRacingSource } from '../../src/modules/racing/import'
 import { sapporoPilot } from '../../../../packages/shared/src/sapporo-pilot'
 test('Sapporo release verification isolates a test-only Local entry manifest', async () => {
-  const { deriveApprovedPlayable, deriveApprovedHistory } =
+  const { deriveApprovedPlayable, deriveApprovedHistory, assertHistoryAppendOnly } =
     await import('../../src/modules/racing/mapping-release')
   const { mappingSourceFacts, mappingDecisionFields } =
     await import('../../../../packages/shared/src/race-mapping')
@@ -81,6 +81,15 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
     { mapping, reference, course },
     { mapping: revised, reference, course },
   ]
+  assert.doesNotThrow(() => assertHistoryAppendOnly([archiveInput[0]], archiveInput))
+  assert.throws(
+    () => assertHistoryAppendOnly(archiveInput, [archiveInput[1]]),
+    /removed or changed/,
+  )
+  assert.throws(
+    () => assertHistoryAppendOnly([archiveInput[0]], [{ ...archiveInput[0], mapping: revised }]),
+    /removed or changed/,
+  )
   assert.deepEqual(deriveApprovedHistory(archiveInput, true), [...entries, ...revisedEntries])
   assert.throws(() => deriveApprovedHistory(archiveInput), /Release approval/)
   assert.throws(() => deriveApprovedHistory([archiveInput[0], archiveInput[0]], true), /Duplicate/)

@@ -1,8 +1,21 @@
 import { inspectRaceMapping, raceMappingSchema } from './mapping'
 import type { Course, RaceSchedule } from './catalog'
-import { validateMappingRegistry } from '../../../../../packages/shared/src/race-mapping'
+import {
+  validateMappingRegistry,
+  canonicalMappingValue,
+} from '../../../../../packages/shared/src/race-mapping'
 import { sapporoPilot } from '../../../../../packages/shared/src/sapporo-pilot'
 import type { ApprovedPlayable } from '../../../../../packages/shared/src/approved-playable'
+
+export function assertHistoryAppendOnly(previous: unknown, current: unknown): void {
+  if (!Array.isArray(previous) || !Array.isArray(current)) {
+    throw new Error('Historical approvals must be arrays')
+  }
+  const retained = new Set(current.map((item) => canonicalMappingValue(item)))
+  if (previous.some((item) => !retained.has(canonicalMappingValue(item)))) {
+    throw new Error('A previously released historical approval was removed or changed')
+  }
+}
 
 /** Node-only derivation; callers never accept these records from an HTTP or save payload. */
 export function deriveApprovedPlayable(
