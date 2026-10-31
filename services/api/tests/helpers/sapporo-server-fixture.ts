@@ -53,6 +53,10 @@ test('isolated Sapporo fixture uses authoritative server entry and settlement', 
       'INSERT INTO official_race_mapping_revisions(race_definition_id,source_race_id,revision) VALUES($1,$2,$3)',
       [manifest.definitionId, manifest.sourceId, manifest.revision],
     )
+    await f.db.query(
+      'INSERT INTO official_race_mapping_history(race_definition_id,source_race_id,revision,snapshot) VALUES($1,$2,$3,$4)',
+      [manifest.definitionId, manifest.sourceId, manifest.revision, JSON.stringify(manifest)],
+    )
     const { id, response } = await f.create()
     const state = {
       ...response.career.state,
@@ -217,6 +221,14 @@ test('isolated Sapporo fixture uses authoritative server entry and settlement', 
     assert.equal((await f.call('POST', path, { ...body, raceRunId: randomUUID() })).statusCode, 409)
     const log = (await f.call('GET', `/v1/careers/${id}/race-runs/${body.raceRunId}/log`)).json()
       .log
+    await f.db.query('DELETE FROM official_race_mapping_revisions WHERE race_definition_id=$1', [
+      manifest.definitionId,
+    ])
+    assert.equal(
+      (await f.call('GET', `${path}?referenceRaceId=${manifest.sourceId}`)).json().referenceRace
+        .status,
+      'blocked',
+    )
     const finishPath = `/v1/careers/${id}/race-runs/${body.raceRunId}/complete`
     const completion = { commandId: randomUUID() }
     if (url) {

@@ -5,15 +5,67 @@ import {
   validateRaceMapping,
   type RaceMapping,
 } from '../../../../../packages/shared/src/race-mapping'
-import { approvedPlayableDefinitions } from '../../../../../packages/shared/src/approved-playable'
+import {
+  approvedPlayableDefinitions,
+  approvedPlayableByRevision,
+} from '../../../../../packages/shared/src/approved-playable'
 import { digest, type Course, type RaceSchedule } from './catalog'
 import type { RaceDefinitionSnapshot } from '../../../../../lib/career/race-entry'
 import { referenceRacePlayability } from '../../../../../packages/shared/src/race-playability'
+import { raceOccurrenceForTurn, type RaceRunInput } from '../../../../../lib/career/race-entry'
+import { ApiError } from '../../errors'
+
+export async function assertHistoricalOfficialRun(tx: Query, run: RaceRunInput) {
+  if (run.raceDefinitionSnapshot.id !== sapporoPilotId) {
+    return
+  }
+  const approved = approvedPlayableByRevision(run.raceDefinitionSnapshot.id, run.mappingRevision)
+  const row =
+    approved &&
+    (
+      await tx.query<{ snapshot: unknown; source_race_id: string }>(
+        'SELECT snapshot,source_race_id FROM official_race_mapping_history WHERE race_definition_id=$1 AND revision=$2',
+        [approved.definitionId, approved.revision],
+      )
+    ).rows[0]
+  const definition = approved && raceOccurrenceForTurn(approved.definition, run.month)
+  if (
+    !approved ||
+    !row ||
+    row.source_race_id !== approved.sourceId ||
+    canonicalMappingValue(row.snapshot) !== canonicalMappingValue(approved) ||
+    !definition ||
+    canonicalMappingValue(run.raceDefinitionSnapshot) !== canonicalMappingValue(definition) ||
+    run.opponentProfile !== approved.opponentProfile
+  ) {
+    throw new ApiError(500, 'CORRUPT_RACE_MAPPING', '저장된 경주 승인 이력을 확인할 수 없습니다.')
+  }
+}
+const sapporoPilotId = 'JPN_SAPPORO_NISAI_G3'
 
 /** Called inside the authoritative transaction, not from a browser-supplied mapping. */
 export async function resolveOfficialEntry(tx: Query, sourceId: string, lock = false) {
   const manifest = approvedPlayableDefinitions.find((item) => item.sourceId === sourceId)
   if (!manifest) {
+    return null
+  }
+  const historical = approvedPlayableByRevision(manifest.definitionId, manifest.revision)
+  const savedHistory =
+    historical &&
+    (
+      await tx.query<{ snapshot: unknown; source_race_id: string }>(
+        'SELECT snapshot,source_race_id FROM official_race_mapping_history WHERE race_definition_id=$1 AND revision=$2' +
+          (lock ? ' FOR SHARE' : ''),
+        [manifest.definitionId, manifest.revision],
+      )
+    ).rows[0]
+  if (
+    !historical ||
+    !savedHistory ||
+    savedHistory.source_race_id !== manifest.sourceId ||
+    canonicalMappingValue(savedHistory.snapshot) !== canonicalMappingValue(historical) ||
+    canonicalMappingValue(historical) !== canonicalMappingValue(manifest)
+  ) {
     return null
   }
   const suffix = lock ? ' FOR SHARE' : ''

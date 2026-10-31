@@ -1,9 +1,6 @@
-import { inspectRaceMapping } from './mapping'
+import { inspectRaceMapping, raceMappingSchema } from './mapping'
 import type { Course, RaceSchedule } from './catalog'
-import {
-  canonicalMappingValue,
-  validateMappingRegistry,
-} from '../../../../../packages/shared/src/race-mapping'
+import { validateMappingRegistry } from '../../../../../packages/shared/src/race-mapping'
 import { sapporoPilot } from '../../../../../packages/shared/src/sapporo-pilot'
 import type { ApprovedPlayable } from '../../../../../packages/shared/src/approved-playable'
 
@@ -13,8 +10,9 @@ export function deriveApprovedPlayable(
   races: RaceSchedule[],
   courses: Course[],
   allowTestEvidence = false,
+  historical = false,
 ): ApprovedPlayable[] {
-  if (!Array.isArray(inputs) || inputs.length > 1) {
+  if (!Array.isArray(inputs) || (!historical && inputs.length > 1)) {
     throw new Error('Only the Sapporo pilot can be approved')
   }
   const outputs: ApprovedPlayable[] = []
@@ -24,7 +22,14 @@ export function deriveApprovedPlayable(
     if (!reference || !course) {
       throw new Error('Sapporo reference or course missing')
     }
-    const result = inspectRaceMapping(input, reference, course, sapporoPilot.definition)
+    const parsed = raceMappingSchema.safeParse(input)
+    const definition = parsed.success ? parsed.data.definition : null
+    const result = inspectRaceMapping(
+      input,
+      reference,
+      course,
+      definition as typeof sapporoPilot.definition | null,
+    )
     if (!result.mapping || result.reasons.length) {
       throw new Error(`Mapping rejected: ${result.reasons.join(', ')}`)
     }
@@ -33,15 +38,11 @@ export function deriveApprovedPlayable(
       m.referenceId !== reference.id ||
       m.gameDefinitionId !== sapporoPilot.definition.id ||
       m.courseId !== course.id ||
-      m.opponents?.profile !== 'sapporo-g3-2yo-v1' ||
-      canonicalMappingValue(m.definition) !== canonicalMappingValue(sapporoPilot.definition)
+      m.opponents?.profile !== 'sapporo-g3-2yo-v1'
     ) {
       throw new Error('Pilot identity or definition differs from reviewed proposal')
     }
-    const registry = validateMappingRegistry(
-      [m],
-      [{ reference, course, definition: sapporoPilot.definition }],
-    )
+    const registry = validateMappingRegistry([m], [{ reference, course, definition: m.definition }])
     if (registry[0].reasons.length) {
       throw new Error(`Registry rejected: ${registry[0].reasons.join(', ')}`)
     }
@@ -67,5 +68,36 @@ export function deriveApprovedPlayable(
       definition: m.definition!,
     })
   }
+  if (new Set(outputs.map((entry) => entry.revision)).size !== outputs.length) {
+    throw new Error('Duplicate approval revision')
+  }
   return outputs
+}
+
+/** Historical source/course snapshots are retained with their approved mapping. */
+export function deriveApprovedHistory(
+  inputs: unknown,
+  allowTestEvidence = false,
+): ApprovedPlayable[] {
+  if (!Array.isArray(inputs)) {
+    throw new Error('Historical approvals must be an array')
+  }
+  const entries = inputs.flatMap(
+    (entry: { mapping: unknown; reference: RaceSchedule; course: Course }) => {
+      if (!entry || !entry.reference || !entry.course) {
+        throw new Error('Historical approval source snapshots are missing')
+      }
+      return deriveApprovedPlayable(
+        [entry.mapping],
+        [entry.reference],
+        [entry.course],
+        allowTestEvidence,
+        true,
+      )
+    },
+  )
+  if (new Set(entries.map((entry) => entry.revision)).size !== entries.length) {
+    throw new Error('Duplicate historical approval revision')
+  }
+  return entries
 }

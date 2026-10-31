@@ -13,7 +13,7 @@ import { summarizeRecords } from './records'
 import { canRace, careerHealth } from './health'
 import { simulateRace, summarizeRaceLog, type RaceSimulationLog, type RaceSimulationSummary } from './race-simulation'
 import { sapporoPilot } from '../../packages/shared/src/sapporo-pilot'
-import { approvedPlayableDefinitions, approvedPlayableById } from '../../packages/shared/src/approved-playable'
+import { approvedPlayableDefinitions, approvedPlayableById, approvedPlayableByRevision } from '../../packages/shared/src/approved-playable'
 
 export const tactics = ['도주', '선행', '선입', '추입'] as const
 export type RunningTactic = typeof tactics[number]
@@ -209,8 +209,8 @@ export function lockRaceEntryWithLog(career: Career, draft: RaceEntryDraft, iden
 }
 export function assertRaceRun(run: RaceRunInput, career: Career) {
   const fail = () => { throw new Error('저장된 출전 정보를 읽을 수 없습니다. 기존 저장은 유지됩니다.') }
-  const approved = approvedPlayableById(run?.raceDefinitionSnapshot?.id)
-  const definition = [...raceDefinitions, ...localOverseasRaces, ...stressRaceDefinitions, ...approvedPlayableDefinitions.map(entry => entry.definition)].find(r => r.id === run?.raceDefinitionSnapshot?.id)
+  const approved = approvedPlayableByRevision(run?.raceDefinitionSnapshot?.id, run?.mappingRevision)
+  const definition = [...raceDefinitions, ...localOverseasRaces, ...stressRaceDefinitions].find(r => r.id === run?.raceDefinitionSnapshot?.id) ?? approved?.definition
   const known = definition && raceOccurrenceForTurn(definition, run.month)
   if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || !known || run.month !== known.month || career.careerTurnIndex !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || run.raceDefinitionSnapshot.month !== known.month || run.raceDefinitionSnapshot.runners !== known.runners || !Array.isArray(run.runners) || run.runners.length !== known.runners) fail()
   if (known && (run.opponentProfile !== undefined || opponentProfileForRace(known) === 'sapporo-g3-2yo-v1') && run.opponentProfile !== opponentProfileForRace(known)) fail()

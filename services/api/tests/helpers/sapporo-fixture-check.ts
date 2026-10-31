@@ -8,7 +8,8 @@ import { normalizeRacingCatalog, digest } from '../../src/modules/racing/catalog
 import { readRacingSource } from '../../src/modules/racing/import'
 import { sapporoPilot } from '../../../../packages/shared/src/sapporo-pilot'
 test('Sapporo release verification isolates a test-only Local entry manifest', async () => {
-  const { deriveApprovedPlayable } = await import('../../src/modules/racing/mapping-release')
+  const { deriveApprovedPlayable, deriveApprovedHistory } =
+    await import('../../src/modules/racing/mapping-release')
   const { mappingSourceFacts, mappingDecisionFields } =
     await import('../../../../packages/shared/src/race-mapping')
   const catalog = normalizeRacingCatalog(
@@ -66,6 +67,31 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
   )
   const entries = deriveApprovedPlayable([mapping], catalog.races, catalog.courses, true)
   assert.equal(entries.length, 1)
+  const revisedDefinition = { ...definition, entryFee: 800000, prize: 66000000 }
+  const revisedBody = {
+    ...body,
+    definition: revisedDefinition,
+    definitionDigest: digest(revisedDefinition),
+    economy: { ...body.economy, entryFee: 800000, firstPrize: 66000000 },
+  }
+  const revised = { ...revisedBody, revision: digest(revisedBody) }
+  const revisedEntries = deriveApprovedPlayable([revised], catalog.races, catalog.courses, true)
+  assert.notEqual(entries[0].revision, revisedEntries[0].revision)
+  const archiveInput = [
+    { mapping, reference, course },
+    { mapping: revised, reference, course },
+  ]
+  assert.deepEqual(deriveApprovedHistory(archiveInput, true), [...entries, ...revisedEntries])
+  assert.throws(() => deriveApprovedHistory(archiveInput), /Release approval/)
+  assert.throws(() => deriveApprovedHistory([archiveInput[0], archiveInput[0]], true), /Duplicate/)
+  assert.throws(
+    () =>
+      deriveApprovedHistory(
+        [{ ...archiveInput[0], course: { ...course, notes: 'tampered' } }],
+        true,
+      ),
+    /Mapping rejected/,
+  )
   const root = join(process.cwd(), '../..')
   const tmp = await mkdtemp(join(tmpdir(), 'derby-sapporo-test-'))
   try {
@@ -82,6 +108,10 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
     await writeFile(
       join(tmp, 'packages/shared/src/approved-playable.json'),
       JSON.stringify(entries, null, 2) + '\n',
+    )
+    await writeFile(
+      join(tmp, 'packages/shared/src/approved-playable-history.json'),
+      JSON.stringify([...entries, ...revisedEntries], null, 2) + '\n',
     )
     // The ordinary release check must reject the test-only registry if it is copied into a build.
     assert.throws(() =>
@@ -115,7 +145,11 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
           cwd: tmp,
           encoding: 'utf8',
           timeout: 60000,
-          env: { ...process.env, NODE_TEST_CONTEXT: undefined },
+          env: {
+            ...process.env,
+            NODE_TEST_CONTEXT: undefined,
+            SAPPORO_TEST_ALT: JSON.stringify(revisedEntries),
+          },
         },
       )
       assert.match(output, /pass 1/)

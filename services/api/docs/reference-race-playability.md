@@ -97,3 +97,11 @@ const options = await client.getRaceEntryOptions(careerId, { referenceRaceId: de
 ```
 
 미조회·실패를 0개로 바꾸지 않고, 후속 실제 활성화 계약이 병합된 후에만 source→game 출전 버튼을 연결한다. 이번 후보 JSON/검증 helper를 브라우저가 승인 데이터로 올리는 API는 존재하지 않으며 POST에 mapping을 보내면 기존 strict 요청 schema가 400으로 거부한다.
+
+## 승인 revision 이력 (Draft #108)
+
+위 후보 단계 설명과 달리 Draft #108은 승인된 정의를 연결하는 코드를 포함하되 실제 승인 목록은 비어 있다. 신규 출전은 `approved-playable.json`의 현재 revision만 사용한다. 이미 잠긴 Run은 별도 `approved-playable-history.json`에서 정의 ID와 revision을 함께 찾아 당시 정의·프로필과 대조한다. 이력 입력 `config/approved-race-history.json`은 mapping과 당시 reference/course snapshot을 함께 보존하며 생성 검사에서 해시와 승인 결정을 검증한다. 기존 이력은 교체하거나 삭제하지 않는다.
+
+서버의 `011_official_mapping_history.sql`은 수정·삭제를 금지하는 빈 이력 테이블만 만든다. 승인 이후 별도 승인된 데이터 이행에서는 이력 행을 먼저 추가하고, 동일한 `(definition ID, revision)`에 기존 값이 있으면 정확히 같은지 확인한 뒤 현재 정의와 활성 관계를 전환해야 한다. 기존 행을 덮어쓰면 안 된다. 활성 관계를 삭제해 신규 출전을 중지해도 기존 Run은 이력과 기존 로그를 사용한다. 이 migration과 데이터 이행을 운영/Preview 환경에 실행하지 않았다.
+
+FE는 새 출전 가능 목록의 현재 revision만 표시하면 된다. 기존 locked Run을 현재 목록에 없다는 이유로 삭제하거나 최신 정의로 바꾸면 안 된다. 실제 승인 및 활성화는 별도 결정이다.

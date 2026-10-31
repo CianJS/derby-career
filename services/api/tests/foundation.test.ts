@@ -225,6 +225,7 @@ test('009 preserves all pre-existing rows and checksums; unselected expiry needs
     assert.deepEqual(await migrate(f.db), [
       '009_unselected_event_expiry.sql',
       '010_official_mapping_revision.sql',
+      '011_official_mapping_history.sql',
     ])
     assert.deepEqual(await migrate(f.db), [])
     assert.deepEqual(

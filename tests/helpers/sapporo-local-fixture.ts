@@ -10,6 +10,10 @@ import { careerStore } from '../../lib/career/store'
 import { readRaceLog } from '../../lib/career/race-log-repository'
 import { localRacesForTurn, raceEligibility } from '../../lib/career/race-entry'
 import { sapporoPilot } from '../../packages/shared/src/sapporo-pilot'
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 test('test-only Sapporo manifest exercises Local entry, payment, completion and reload', async () => {
   const storage = browserStorage()
@@ -67,6 +71,42 @@ test('test-only Sapporo manifest exercises Local entry, payment, completion and 
   assert.equal(readBrowserSave().career!.raceRun!.raceRunId, run.raceRunId)
   assert.equal(await careerStore.lockRace(draft, career.horse.id, 9), true)
   assert.equal(readBrowserSave().lifecycle!.fundsKRW, 19_250_000)
+  if (process.env.SAPPORO_TEST_ALT) {
+    const directory = mkdtempSync(join(tmpdir(), 'sapporo-locked-'))
+    const savePath = join(directory, 'storage.json')
+    const registryPath = 'packages/shared/src/approved-playable.json'
+    const originalRegistry = readFileSync(registryPath, 'utf8')
+    try {
+      writeFileSync(savePath, JSON.stringify([...storage.data]))
+      for (const disabled of [false, true]) {
+        writeFileSync(registryPath, disabled ? '[]\n' : process.env.SAPPORO_TEST_ALT)
+        const output = execFileSync(
+          process.execPath,
+          [
+            '--import',
+            './services/api/node_modules/tsx/dist/loader.mjs',
+            '--test',
+            'tests/helpers/sapporo-reload-fixture.ts',
+          ],
+          {
+            cwd: process.cwd(),
+            encoding: 'utf8',
+            timeout: 60000,
+            env: {
+              ...process.env,
+              NODE_TEST_CONTEXT: undefined,
+              SAPPORO_TEST_SAVE: savePath,
+              SAPPORO_TEST_DISABLED: disabled ? '1' : '0',
+            },
+          },
+        )
+        assert.match(output, /pass 1/)
+      }
+    } finally {
+      writeFileSync(registryPath, originalRegistry)
+      rmSync(directory, { recursive: true, force: true })
+    }
+  }
   const stored = storage.target.getItem('derby-career-browser-save-v1')!
   for (const tamper of [
     (value: typeof locked) => {

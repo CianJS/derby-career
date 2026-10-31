@@ -2,6 +2,7 @@ import { referenceRacePlayability } from '../../../../packages/shared/src/race-p
 import {
   resolveOfficialEntry,
   officialReferencePlayability,
+  assertHistoricalOfficialRun,
 } from '../modules/racing/official-entry'
 import { sapporoPilot } from '../../../../packages/shared/src/sapporo-pilot'
 import {
@@ -766,6 +767,8 @@ export class CareerRepository {
         if (row.state.raceRun?.raceRunId !== runId || row.turn !== run.turn) {
           throw conflict('현재 확정 경주와 일치하지 않습니다.')
         }
+        await assertHistoricalOfficialRun(tx, run.input)
+        await assertHistoricalOfficialRun(tx, row.state.raceRun)
         const exactLog = await readSimulationLog(tx, runId, run.engine_version)
         const result = exactLog.result
         assertMoney(result.prizeMoney)
