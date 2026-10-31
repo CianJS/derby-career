@@ -217,8 +217,9 @@ test('Sapporo R1 to R2 restart preserves old run and uses R2 for new entry', asy
     )
     assert.equal(options.statusCode, 200, options.body)
     assert.equal(options.json().races[0].eligible, true)
+    const freshRunId = randomUUID()
     const entered = await f.call('POST', `/v1/careers/${fresh.id}/race-entries`, {
-      raceRunId: randomUUID(),
+      raceRunId: freshRunId,
       raceDefinitionId: manifest.definitionId,
       jockeyId: 'SEO_JIAN',
       tactic: '선입',
@@ -228,6 +229,12 @@ test('Sapporo R1 to R2 restart preserves old run and uses R2 for new entry', asy
     assert.equal(entered.json().career.state.raceRun.mappingRevision, manifest.revision)
     assert.equal(entered.json().career.state.raceRun.raceDefinitionSnapshot.entryFee, 800000)
     assert.equal(entered.json().career.funds, 19200000)
+    const newLedger = (
+      await f.db.query('SELECT kind,amount FROM stable_ledger WHERE race_run_id=$1', [freshRunId])
+    ).rows
+    assert.equal(newLedger.length, 1)
+    assert.equal(newLedger[0].kind, 'entry_fee')
+    assert.equal(Number(newLedger[0].amount), -800000)
   } finally {
     await f.close()
   }
