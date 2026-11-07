@@ -14,6 +14,7 @@ import { canRace, careerHealth } from './health'
 import { simulateRace, summarizeRaceLog, type RaceSimulationLog, type RaceSimulationSummary } from './race-simulation'
 import { sapporoPilot } from '../../packages/shared/src/sapporo-pilot'
 import { approvedPlayableDefinitions, approvedPlayableById, approvedPlayableByRevision } from '../../packages/shared/src/approved-playable'
+import { canonicalJson } from '../../packages/shared/src/canonical-json'
 
 export const tactics = ['도주', '선행', '선입', '추입'] as const
 export type RunningTactic = typeof tactics[number]
@@ -214,7 +215,7 @@ export function assertRaceRun(run: RaceRunInput, career: Career) {
   const known = definition && raceOccurrenceForTurn(definition, run.month)
   if (!run || !run.raceRunId || !run.raceSeed || run.engineVersion !== 'entry-contract-v1' || !known || run.month !== known.month || career.careerTurnIndex !== run.month || career.action || run.playerHorseId !== career.horse.id || !run.player || run.player.horseSnapshot?.id !== run.playerHorseId || run.raceDefinitionSnapshot.month !== known.month || run.raceDefinitionSnapshot.runners !== known.runners || !Array.isArray(run.runners) || run.runners.length !== known.runners) fail()
   if (known && (run.opponentProfile !== undefined || opponentProfileForRace(known) === 'sapporo-g3-2yo-v1') && run.opponentProfile !== opponentProfileForRace(known)) fail()
-  if (approved && (!known || run.mappingRevision !== approved.revision || run.opponentProfile !== approved.opponentProfile || JSON.stringify(Object.entries(run.raceDefinitionSnapshot).sort()) !== JSON.stringify(Object.entries(known).sort()))) fail()
+  if (approved && (!known || run.mappingRevision !== approved.revision || run.opponentProfile !== approved.opponentProfile || canonicalJson(run.raceDefinitionSnapshot) !== canonicalJson(known))) fail()
   if (
     run.trustContext !== undefined && (
       run.trustContext.version !== 'jockey-trust-v1' ||

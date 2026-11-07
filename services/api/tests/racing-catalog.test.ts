@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto'
 import { fixture } from './helpers'
 import type { Query } from '../src/db'
 import { normalizeRacingCatalog, digest } from '../src/modules/racing/catalog'
+import { canonicalMappingValue } from '../../../packages/shared/src/race-mapping'
 import { importRacingCatalog, readRacingSource } from '../src/modules/racing/import'
 import { createApiClient } from '../../../packages/shared/src/client'
 import { sapporoPilot } from '../../../packages/shared/src/sapporo-pilot'
@@ -1153,5 +1154,28 @@ test('source conversion locks verified JPY facts and all explicit policy factors
         definition,
       ).reasons.includes('mapping_schema_invalid'),
     )
+  }
+})
+
+test('shared mapping revision hash and Node catalog digest agree byte for byte', async () => {
+  const webSha = async (value: unknown) =>
+    Array.from(
+      new Uint8Array(
+        await globalThis.crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(canonicalMappingValue(value)),
+        ),
+      ),
+    )
+      .map((n) => n.toString(16).padStart(2, '0'))
+      .join('')
+  for (const sample of [
+    { a: 1, b: [2, 3], c: { d: '한글', e: null } },
+    { revisionBody: { economy: { policy: { krwPerJpy: { numerator: 10, denominator: 1 } } } } },
+    { x: undefined, y: 1 },
+    { arr: [undefined, 1] },
+    { key: 'a"b\\c\n', braces: '{}:,[]' },
+  ]) {
+    assert.equal(digest(sample), await webSha(sample))
   }
 })

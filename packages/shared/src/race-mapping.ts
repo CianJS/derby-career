@@ -12,6 +12,7 @@ import type { Career } from '../../../lib/career/model'
 import type { StableTravel } from '../../../lib/career/local-travel'
 import { convertJpyRaceAmount, type RaceCurrencyPolicy } from './race-currency-policy'
 import { sapporoOfficialFacts } from './sapporo-official-facts'
+import { canonicalJson } from './canonical-json'
 
 type Schedule = components['schemas']['RaceSchedule']
 type Course = components['schemas']['Course']
@@ -111,23 +112,12 @@ export type MappingContext = {
 export function mappingSourceFacts(race: Schedule): MappingSourceFacts {
   return Object.fromEntries(factKeys.map((k) => [k, race[k]])) as MappingSourceFacts
 }
-/** Portable structural comparison. Cryptographic provenance is checked by the Backend audit. */
+/**
+ * Portable structural comparison. Cryptographic provenance is checked by the Backend audit.
+ * Shares canonicalJson with the Node-side digest so a revision hashed on either side verifies.
+ */
 export function canonicalMappingValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return '[' + value.map(canonicalMappingValue).join(',') + ']'
-  }
-  if (value && typeof value === 'object') {
-    return (
-      '{' +
-      Object.entries(value)
-        .filter(([, v]) => v !== undefined)
-        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-        .map(([k, v]) => JSON.stringify(k) + ':' + canonicalMappingValue(v))
-        .join(',') +
-      '}'
-    )
-  }
-  return JSON.stringify(value)
+  return canonicalJson(value)
 }
 /** No heuristic joins: every approved record pins the exact source and game definition. */
 export function validateRaceMapping(mapping: RaceMapping, context: MappingContext): string[] {
@@ -458,7 +448,7 @@ export async function previewMappedEntry(
       new Uint8Array(
         await globalThis.crypto.subtle.digest(
           'SHA-256',
-          new TextEncoder().encode(canonicalMappingValue(value)),
+          new TextEncoder().encode(canonicalJson(value)),
         ),
       ),
     )

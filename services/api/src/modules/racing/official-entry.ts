@@ -10,13 +10,14 @@ import {
   approvedPlayableByRevision,
 } from '../../../../../packages/shared/src/approved-playable'
 import { digest, type Course, type RaceSchedule } from './catalog'
+import { sapporoPilot } from '../../../../../packages/shared/src/sapporo-pilot'
 import type { RaceDefinitionSnapshot } from '../../../../../lib/career/race-entry'
 import { referenceRacePlayability } from '../../../../../packages/shared/src/race-playability'
 import { raceOccurrenceForTurn, type RaceRunInput } from '../../../../../lib/career/race-entry'
 import { ApiError } from '../../errors'
 
 export async function assertHistoricalOfficialRun(tx: Query, run: RaceRunInput) {
-  if (run.raceDefinitionSnapshot.id !== sapporoPilotId) {
+  if (run.raceDefinitionSnapshot.id !== sapporoPilot.definition.id) {
     return
   }
   const approved = approvedPlayableByRevision(run.raceDefinitionSnapshot.id, run.mappingRevision)
@@ -41,7 +42,6 @@ export async function assertHistoricalOfficialRun(tx: Query, run: RaceRunInput) 
     throw new ApiError(500, 'CORRUPT_RACE_MAPPING', '저장된 경주 승인 이력을 확인할 수 없습니다.')
   }
 }
-const sapporoPilotId = 'JPN_SAPPORO_NISAI_G3'
 
 /** Called inside the authoritative transaction, not from a browser-supplied mapping. */
 export async function resolveOfficialEntry(tx: Query, sourceId: string, lock = false) {
