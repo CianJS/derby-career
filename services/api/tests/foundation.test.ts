@@ -267,3 +267,25 @@ test('009 preserves all pre-existing rows and checksums; unselected expiry needs
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test('readiness requires the additive official mapping migrations 010 and 011', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'derby-readiness-migrations-'))
+  let f: Awaited<ReturnType<typeof fixture>> | undefined
+  try {
+    for (const name of (await readdir('migrations')).filter(
+      (name) => name.endsWith('.sql') && name < '010_',
+    )) {
+      await copyFile(join('migrations', name), join(directory, name))
+    }
+    f = await fixture({ migrationsDirectory: directory, seed: false })
+    assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 503)
+    assert.deepEqual(await migrate(f.db), [
+      '010_official_mapping_revision.sql',
+      '011_official_mapping_history.sql',
+    ])
+    assert.equal((await f.app.inject({ url: '/health/ready' })).statusCode, 200)
+  } finally {
+    await f?.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})

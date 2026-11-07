@@ -16,6 +16,21 @@ import { RacingCatalogRepository } from './repositories/racing-catalog'
 import { racingCatalogRoutes } from './routes/racing-catalog'
 import { starterJockeyOptions } from '../../../packages/shared/src/domain'
 
+// Every migration that runtime code reads at request time must be listed here, so a deployment
+// missing its tables fails readiness instead of serving requests against an incomplete schema.
+const REQUIRED_MIGRATIONS = [
+  '001_foundation.sql',
+  '002_history_guards.sql',
+  '003_exact_race_log_json.sql',
+  '004_race_sim_v3.sql',
+  '005_event_activation_guards.sql',
+  '006_racing_reference_catalog.sql',
+  '007_jockey_trust.sql',
+  '008_overseas_expeditions.sql',
+  '009_unselected_event_expiry.sql',
+  '010_official_mapping_revision.sql',
+  '011_official_mapping_history.sql',
+] as const
 const CLIENT_ERROR_CODES: Record<number, string> = {
   400: 'INVALID_REQUEST',
   413: 'PAYLOAD_TOO_LARGE',
@@ -133,9 +148,10 @@ export async function createApp(
   app.get('/health/ready', { schema: routeSchema(spec, '/health/ready', 'get') }, async () => {
     try {
       const result = await db.query(
-        "SELECT name FROM schema_migrations WHERE name IN ('001_foundation.sql','002_history_guards.sql','003_exact_race_log_json.sql','004_race_sim_v3.sql','005_event_activation_guards.sql','006_racing_reference_catalog.sql','007_jockey_trust.sql','008_overseas_expeditions.sql','009_unselected_event_expiry.sql')",
+        'SELECT name FROM schema_migrations WHERE name = ANY($1::text[])',
+        [[...REQUIRED_MIGRATIONS]],
       )
-      if (result.rows.length !== 9) {
+      if (result.rows.length !== REQUIRED_MIGRATIONS.length) {
         throw new Error('Migration missing')
       }
       return { status: 'ready' }
