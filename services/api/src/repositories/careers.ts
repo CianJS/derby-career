@@ -5,7 +5,7 @@ import {
   officialReferencePlayability,
   assertHistoricalOfficialRun,
 } from '../modules/racing/official-entry'
-import { sapporoPilot } from '../../../../packages/shared/src/sapporo-pilot'
+import { officialPilotByDefinitionId } from '../../../../packages/shared/src/sapporo-pilot'
 import {
   readTravel,
   expeditionDto,
@@ -563,17 +563,18 @@ export class CareerRepository {
           [careerProgress(row.turn).seasonTurn],
         )
       ).rows
-      // Even an inserted catalog row cannot make the pilot usable without its verified manifest.
-      const officialInList = loadedDefinitions.some(
-        (d) => d.id === sapporoPilot.definition.id || d.payload.id === sapporoPilot.definition.id,
-      )
-        ? (official ?? (await resolveOfficialEntry(tx, sapporoPilot.source.id)))
+      // Even an inserted catalog row cannot make a pilot usable without its verified manifest.
+      const pilotInList = loadedDefinitions
+        .map((d) => officialPilotByDefinitionId(d.id) ?? officialPilotByDefinitionId(d.payload.id))
+        .find((pilot) => pilot)
+      const officialInList = pilotInList
+        ? (official ?? (await resolveOfficialEntry(tx, pilotInList.sourceId)))
         : null
       const definitions = loadedDefinitions
         .filter((d) =>
-          d.id === sapporoPilot.definition.id
+          officialPilotByDefinitionId(d.id)
             ? officialInList !== null && d.payload.id === d.id
-            : d.payload.id !== sapporoPilot.definition.id,
+            : !officialPilotByDefinitionId(d.payload.id),
         )
         .filter(
           (d) => !referenceRaceId || (official && d.payload.id === official.manifest.definitionId),
@@ -639,11 +640,11 @@ export class CareerRepository {
         if (!row.state.contractedJockeyIds.includes(body.jockeyId)) {
           throw new ApiError(422, 'RACE_RESTRICTED', '계약 기수 중에서 선택해 주세요.')
         }
-        const officialEntry =
-          body.raceDefinitionId === sapporoPilot.definition.id
-            ? await resolveOfficialEntry(tx, sapporoPilot.source.id, true)
-            : null
-        if (body.raceDefinitionId === sapporoPilot.definition.id && !officialEntry) {
+        const entryPilot = officialPilotByDefinitionId(body.raceDefinitionId)
+        const officialEntry = entryPilot
+          ? await resolveOfficialEntry(tx, entryPilot.sourceId, true)
+          : null
+        if (entryPilot && !officialEntry) {
           throw new ApiError(
             422,
             'RACE_RESTRICTED',

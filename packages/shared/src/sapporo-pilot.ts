@@ -1,4 +1,6 @@
 /** Review-only proposal: never add to a live race catalog without the separate approvals. */
+import type { OpponentProfile } from '../../../lib/career/race-entry'
+
 export const sapporoPilot = {
   state: 'candidate',
   source: {
@@ -25,3 +27,27 @@ export const sapporoPilot = {
     id: 'JPN_SAPPORO_NISAI_G3',
   },
 } as const
+
+/**
+ * Official pilot identities. The read, entry and validation paths ask "is this the official
+ * pilot?" through these lookups, so a second approved race adds one entry instead of editing
+ * each path against a hardcoded ID.
+ */
+export type OfficialPilot = {
+  sourceId: string
+  definitionId: string
+  courseId: string
+  opponentProfile: OpponentProfile
+}
+export const officialPilots: readonly OfficialPilot[] = [
+  {
+    sourceId: sapporoPilot.source.id,
+    definitionId: sapporoPilot.definition.id,
+    courseId: sapporoPilot.courseModel.id,
+    opponentProfile: 'sapporo-g3-2yo-v1',
+  },
+]
+export const officialPilotByDefinitionId = (id: string | undefined) =>
+  officialPilots.find((pilot) => pilot.definitionId === id)
+export const officialPilotBySourceId = (id: string | undefined) =>
+  officialPilots.find((pilot) => pilot.sourceId === id)

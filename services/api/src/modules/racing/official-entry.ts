@@ -10,14 +10,14 @@ import {
   approvedPlayableByRevision,
 } from '../../../../../packages/shared/src/approved-playable'
 import { digest, type Course, type RaceSchedule } from './catalog'
-import { sapporoPilot } from '../../../../../packages/shared/src/sapporo-pilot'
+import { officialPilotByDefinitionId } from '../../../../../packages/shared/src/sapporo-pilot'
 import type { RaceDefinitionSnapshot } from '../../../../../lib/career/race-entry'
 import { referenceRacePlayability } from '../../../../../packages/shared/src/race-playability'
 import { raceOccurrenceForTurn, type RaceRunInput } from '../../../../../lib/career/race-entry'
 import { ApiError } from '../../errors'
 
 export async function assertHistoricalOfficialRun(tx: Query, run: RaceRunInput) {
-  if (run.raceDefinitionSnapshot.id !== sapporoPilot.definition.id) {
+  if (!officialPilotByDefinitionId(run.raceDefinitionSnapshot.id)) {
     return
   }
   const approved = approvedPlayableByRevision(run.raceDefinitionSnapshot.id, run.mappingRevision)

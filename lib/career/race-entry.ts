@@ -12,7 +12,7 @@ import type { Career, Horse, Values } from './model'
 import { summarizeRecords } from './records'
 import { canRace, careerHealth } from './health'
 import { simulateRace, summarizeRaceLog, type RaceSimulationLog, type RaceSimulationSummary } from './race-simulation'
-import { sapporoPilot } from '../../packages/shared/src/sapporo-pilot'
+import { officialPilotByDefinitionId } from '../../packages/shared/src/sapporo-pilot'
 import { approvedPlayableDefinitions, approvedPlayableById, approvedPlayableByRevision } from '../../packages/shared/src/approved-playable'
 import { canonicalJson } from '../../packages/shared/src/canonical-json'
 
@@ -153,7 +153,7 @@ const opponentNames = ['새벽빛', '은빛 바람', '푸른 물결', '해오름
 // Strength spans the same stat range as the starter horses. Even-numbered runners lean on speed and odd-numbered ones
 // on stamina, so distance changes who is strong instead of only how strong everyone is.
 export function opponentProfileForRace(race: RaceDefinitionSnapshot): OpponentProfile {
-  return race.id === sapporoPilot.definition.id && race.raceClass === 'G3'
+  return officialPilotByDefinitionId(race.id) && race.raceClass === 'G3'
     ? 'sapporo-g3-2yo-v1'
     : 'shared-development-v1'
 }

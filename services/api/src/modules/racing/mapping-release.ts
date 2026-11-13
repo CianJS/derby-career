@@ -4,7 +4,7 @@ import {
   validateMappingRegistry,
   canonicalMappingValue,
 } from '../../../../../packages/shared/src/race-mapping'
-import { sapporoPilot } from '../../../../../packages/shared/src/sapporo-pilot'
+import { officialPilotBySourceId } from '../../../../../packages/shared/src/sapporo-pilot'
 import type { ApprovedPlayable } from '../../../../../packages/shared/src/approved-playable'
 import type { RaceDefinitionSnapshot } from '../../../../../lib/career/race-entry'
 
@@ -27,16 +27,20 @@ export function deriveApprovedPlayable(
   historical = false,
 ): ApprovedPlayable[] {
   if (!Array.isArray(inputs) || (!historical && inputs.length > 1)) {
-    throw new Error('Only the Sapporo pilot can be approved')
+    throw new Error('Only a single approved pilot can be released')
   }
   const outputs: ApprovedPlayable[] = []
   for (const input of inputs) {
-    const reference = races.find((r) => r.id === sapporoPilot.source.id)
-    const course = courses.find((c) => c.id === sapporoPilot.courseModel.id)
-    if (!reference || !course) {
-      throw new Error('Sapporo reference or course missing')
-    }
     const parsed = raceMappingSchema.safeParse(input)
+    const pilot = officialPilotBySourceId(parsed.success ? parsed.data.referenceId : undefined)
+    if (!pilot) {
+      throw new Error('Pilot identity or definition differs from reviewed proposal')
+    }
+    const reference = races.find((r) => r.id === pilot.sourceId)
+    const course = courses.find((c) => c.id === pilot.courseId)
+    if (!reference || !course) {
+      throw new Error('Pilot reference or course missing')
+    }
     const definition = parsed.success ? parsed.data.definition : null
     const result = inspectRaceMapping(
       input,
@@ -50,9 +54,9 @@ export function deriveApprovedPlayable(
     const m = result.mapping
     if (
       m.referenceId !== reference.id ||
-      m.gameDefinitionId !== sapporoPilot.definition.id ||
+      m.gameDefinitionId !== pilot.definitionId ||
       m.courseId !== course.id ||
-      m.opponents?.profile !== 'sapporo-g3-2yo-v1'
+      m.opponents?.profile !== pilot.opponentProfile
     ) {
       throw new Error('Pilot identity or definition differs from reviewed proposal')
     }

@@ -105,6 +105,8 @@ export class RacingCatalogRepository {
           [...values, query.pageSize, (query.page - 1) * query.pageSize],
         )
       ).rows
+      // Resolves each row independently, so a populated approval registry costs a few queries
+      // per row. Batch this lookup before the registry ships with real entries.
       const data = await Promise.all(
         rows.map(
           async (r) =>
