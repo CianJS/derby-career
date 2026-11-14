@@ -82,7 +82,7 @@ export function deriveApprovedPlayable(
     // decisions and runtime paths are complete; historical replays still work.
     if (!historical && !allowTestEvidence) {
       throw new Error(
-        'Sapporo activation blocked: currency policy, affiliation and occurrence field unresolved',
+        'Activation blocked: approved mapping, currency conversion policy, affiliation selection rules and locked occurrence roster unresolved',
       )
     }
     outputs.push({

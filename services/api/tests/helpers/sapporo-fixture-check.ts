@@ -74,7 +74,7 @@ test('Sapporo release verification isolates a test-only Local entry manifest', a
   const evidenceOnlyMapping = { ...evidenceOnlyBody, revision: digest(evidenceOnlyBody) }
   assert.throws(
     () => deriveApprovedPlayable([evidenceOnlyMapping], catalog.races, catalog.courses),
-    /activation blocked/,
+    /Activation blocked/,
   )
   assert.throws(
     () =>
