@@ -1,10 +1,18 @@
 import type { components } from './generated/api'
 import type { RaceDefinitionSnapshot } from '../../../lib/career/race-entry'
-import { raceOccurrenceForTurn, raceEligibility, isRaceTurn } from '../../../lib/career/race-entry'
+import {
+  raceOccurrenceForTurn,
+  raceEligibility,
+  isRaceTurn,
+  opponentProfileForRace,
+} from '../../../lib/career/race-entry'
 import { careerProgress } from '../../../lib/career/career-time'
 import { canRace } from '../../../lib/career/health'
 import type { Career } from '../../../lib/career/model'
 import type { StableTravel } from '../../../lib/career/local-travel'
+import { convertJpyRaceAmount, type RaceCurrencyPolicy } from './race-currency-policy'
+import { sapporoOfficialFacts } from './sapporo-official-facts'
+import { canonicalJson } from './canonical-json'
 
 type Schedule = components['schemas']['RaceSchedule']
 type Course = components['schemas']['Course']
@@ -64,7 +72,7 @@ export type RaceMapping = {
     minAge: number
     maxAge: number | null
     sex: 'any'
-    minWins: number
+    minWins: number | null
     maxWins: number | null
   } | null
   calendar: {
@@ -73,8 +81,21 @@ export type RaceMapping = {
     seasonMonth: number
     policy: 'repeat_season_month'
   } | null
-  economy: { entryFee: number; firstPrize: number; currency: 'KRW'; basis: 'game_balance' } | null
-  opponents: { profile: 'shared-development-v1'; runners: number } | null
+  economy:
+    | { entryFee: number; firstPrize: number; currency: 'KRW'; basis: 'game_balance' }
+    | {
+        entryFee: number
+        firstPrize: number
+        currency: 'KRW'
+        basis: 'source_conversion_v1'
+        sourceRevision: string
+        feeBasis: 'jra_central_special_registration'
+        entryFeeJPY: number
+        firstPrizeJPY: number
+        policy: RaceCurrencyPolicy
+      }
+    | null
+  opponents: { profile: 'shared-development-v1' | 'sapporo-g3-2yo-v1'; runners: number } | null
   decisions: Partial<
     Record<
       MappingDecisionField,
@@ -91,23 +112,12 @@ export type MappingContext = {
 export function mappingSourceFacts(race: Schedule): MappingSourceFacts {
   return Object.fromEntries(factKeys.map((k) => [k, race[k]])) as MappingSourceFacts
 }
-/** Portable structural comparison. Cryptographic provenance is checked by the Backend audit. */
+/**
+ * Portable structural comparison. Cryptographic provenance is checked by the Backend audit.
+ * Shares canonicalJson with the Node-side digest so a revision hashed on either side verifies.
+ */
 export function canonicalMappingValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return '[' + value.map(canonicalMappingValue).join(',') + ']'
-  }
-  if (value && typeof value === 'object') {
-    return (
-      '{' +
-      Object.entries(value)
-        .filter(([, v]) => v !== undefined)
-        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-        .map(([k, v]) => JSON.stringify(k) + ':' + canonicalMappingValue(v))
-        .join(',') +
-      '}'
-    )
-  }
-  return JSON.stringify(value)
+  return canonicalJson(value)
 }
 /** No heuristic joins: every approved record pins the exact source and game definition. */
 export function validateRaceMapping(mapping: RaceMapping, context: MappingContext): string[] {
@@ -195,21 +205,41 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
     ) {
       fail('distance_unconfirmed')
     }
-    if (game.raceClass !== 'Listed' || ref.grade !== 'Listed') {
+    if (!(
+      (game.raceClass === 'Listed' && ref.grade === 'Listed') ||
+      (game.raceClass === 'G3' && ref.grade === 'G3')
+    )) {
       fail('grade_unsupported')
     }
+    // New conversion revisions explicitly pin the corrected source; historical
+    // game_balance revisions continue to use their original source facts.
+    const verifiedMaximum = sapporoOfficialFacts.corrections.find(
+      (item) => item.field === 'officialMaximumStarters',
+    )
+    const sourceMaximum =
+      ref.maxRunners ??
+      (mapping.economy?.basis === 'source_conversion_v1' &&
+      mapping.economy.sourceRevision === sapporoOfficialFacts.version &&
+      ref.id === sapporoOfficialFacts.sourceId &&
+      ref.year === sapporoOfficialFacts.applicableYear &&
+      mapping.sourceDigest === sapporoOfficialFacts.baseSourceDigest &&
+      verifiedMaximum?.verificationStatus === 'verified' &&
+      typeof verifiedMaximum.newValue === 'number'
+        ? verifiedMaximum.newValue
+        : null)
     if (
       !Number.isInteger(game.runners) ||
       game.runners < 2 ||
       game.runners > 18 ||
-      ref.maxRunners === null ||
-      ref.maxRunners !== game.runners
+      (sourceMaximum !== null &&
+        (!Number.isInteger(sourceMaximum) || sourceMaximum < 2 || game.runners > sourceMaximum))
     ) {
       fail('runners_unconfirmed')
     }
     if (
       !mapping.opponents ||
-      mapping.opponents.profile !== 'shared-development-v1' ||
+      mapping.opponents.profile !== opponentProfileForRace(game) ||
+      (game.raceClass === 'G3' && mapping.opponents.profile !== 'sapporo-g3-2yo-v1') ||
       mapping.opponents.runners !== game.runners
     ) {
       fail('opponents_not_approved')
@@ -217,7 +247,7 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
     if (
       !mapping.economy ||
       mapping.economy.currency !== 'KRW' ||
-      mapping.economy.basis !== 'game_balance' ||
+      !['game_balance', 'source_conversion_v1'].includes(mapping.economy.basis) ||
       !Number.isSafeInteger(game.entryFee) ||
       game.entryFee < 0 ||
       !Number.isSafeInteger(game.prize) ||
@@ -226,6 +256,49 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
       mapping.economy.firstPrize !== game.prize
     ) {
       fail('game_economy_unapproved')
+    }
+    if (mapping.economy?.basis === 'source_conversion_v1') {
+      const economy = mapping.economy
+      const correction = (field: string) => {
+        const fact = sapporoOfficialFacts.corrections.find((item) => item.field === field)
+        return fact?.verificationStatus === 'verified' && typeof fact.newValue === 'number'
+          ? fact.newValue
+          : null
+      }
+      const firstStage = correction('specialRegistrationJPY.central.first')
+      const secondStage = correction('specialRegistrationJPY.central.second')
+      const sourcePrize = correction('officialPrizeJPY.place1')
+      if (
+        ref.id !== sapporoOfficialFacts.sourceId ||
+        ref.year !== sapporoOfficialFacts.applicableYear ||
+        mapping.sourceDigest !== sapporoOfficialFacts.baseSourceDigest ||
+        ref.verificationStatus !== 'verified' ||
+        economy.sourceRevision !== sapporoOfficialFacts.version ||
+        economy.feeBasis !== 'jra_central_special_registration' ||
+        firstStage === null ||
+        secondStage === null ||
+        sourcePrize === null ||
+        economy.entryFeeJPY !== firstStage + secondStage ||
+        economy.firstPrizeJPY !== sourcePrize ||
+        ref.prizeMoney !== sourcePrize ||
+        ref.prizeCurrency !== 'JPY'
+      ) {
+        fail('game_economy_source_unconfirmed')
+      }
+      try {
+        const fee = convertJpyRaceAmount(economy.entryFeeJPY, economy.policy)
+        const prize = convertJpyRaceAmount(economy.firstPrizeJPY, economy.policy)
+        if (
+          !fee ||
+          !prize ||
+          fee.amountKRW !== economy.entryFee ||
+          prize.amountKRW !== economy.firstPrize
+        ) {
+          fail('game_economy_conversion_invalid')
+        }
+      } catch {
+        fail('game_economy_conversion_invalid')
+      }
     }
     // Missing source game values may be approved independently in the mapping.
     // Present source values must agree; official total purse is never a substitute.
@@ -279,7 +352,9 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
     rule.maxAge !== (age[2] ? null : Number(age[1])) ||
     !Number.isInteger(rule.minAge) ||
     rule.minAge < 2 ||
-    (rule.maxAge !== null && rule.maxAge < rule.minAge)
+    (rule.maxAge !== null && rule.maxAge < rule.minAge) ||
+    (game?.raceClass === 'G3' &&
+      (game.minAge !== rule.minAge || (game.maxAge ?? null) !== rule.maxAge))
   ) {
     fail('age_unconfirmed')
   }
@@ -293,14 +368,24 @@ export function validateRaceMapping(mapping: RaceMapping, context: MappingContex
   }
   if (
     !rule ||
-    !Number.isSafeInteger(rule.minWins) ||
-    rule.minWins < 0 ||
+    (rule.minWins !== null && (!Number.isSafeInteger(rule.minWins) || rule.minWins < 0)) ||
     (rule.maxWins !== null &&
-      (!Number.isSafeInteger(rule.maxWins) || rule.maxWins < rule.minWins)) ||
-    game?.minWins !== rule.minWins ||
+      (!Number.isSafeInteger(rule.maxWins) ||
+        rule.maxWins < 0 ||
+        (rule.minWins !== null && rule.maxWins < rule.minWins))) ||
+    (rule.minWins === null ? game?.minWins !== undefined : game?.minWins !== rule.minWins) ||
     (game?.maxWins ?? null) !== rule.maxWins
   ) {
     fail('win_conditions_not_approved')
+  }
+  // Absence of a uniform minimum is not approval for every affiliation. The
+  // current engine cannot yet establish affiliation-specific eligibility.
+  if (
+    rule?.minWins === null &&
+    ref.id === sapporoOfficialFacts.sourceId &&
+    game?.raceClass === 'G3'
+  ) {
+    fail('affiliation_eligibility_unsupported')
   }
   return reasons
 }
@@ -363,7 +448,7 @@ export async function previewMappedEntry(
       new Uint8Array(
         await globalThis.crypto.subtle.digest(
           'SHA-256',
-          new TextEncoder().encode(canonicalMappingValue(value)),
+          new TextEncoder().encode(canonicalJson(value)),
         ),
       ),
     )

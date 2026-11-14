@@ -20,6 +20,19 @@ import { validateRaceDefinition } from './mapping-definition-validation'
 
 const sha = z.string().regex(/^[a-f0-9]{64}$/)
 const positive = z.number().int().nonnegative()
+const ratio = z
+  .object({ numerator: z.number().int().positive(), denominator: z.number().int().positive() })
+  .strict()
+const conversionPolicy = z
+  .object({
+    version: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/),
+    sourceCurrency: z.literal('JPY'),
+    destinationCurrency: z.literal('KRW'),
+    krwPerJpy: ratio,
+    scale: ratio,
+    rounding: z.enum(['floor', 'ceil', 'half_up']),
+  })
+  .strict()
 const decisions = z.partialRecord(
   z.enum(mappingDecisionFields),
   z
@@ -48,7 +61,7 @@ export const raceMappingSchema = z
         minAge: z.number().int().min(2),
         maxAge: z.number().int().min(2).nullable(),
         sex: z.literal('any'),
-        minWins: positive,
+        minWins: positive.nullable(),
         maxWins: positive.nullable(),
       })
       .strict()
@@ -63,17 +76,33 @@ export const raceMappingSchema = z
       .strict()
       .nullable(),
     economy: z
-      .object({
-        entryFee: positive,
-        firstPrize: positive,
-        currency: z.literal('KRW'),
-        basis: z.literal('game_balance'),
-      })
-      .strict()
+      .discriminatedUnion('basis', [
+        z
+          .object({
+            entryFee: positive,
+            firstPrize: positive,
+            currency: z.literal('KRW'),
+            basis: z.literal('game_balance'),
+          })
+          .strict(),
+        z
+          .object({
+            entryFee: positive,
+            firstPrize: positive,
+            currency: z.literal('KRW'),
+            basis: z.literal('source_conversion_v1'),
+            sourceRevision: z.string().min(1),
+            feeBasis: z.literal('jra_central_special_registration'),
+            entryFeeJPY: positive,
+            firstPrizeJPY: positive,
+            policy: conversionPolicy,
+          })
+          .strict(),
+      ])
       .nullable(),
     opponents: z
       .object({
-        profile: z.literal('shared-development-v1'),
+        profile: z.enum(['shared-development-v1', 'sapporo-g3-2yo-v1']),
         runners: z.number().int().min(2).max(18),
       })
       .strict()

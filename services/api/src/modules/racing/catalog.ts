@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
+import { canonicalJson } from '../../../../../packages/shared/src/canonical-json'
 import type { components } from '../../../../../packages/shared/src/generated/api'
 import {
   validateRacecourse,
@@ -86,23 +87,8 @@ function assertModel<T>(model: unknown, validate: (x: unknown) => x is T): T {
   return model
 }
 export function digest(value: unknown): string {
-  // Canonical key ordering makes repeated imports independent of JSON property ordering.
-  const canonical = (v: unknown): unknown => {
-    if (Array.isArray(v)) {
-      return v.map(canonical)
-    }
-    if (v && typeof v === 'object') {
-      return Object.fromEntries(
-        Object.entries(v)
-          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-          .map(([k, x]) => [k, canonical(x)]),
-      )
-    }
-    return v
-  }
-  return createHash('sha256')
-    .update(JSON.stringify(canonical(value)))
-    .digest('hex')
+  // Shares canonicalJson with the shared mapping revision hash so both sides agree byte for byte.
+  return createHash('sha256').update(canonicalJson(value)).digest('hex')
 }
 export function normalizeRacingCatalog(input: unknown) {
   const source = packetSchema.parse(input)
