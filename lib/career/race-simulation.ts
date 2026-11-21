@@ -27,6 +27,8 @@ export type RaceSimulationSummary = { engineVersion: string; digest: string; dur
 
 const STEP_SECONDS = 0.25
 const STEPS_PER_SAMPLE = 4
+/** Hard bound on simulated steps; a race that cannot reach the line is reported as unfinished, never as a winner. */
+const MAX_STEPS = 4000
 const PRIZE_SHARES = [1, 0.4, 0.25, 0.15, 0.1]
 
 /**
@@ -228,15 +230,15 @@ export function simulateWithProfile(run: RaceRunInput, profile: EngineProfile): 
   let lastBlockedMs = -10000
   let previousRank = 0
   let step = 0
-  const rankOf = (id: string) => states.slice().sort((a, b) => b.distance - a.distance || a.index - b.index).findIndex(state => state.id === id) + 1
+  const rankOfPlayer = () => 1 + states.filter(other => other !== player && (other.distance > player.distance || (other.distance === player.distance && other.index < player.index))).length
 
   const takeSample = (tMs: number) => {
     samples.push({ tMs, runners: states.map(state => ({ horseId: state.id, distance: round1(Math.min(D, state.distance)), lane: round1(laneOf(state, D)) })) })
   }
   takeSample(0)
-  previousRank = rankOf(player.id)
+  previousRank = rankOfPlayer()
 
-  while (step < 4000) {
+  while (step < MAX_STEPS) {
     const tMs = Math.round(step * STEP_SECONDS * 1000)
     const t = step * STEP_SECONDS
     for (const state of states) {
@@ -253,9 +255,10 @@ export function simulateWithProfile(run: RaceRunInput, profile: EngineProfile): 
       } else state.speed = targetSpeed(state, state.distance / D, profile)
     }
     const ordered = states.slice().sort((a, b) => b.distance - a.distance || a.index - b.index)
-    ordered.forEach((state, position) => {
-      if (state.finishTime !== null) return
-      const ahead = ordered.slice(0, position).reverse().find(other => other.finishTime === null)
+    // `ordered` is nearest-to-the-line first, so the last racing runner seen is the one directly ahead.
+    let ahead: RunnerState | null = null
+    for (const state of ordered) {
+      if (state.finishTime !== null) continue
       let held: boolean
       if (profile.laneClearance === null) {
         if (ahead && ahead.distance - state.distance < 2 && ahead.speed < state.speed && draws[state.index] < state.blockProbability && state.latch <= 0) state.latch = profile.blockLatchSteps
@@ -277,7 +280,8 @@ export function simulateWithProfile(run: RaceRunInput, profile: EngineProfile): 
         lastBlockedMs = tMs
         events.push({ id: `blocked-${tMs}`, tMs, type: 'BLOCKED', horseId: state.id, distance: round1(D - state.distance) })
       }
-    })
+      ahead = state
+    }
     for (const state of states) {
       if (state.finishTime !== null) continue
       const next = state.distance + state.speed * STEP_SECONDS
@@ -288,7 +292,8 @@ export function simulateWithProfile(run: RaceRunInput, profile: EngineProfile): 
     }
     step += 1
     const nextMs = Math.round(step * STEP_SECONDS * 1000)
-    const leader = Math.max(...states.map(state => state.distance))
+    let leader = 0
+    for (const state of states) if (state.distance > leader) leader = state.distance
     while (nextPhase < phaseThresholds.length && leader >= phaseThresholds[nextPhase][1] * D) {
       phaseMarkers.push({ phase: phaseThresholds[nextPhase][0], tMs: nextMs, distance: round1(D - leader) })
       nextPhase += 1
@@ -300,9 +305,14 @@ export function simulateWithProfile(run: RaceRunInput, profile: EngineProfile): 
     if (step % STEPS_PER_SAMPLE === 0) {
       takeSample(nextMs)
       if (player.finishTime === null) {
-        const rank = rankOf(player.id)
+        const rank = rankOfPlayer()
         if (rank < previousRank && nextMs - lastOvertakeMs >= 4000) {
-          const passed = states.filter(state => state.id !== player.id && state.distance < player.distance).sort((a, b) => b.distance - a.distance || a.index - b.index)[0]
+          // The closest runner the player has already passed; one pass avoids a sort per sample.
+          let passed: RunnerState | undefined
+          for (const state of states) {
+            if (state.id === player.id || state.distance >= player.distance) continue
+            if (!passed || state.distance > passed.distance || (state.distance === passed.distance && state.index < passed.index)) passed = state
+          }
           lastOvertakeMs = nextMs
           events.push({ id: `overtake-${nextMs}`, tMs: nextMs, type: 'OVERTAKE', horseId: player.id, relatedHorseId: passed?.id, distance: round1(D - player.distance), rank })
         }
@@ -312,16 +322,27 @@ export function simulateWithProfile(run: RaceRunInput, profile: EngineProfile): 
     }
   }
 
-  const finishOrderStates = states.slice().sort((a, b) => a.finishTime! - b.finishTime! || a.index - b.index)
-  const winnerTime = finishOrderStates[0].finishTime!
-  const finishOrder: FinishRecord[] = finishOrderStates.map((state, i) => ({
-    horseId: state.id,
-    horseName: nameOf.get(state.id)!,
-    placing: i + 1,
-    finishTime: round2(state.finishTime!),
-    marginToWinner: round2(state.finishTime! - winnerTime),
-    prizeMoney: Math.round(race.prize * (PRIZE_SHARES[i] ?? 0)),
-  }))
+  // A runner that never reaches the line inside MAX_STEPS is unfinished: it is ranked behind every finisher
+  // (further along the track first) and keeps no prize. A `null` time must never reach the comparator.
+  const finishOrderStates = states.slice().sort((a, b) => {
+    if (a.finishTime === null || b.finishTime === null) {
+      if (a.finishTime === null && b.finishTime === null) return b.distance - a.distance || a.index - b.index
+      return a.finishTime === null ? 1 : -1
+    }
+    return a.finishTime - b.finishTime || a.index - b.index
+  })
+  const winnerTime = finishOrderStates[0].finishTime ?? MAX_STEPS * STEP_SECONDS
+  const finishOrder: FinishRecord[] = finishOrderStates.map((state, i) => {
+    const raw = state.finishTime ?? MAX_STEPS * STEP_SECONDS
+    return {
+      horseId: state.id,
+      horseName: nameOf.get(state.id)!,
+      placing: i + 1,
+      finishTime: round2(raw),
+      marginToWinner: round2(raw - winnerTime),
+      prizeMoney: state.finishTime === null ? 0 : Math.round(race.prize * (PRIZE_SHARES[i] ?? 0)),
+    }
+  })
   for (const record of finishOrder) events.push({ id: `finish-${record.horseId}`, tMs: Math.round(record.finishTime * 1000), type: 'FINISH', horseId: record.horseId, distance: 0, rank: record.placing })
   events.sort((a, b) => a.tMs - b.tMs)
   phaseMarkers.push({ phase: 'FINISH', tMs: Math.round(finishOrder[0].finishTime * 1000), distance: 0 })
