@@ -337,16 +337,22 @@ export function simulateRaceCore(run: RaceRunInput, cfg: RaceBalanceConfig, exec
   }
 
   const finishOrderStates = states.slice().sort((a, b) => (a.finishTime ?? Infinity) - (b.finishTime ?? Infinity) || a.index - b.index)
-  const winnerTime = finishOrderStates[0].finishTime ?? 0
+  // A runner that never reaches the line inside maxTicks is unfinished: it keeps no prize. Paying the prize
+  // table by position alone minted money whenever the field failed to finish.
+  const unfinishedTime = cfg.maxTicks * dt
+  const winnerTime = finishOrderStates[0].finishTime ?? unfinishedTime
   const PRIZE_SHARES = [1, 0.4, 0.25, 0.15, 0.1]
-  const finishOrder: FinishRecord[] = finishOrderStates.map((state, i) => ({
-    horseId: state.id,
-    horseName: nameOf.get(state.id)!,
-    placing: i + 1,
-    finishTime: round2(state.finishTime ?? cfg.maxTicks * dt),
-    marginToWinner: round2((state.finishTime ?? cfg.maxTicks * dt) - winnerTime),
-    prizeMoney: Math.round(race.prize * (PRIZE_SHARES[i] ?? 0)),
-  }))
+  const finishOrder: FinishRecord[] = finishOrderStates.map((state, i) => {
+    const raw = state.finishTime ?? unfinishedTime
+    return {
+      horseId: state.id,
+      horseName: nameOf.get(state.id)!,
+      placing: i + 1,
+      finishTime: round2(raw),
+      marginToWinner: round2(raw - winnerTime),
+      prizeMoney: state.finishTime === null ? 0 : Math.round(race.prize * (PRIZE_SHARES[i] ?? 0)),
+    }
+  })
   for (const record of finishOrder) events.push({ id: `finish-${record.horseId}`, tMs: Math.round(record.finishTime * 1000), type: 'FINISH', horseId: record.horseId, distance: 0, rank: record.placing })
   events.sort((a, b) => a.tMs - b.tMs)
   phaseMarkers.push({ phase: 'FINISH', tMs: Math.round(finishOrder[0].finishTime * 1000), distance: 0 })
